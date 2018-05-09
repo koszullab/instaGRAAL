@@ -1,7 +1,7 @@
 # instaGRAAL
 Large genome reassembly based on Hi-C data (continuation and partial rewrite of [GRAAL](https://github.com/koszullab/GRAAL))
 
-This is largely a work in progress and more is to be added - see [GRAAL](https://github.com/koszullab/GRAAL) for more information on how to deploy it. 
+This work is under continuous development/improvement - see [GRAAL](https://github.com/koszullab/GRAAL) for information about the basic principles of GRAAL and on how to deploy it. 
 
 ## How to use
 Until more detailed documentation is added, run the following to see options:
