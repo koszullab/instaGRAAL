@@ -2,27 +2,45 @@
 # coding: utf-8
 
 """
-A couple of functions to manipulate info_frags.txt files
+A couple of functions to manipulate info_frags.txt files and BED files.
+
+This module started as a couple scripts to flip back artefact inversions
+introduced by the GRAAL assembler and its derivatives (see:
+https://github.com/koszullab/GRAAL, https://github.com/koszullab/instaGRAAL).
+It has greatly evolved since, and provides a range of functions to attempt
+at polishing assemblies and correct potential missassemblies found in them.
+
+
 """
 
-from Bio import SeqIO
-from Bio.SeqRecord import SeqRecord
-from Bio.Seq import Seq, IUPAC
-from matplotlib import pyplot as plt
 import argparse
 import copy
 import itertools
 import operator
+from Bio import SeqIO
+from Bio.SeqRecord import SeqRecord
+from Bio.Seq import Seq, IUPAC
+from matplotlib import pyplot as plt
 
+# Defaults:
+# -Scaffolds below DEFAULT_MIN_SCAFFOLD_SIZE are not considered for polishing
+# -Defaut names for output files
+# -Junction sequence between two bins that have been stitched together
+# in order to reflect that some base pairs may be missing
+# -Two default schemes ('criteria') for each inversion corrector
 DEFAULT_MIN_SCAFFOLD_SIZE = 0
 DEFAULT_NEW_INFO_FRAGS_NAME = "new_info_frags.txt"
 DEFAULT_NEW_GENOME_NAME = "new_genome.fa"
-DEFAULT_JUNCTION_SEQUENCE = Seq('NNNNNN', IUPAC.ambiguous_dna)
-DEFAULT_CRITERION = 'colinear'
-DEFAULT_CRITERION_2 = 'blocks'
+DEFAULT_JUNCTION_SEQUENCE = Seq("NNNNNN", IUPAC.ambiguous_dna)
+DEFAULT_CRITERION = "colinear"
+DEFAULT_CRITERION_2 = "blocks"
 
 
 def parse_info_frags(info_frags):
+    """Import an info_frags.txt file and return a dictionary where each key
+    is a newly formed scaffold and each value is the list of bins and their
+    origin on the initial scaffolding.
+    """
 
     new_scaffolds = {}
     with open(info_frags, "r") as info_frags_handle:
@@ -34,39 +52,43 @@ def parse_info_frags(info_frags):
             elif line.startswith("init_contig"):
                 pass
             else:
-                (init_contig,
-                 id_frag,
-                 orientation,
-                 pos_start,
-                 pos_end) = str(line[:-1]).split("\t")
+                (init_contig, id_frag, orientation, pos_start, pos_end) = str(
+                    line[:-1]
+                ).split("\t")
                 start = int(pos_start)
                 end = int(pos_end)
                 ori = int(orientation)
                 fragid = int(id_frag)
                 assert start < end
                 assert ori in {-1, 1}
-                new_scaffolds[current_new_contig].append([init_contig,
-                                                          fragid,
-                                                          start,
-                                                          end,
-                                                          ori])
+                new_scaffolds[current_new_contig].append(
+                    [init_contig, fragid, start, end, ori]
+                )
 
     return new_scaffolds
 
 
+# The format of info_frags.txt files looks a lot like the BED format, so this
+# function may come in handy
 def parse_bed(bed_file):
+    """Import a BED file (where the data entries are analogous to what may be
+    expected in an info_frags.txt file) and return a scaffold dictionary,
+    similarly to parse_info_frags.
+    """
 
     new_scaffolds = {}
     with open(bed_file) as bed_handle:
         for line in bed_handle:
             chrom, start, end, query, qual, strand = line.split()[:7]
-            if strand == '+':
+            if strand == "+":
                 ori = 1
-            elif strand == '-':
+            elif strand == "-":
                 ori = -1
             else:
-                raise TypeError("Error when parsing strand "
-                                "orientation: {}".format(strand))
+                raise ValueError(
+                    "Error when parsing strand "
+                    "orientation: {}".format(strand)
+                )
 
             if int(qual) > 0:
                 bed_bin = [query, -2, int(start), int(end), ori]
@@ -85,12 +107,15 @@ def correct_scaffolds(scaffolds, corrector):
     new_scaffolds = {}
 
     def are_overlapping(bin1, bin2):
+        """Check for overlapping regions between two regions - necessary
+        requirement before potentially merging
+        """
 
         if bin2 is None:
             return False
 
-        init1, fragid1, start1, end1, ori1 = bin1
-        init2, fragid2, start2, end2, ori2 = bin2
+        init1, _, start1, end1, _ = bin1
+        init2, _, start2, end2, _ = bin2
 
         if init1 != init2:
             return False
@@ -98,8 +123,11 @@ def correct_scaffolds(scaffolds, corrector):
             return (start2 <= start1 <= end2) or (start1 <= start2 <= end1)
 
     def merge_bins(bin1, bin2, ignore_ori=True):
-        init1, fragid1, start1, end1, ori1 = bin1
-        init2, fragid2, start2, end2, ori2 = bin2
+        """Painstakingly check for every edge case in order to properly merge
+        two overlapping bins.
+        """
+        init1, _, start1, end1, ori1 = bin1
+        init2, _, start2, end2, ori2 = bin2
 
         assert init1 == init2
         start = min(start1, start2)
@@ -119,7 +147,7 @@ def correct_scaffolds(scaffolds, corrector):
 
     corrector_bins = copy.deepcopy(corrector)
 
-    for name, scaffold in scaffolds.iteritems():
+    for name, scaffold in scaffolds.items():
         new_scaffold = []
 
         for _, blocks in itertools.groupby(scaffold, operator.itemgetter(0)):
@@ -152,6 +180,9 @@ def correct_scaffolds(scaffolds, corrector):
 
 
 def format_info_frags(info_frags):
+    """A function to seamlessly run on either scaffold dictionaries or
+    info_frags.txt files without having to check the input first.
+    """
     if isinstance(info_frags, dict):
         return info_frags
     else:
@@ -165,15 +196,20 @@ def format_info_frags(info_frags):
 
 def plot_info_frags(scaffolds):
 
+    """A crude way to visualize new scaffolds according to their origin on the
+    initial scaffolding. Each scaffold spawns a new plot. Orientations are
+    represented by different colors.
+    """
+
     scaffolds = format_info_frags(scaffolds)
-    for name, scaffold in scaffolds.iteritems():
+    for name, scaffold in scaffolds.items():
         plt.figure()
         xs = range(len(scaffold))
         color = []
         names = {}
         ys = []
         for my_bin in scaffold:
-            current_color = 'r' if my_bin[4] > 0 else 'g'
+            current_color = "r" if my_bin[4] > 0 else "g"
             color += [current_color]
             name = my_bin[0]
             if name in names:
@@ -187,25 +223,74 @@ def plot_info_frags(scaffolds):
 
 def remove_spurious_insertions(scaffolds):
 
+    """Remove all bins whose left and right neighbors belong to the same,
+    different scaffold.
+
+    Example with three such insertions in two different scaffolds:
+
+        >>> scaffolds = {
+        ...     "scaffold1": [
+        ...         ["contig1", 0, 0, 100, 1],
+        ...         ["contig1", 1, 100, 200, 1],
+        ...         ["contig23", 53, 1845, 2058, -1], # <-- insertion
+        ...         ["contig1", 4, 254, 408, 1],
+        ...         ["contig1", 7, 805, 1253, 1],
+        ...         ["contig5", 23, 1500, 1605, -1],
+        ...         ["contig65", 405, 32145, 45548, -1], # <-- insertion
+        ...         ["contig5", 22, 1385, 1499, -1],
+        ...     ],
+        ...     "scaffold2": [
+        ...         ["contig8", 0, 0, 250, 1],
+        ...         ["contig17", 2454, 8754, -1], # <-- insertion
+        ...         ["contig8", 2, 320, 480, 1],
+        ...      ],
+        ... }
+
+        >>> new_scaffolds = remove_spurious_insertions(scaffolds)
+        >>> for my_bin in new_scaffolds['scaffold1']:
+        ...     print(my_bin)
+        ...
+        ['contig1', 0, 0, 100, 1]
+        ['contig1', 1, 100, 200, 1]
+        ['contig1', 4, 254, 408, 1]
+        ['contig1', 7, 805, 1253, 1]
+        ['contig5', 23, 1500, 1605, -1]
+        ['contig5', 22, 1385, 1499, -1]
+
+        >>> for my_bin in new_scaffolds['scaffold2']:
+        ...     print(my_bin)
+        ...
+        ['contig8', 0, 0, 250, 1]
+        ['contig8', 2, 320, 480, 1]
+
+
+    """
+
     scaffolds = format_info_frags(scaffolds)
     new_scaffolds = {}
-    for name, scaffold in scaffolds.iteritems():
+    for name, scaffold in scaffolds.items():
         new_scaffold = []
         if len(scaffold) > 2:
             for i in range(len(scaffold)):
                 # First take care of edge cases: *-- or --*
                 if i == 0:
-                    if not (scaffold[i][0] != scaffold[i + 1][0] and
-                            scaffold[i + 1][0] == scaffold[i + 2][0]):
+                    if not (
+                        scaffold[i][0] != scaffold[i + 1][0]
+                        and scaffold[i + 1][0] == scaffold[i + 2][0]
+                    ):
                         new_scaffold.append(scaffold[i])
                 elif i == len(scaffold) - 1:
-                    if not (scaffold[i][0] != scaffold[i - 1][0] and
-                            scaffold[i - 1][0] == scaffold[i - 2][0]):
+                    if not (
+                        scaffold[i][0] != scaffold[i - 1][0]
+                        and scaffold[i - 1][0] == scaffold[i - 2][0]
+                    ):
                         new_scaffold.append(scaffold[i])
                 # Otherwise, looking for -*-
                 else:
-                    if not (scaffold[i - 1][0] == scaffold[i + 1][0] and
-                            scaffold[i - 1][0] != scaffold[i][0]):
+                    if not (
+                        scaffold[i - 1][0] == scaffold[i + 1][0]
+                        and scaffold[i - 1][0] != scaffold[i][0]
+                    ):
                         new_scaffold.append(scaffold[i])
         else:
             # Can't remove insertions if 2 bins or less
@@ -216,9 +301,98 @@ def remove_spurious_insertions(scaffolds):
     return new_scaffolds
 
 
-def correct_spurious_inversions(scaffolds,
-                                method="blocks",
-                                criterion="colinear"):
+def correct_spurious_inversions(scaffolds, criterion="colinear"):
+    """Invert bins based on orientation neighborhoods. Neighborhoods can be
+    defined by three criteria:
+
+    -a 'cis' neighborhood is a group of bins belonging to the same initial
+    contig
+    -a 'colinear' neighborhood is a 'cis' neighborhood where bins are
+    ordered the same way they were on the initial contig
+    -a 'contiguous' neighborhood is a 'colinear' neighborhood where all bins
+    are exactly consecutive, i.e. the end position of each bin matches the
+    starting position of the next bin
+
+    This function looks for such neighborhoods and orients all bins in it
+    according to the majority orientation.
+
+    An example with three inversions, one for each criterion:
+
+        >>> scaffolds = {
+        ...     "scaffold1": [
+        ...         ["contig1", 1, 100, 200, 1],
+        ...         ["contig1", 2, 200, 300, 1],
+        ...         ["contig1", 3, 300, 400, -1], # <-- inversion (contiguous)
+        ...         ["contig1", 4, 400, 500, 1],
+        ...         ["contig1", 10, 1500, 1605, 1],
+        ...         ["contig1", 12, 1750, 1850, -1], # <-- inversion (colinear)
+        ...         ["contig1", 23, 2100, 2499, 1],
+        ...         ["contig1", 28, 2850, 3000, 1],
+        ...         ["contig1", 0, 0, 100, -1], # <-- inversion (cis)
+        ...         ["contig2", 554, 1850, 1900, -1],
+        ...     ],
+        ... }
+
+    With the 'cis' criterion, pretty much all bins from "contig1" get inverted
+    to the majority orientation (+):
+
+        >>> sc_cis = correct_spurious_inversions(scaffolds, "cis")
+        >>> for my_bin in sc_cis['scaffold1']:
+        ...     print(my_bin)
+        ...
+        ['contig1', 1, 100, 200, 1]
+        ['contig1', 2, 200, 300, 1]
+        ['contig1', 3, 300, 400, 1]
+        ['contig1', 4, 400, 500, 1]
+        ['contig1', 10, 1500, 1605, 1]
+        ['contig1', 12, 1750, 1850, 1]
+        ['contig1', 23, 2100, 2499, 1]
+        ['contig1', 28, 2850, 3000, 1]
+        ['contig1', 0, 0, 100, 1]
+        ['contig2', 554, 1850, 1900, -1]
+
+    With the 'colinear' criterion, the bin ['contig1', 0, 0, 100, -1] is
+    treated as a different neighborhood from the rest (as it is not colinear
+    with the other bins from 'contig1') and remains untouched:
+
+        >>> sc_colinear = correct_spurious_inversions(scaffolds, "colinear")
+        >>> for my_bin in sc_colinear['scaffold1']:
+        ...     print(my_bin)
+        ...
+        ['contig1', 1, 100, 200, 1]
+        ['contig1', 2, 200, 300, 1]
+        ['contig1', 3, 300, 400, 1]
+        ['contig1', 4, 400, 500, 1]
+        ['contig1', 10, 1500, 1605, 1]
+        ['contig1', 12, 1750, 1850, 1]
+        ['contig1', 23, 2100, 2499, 1]
+        ['contig1', 28, 2850, 3000, 1]
+        ['contig1', 0, 0, 100, -1]
+        ['contig2', 554, 1850, 1900, -1]
+
+    With the 'contiguous' criterion, the ['contig1', 12, 1750, 1850, -1] breaks
+    with the contiguous region spanning from 100 to 400 bp on 'contig1' and
+    so is treated as a different neighborhood as well:
+
+        >>> sc_cont = correct_spurious_inversions(scaffolds, "contiguous")
+        >>> for my_bin in sc_cont['scaffold1']:
+        ...     print(my_bin)
+        ...
+        ['contig1', 1, 100, 200, 1]
+        ['contig1', 2, 200, 300, 1]
+        ['contig1', 3, 300, 400, 1]
+        ['contig1', 4, 400, 500, 1]
+        ['contig1', 10, 1500, 1605, 1]
+        ['contig1', 12, 1750, 1850, -1]
+        ['contig1', 23, 2100, 2499, 1]
+        ['contig1', 28, 2850, 3000, 1]
+        ['contig1', 0, 0, 100, -1]
+        ['contig2', 554, 1850, 1900, -1]
+
+    Note that 'contig2' remains untouched at all times since bins in it are
+    never in the same neighborhood as those from 'contig1'.
+
+    """
 
     scaffolds = format_info_frags(scaffolds)
     new_scaffolds = {}
@@ -227,56 +401,61 @@ def correct_spurious_inversions(scaffolds,
         return bin1[0] == bin2[0]
 
     def is_contiguous(bin1, bin2):
-        return is_cis(bin1, bin2) and bin1[-3] == bin2[-2]
+        return is_cis(bin1, bin2) and bin1[3] == bin2[2]
 
     def is_colinear(bin1, bin2):
-        return is_cis(bin1, bin2) and bin1[-3] <= bin2[-2]
+        return is_cis(bin1, bin2) and bin1[3] <= bin2[2]
 
-    condition_callables = {"cis": is_cis,
-                           "colinear": is_colinear,
-                           "contiguous": is_contiguous}
+    condition_callables = {
+        "cis": is_cis,
+        "colinear": is_colinear,
+        "contiguous": is_contiguous,
+    }
     block_test = condition_callables.get(criterion, "colinear")
-    # print("You have chosen that a block "
-    #       "only be composed of {} bins".format(criterion))
 
-    for name, scaffold in scaffolds.iteritems():
-        # print("This is scaffold %s" % name)
+    for name, scaffold in scaffolds.items():
         new_scaffold = []
 
         block_cumulative_ori = 0
+
         if len(scaffold) > 2:
             current_bin = scaffold[0]
             block_buffer = []
             for my_bin in scaffold:
-                # print(my_bin)
+
                 if not block_buffer:
                     new_bin = copy.deepcopy(my_bin)
                     block_buffer.append(new_bin)
                     block_cumulative_ori = my_bin[-1]
                     continue
-                elif not block_test(my_bin, current_bin):
-                    # print(my_bin[0], current_bin[0])
+
+                elif not block_test(current_bin, my_bin):
                     for my_buf_bin in block_buffer:
-                        # print("Writing new bin: %s" % my_bin)
                         new_bin = copy.deepcopy(my_buf_bin)
-                        new_bin[-1] = ((block_cumulative_ori >= 0) -
-                                       (block_cumulative_ori < 0))
+                        if block_cumulative_ori >= 0:
+                            new_bin[-1] = 1
+                        else:
+                            new_bin[-1] = -1
                         new_scaffold.append(new_bin)
-                    block_cumulative_ori = 0
+                    block_cumulative_ori = my_bin[-1]
                     current_bin = copy.deepcopy(my_bin)
                     block_buffer = copy.deepcopy([my_bin])
+
                 else:
                     block_cumulative_ori += my_bin[-1]
                     new_bin = copy.deepcopy(my_bin)
                     block_buffer.append(new_bin)
                     current_bin = my_bin
+
             for my_bin in block_buffer:
-                # print("Writing new bin: %s" % my_bin)
                 new_bin = copy.deepcopy(my_bin)
-                new_bin[-1] = ((block_cumulative_ori >= 0) -
-                               (block_cumulative_ori < 0))
+                if block_cumulative_ori >= 0:
+                    new_bin[-1] = 1
+                else:
+                    new_bin[-1] = -1
                 new_scaffold.append(new_bin)
             new_scaffolds[name] = copy.deepcopy(new_scaffold)
+
         else:
             new_scaffolds[name] = copy.deepcopy(scaffold)
 
@@ -285,10 +464,17 @@ def correct_spurious_inversions(scaffolds,
 
 def rearrange_intra_scaffolds(scaffolds):
 
+    """Rearranges all bins within each scaffold such that all bins belonging
+    to the same initial contig are grouped together in the same order. When
+    two such groups are found, the smaller one is moved to the larger one.
+    """
+
     scaffolds = format_info_frags(scaffolds)
     new_scaffolds = {}
 
-    for name, scaffold in scaffolds.iteritems():
+    ordering = dict()
+
+    for name, scaffold in scaffolds.items():
         new_scaffold = []
 
         ordering = dict()
@@ -296,8 +482,7 @@ def rearrange_intra_scaffolds(scaffolds):
 
         my_blocks = []
 
-        for k, my_block in itertools.groupby(scaffold,
-                                             operator.itemgetter(0)):
+        for _, my_block in itertools.groupby(scaffold, operator.itemgetter(0)):
 
             my_bins = list(my_block)
             my_blocks.append(my_bins)
@@ -323,47 +508,43 @@ def rearrange_intra_scaffolds(scaffolds):
     return new_scaffolds
 
 
-def reorient_consecutive_blocks(scaffolds, mode='blocks'):
+def reorient_consecutive_blocks(scaffolds, mode="blocks"):
 
     scaffolds = format_info_frags(scaffolds)
     new_scaffolds = {}
 
-    for name, scaffold in scaffolds.iteritems():
+    for name, scaffold in scaffolds.items():
         # print(scaffold)
         new_scaffold = []
-        for k, my_block in itertools.groupby(scaffold,
-                                             operator.itemgetter(0)):
+        for _, my_block in itertools.groupby(scaffold, operator.itemgetter(0)):
             my_bins = list(my_block)
 
-            if mode == 'sequences':
+            if mode == "sequences":
 
                 if len(my_bins) < 2:
                     new_scaffold.append(my_bins[0])
                     continue
                 else:
-                    previous_bin = None
+                    previous_bin = []
                     end_bin = [-2, -2, -2, -2, -2]
                     current_ori = 0
                     # print(my_bins + end_bin)
                     for my_bin in my_bins + [end_bin]:
-                        if previous_bin is None:
+                        if not previous_bin:
                             # print("début")
                             previous_bin = copy.copy(my_bin)
                             continue
                         elif my_bin[1] == previous_bin[1] + 1:
-                            # print("suite croissante")
                             current_ori = 1
                             previous_bin[-1] = 1
                             new_scaffold.append(previous_bin)
                             previous_bin = copy.copy(my_bin)
                         elif my_bin[1] == previous_bin[1] - 1:
-                            # print("suite décroissante")
                             current_ori = -1
                             previous_bin[-1] = -1
                             new_scaffold.append(previous_bin)
                             previous_bin = copy.copy(my_bin)
                         else:
-                            # print("fin de suite")
                             if current_ori == 0:
                                 new_scaffold.append(previous_bin)
                             else:
@@ -374,7 +555,7 @@ def reorient_consecutive_blocks(scaffolds, mode='blocks'):
 
                     assert previous_bin[0] == -2
 
-            elif mode == 'blocks':
+            elif mode == "blocks":
                 total_ori = sum([my_bin[-1] for my_bin in my_bins])
 
                 if total_ori >= 0:
@@ -382,9 +563,9 @@ def reorient_consecutive_blocks(scaffolds, mode='blocks'):
                     sorted_block = sorted(my_bins, key=operator.itemgetter(1))
                 else:
                     block_ori = -1
-                    sorted_block = sorted(my_bins,
-                                          key=operator.itemgetter(1),
-                                          reverse=True)
+                    sorted_block = sorted(
+                        my_bins, key=operator.itemgetter(1), reverse=True
+                    )
 
                 for my_bin in sorted_block:
                     my_bin[-1] = block_ori
@@ -399,31 +580,39 @@ def write_info_frags(scaffolds, output="new_info_frags.txt"):
 
     scaffolds = format_info_frags(scaffolds)
     with open(output, "w") as info_frags_handle:
-        for new_name, scaffold in scaffolds.iteritems():
+        for new_name, scaffold in scaffolds.items():
             info_frags_handle.write(">{}\n".format(new_name))
-            header_line = "\t".join(["init_contig",
-                                     "id_frag",
-                                     "orientation",
-                                     "start",
-                                     "end"])
+            header_line = "\t".join(
+                ["init_contig", "id_frag", "orientation", "start", "end"]
+            )
             info_frags_handle.write("{}\n".format(header_line))
             for my_bin in scaffold:
                 init_contig, id_frag, pos_start, pos_end, orientation = my_bin
                 assert orientation in {-1, 1}
-                my_line = "\t".join([str(init_contig),
-                                     str(id_frag),
-                                     str(orientation),
-                                     str(pos_start),
-                                     str(pos_end)])
+                my_line = "\t".join(
+                    [
+                        str(init_contig),
+                        str(id_frag),
+                        str(orientation),
+                        str(pos_start),
+                        str(pos_end),
+                    ]
+                )
                 info_frags_handle.write("{}\n".format(my_line))
 
 
-def write_fasta(init_fasta, info_frags,
-                output=DEFAULT_NEW_GENOME_NAME,
-                junction=False):
+def write_fasta(
+    init_fasta, info_frags, output=DEFAULT_NEW_GENOME_NAME, junction=False
+):
 
-    init_genome = {record.id: record.seq
-                   for record in SeqIO.parse(init_fasta, "fasta")}
+    """Convert an info_frags.txt file into a fasta file given a reference.
+    Optionally adds junction sequences to reflect the possibly missing base
+    pairs between two newly joined scaffolds.
+    """
+
+    init_genome = {
+        record.id: record.seq for record in SeqIO.parse(init_fasta, "fasta")
+    }
     my_new_records = []
     with open(info_frags, "r") as info_frags_handle:
         current_seq = ""
@@ -433,21 +622,18 @@ def write_fasta(init_fasta, info_frags,
             if line.startswith(">"):
                 previous_contig = None
                 if current_id is not None:
-                    new_record = SeqRecord(current_seq,
-                                           id=current_id,
-                                           description="")
+                    new_record = SeqRecord(
+                        current_seq, id=current_id, description=""
+                    )
                     my_new_records.append(new_record)
                 current_seq = ""
                 current_id = str(line[1:])
             elif line.startswith("init_contig"):
                 previous_contig = None
-                pass
             else:
-                (init_contig,
-                 id_frag,
-                 orientation,
-                 pos_start,
-                 pos_end) = str(line[:-1]).split("\t")
+                (init_contig, _, orientation, pos_start, pos_end) = str(
+                    line[:-1]
+                ).split("\t")
 
                 start = int(pos_start)
                 end = int(pos_end)
@@ -462,8 +648,7 @@ def write_fasta(init_fasta, info_frags,
                 elif ori == -1:
                     current_seq += seq_to_add.reverse_complement()
 
-                if junction and previous_contig not in {init_contig,
-                                                        None}:
+                if junction and previous_contig not in {init_contig, None}:
                     error_was_raised = False
                     try:
                         extra_seq = Seq(junction, IUPAC.ambiguous_dna)
@@ -482,9 +667,9 @@ def write_fasta(init_fasta, info_frags,
 def find_lost_dna(init_fasta, scaffolds, output_file=None):
 
     my_scaffolds = format_info_frags(scaffolds)
-    my_records = sorted(SeqIO.parse(init_fasta, "fasta"),
-                        reverse=True,
-                        key=len)
+    my_records = sorted(
+        SeqIO.parse(init_fasta, "fasta"), reverse=True, key=len
+    )
 
     that_which_was_removed = {}
     fasta_dict = {}
@@ -499,19 +684,25 @@ def find_lost_dna(init_fasta, scaffolds, output_file=None):
 
         remaining_regions_ordered = range(len(record))
         remaining_regions = set(remaining_regions_ordered)
-        regions = [my_bin
-                   for scaffold in my_scaffolds.values()
-                   for my_bin in scaffold if my_bin[0] == record.id]
+        regions = [
+            my_bin
+            for scaffold in my_scaffolds.values()
+            for my_bin in scaffold
+            if my_bin[0] == record.id
+        ]
         for region in regions:
             start, end = region[2], region[3]
-            remaining_regions -= set(remaining_regions_ordered[start:end + 1])
+            remaining_regions -= set(
+                remaining_regions_ordered[start : end + 1]
+            )
 
         sorted_regions = sorted(remaining_regions)
 
-        for k, g in itertools.groupby(enumerate(sorted_regions),
-                                      consecutiveness):
+        for _, g in itertools.groupby(
+            enumerate(sorted_regions), consecutiveness
+        ):
 
-            swath = list(itertools.imap(operator.itemgetter(1), g))
+            swath = list(map(operator.itemgetter(1), g))
             start = min(swath)
             end = max(swath) + 1
             ori = 1
@@ -525,7 +716,7 @@ def find_lost_dna(init_fasta, scaffolds, output_file=None):
 
         try:
             with open(output_file, "w") as output_handle:
-                for name, chunks in that_which_was_removed.iteritems():
+                for name, chunks in that_which_was_removed.items():
                     for chunk in chunks:
                         try:
                             start, end = chunk[2], chunk[3]
@@ -547,7 +738,7 @@ def integrate_lost_dna(scaffolds, lost_dna_positions):
     scaffolds = format_info_frags(scaffolds)
     remaining_dna_positions = copy.deepcopy(lost_dna_positions)
     new_scaffolds = {}
-    for name, scaffold in scaffolds.iteritems():
+    for name, scaffold in scaffolds.items():
         scaffold_to_modify = copy.deepcopy(scaffold)
 
         i = 0
@@ -565,20 +756,28 @@ def integrate_lost_dna(scaffolds, lost_dna_positions):
                     lost_end = lost_bin[3]
 
                     if end == lost_start - 1:
-                        print("A bin was reintegrated after position {}"
-                              " in scaffold {}".format(my_bin[3], init_name))
-                        bin_to_add = [init_name, -1,
-                                      lost_start - 1,
-                                      lost_end + 1,
-                                      ori]
-                        scaffold_to_modify.insert(i + 1 - (ori < 0),
-                                                  bin_to_add)
+                        # print(
+                        #     "A bin was reintegrated after position {}"
+                        #     " in scaffold {}".format(my_bin[3], init_name)
+                        # )
+                        bin_to_add = [
+                            init_name,
+                            -1,
+                            lost_start - 1,
+                            lost_end + 1,
+                            ori,
+                        ]
+                        scaffold_to_modify.insert(
+                            i + 1 - (ori < 0), bin_to_add
+                        )
                         remaining_dna_positions.pop(init_name)
                         i += 1
 
                     elif start in (lost_end, lost_end - 1, lost_end + 1):
-                        print("A bin was reintegrated before position {}"
-                              " in scaffold {}".format(my_bin[3], init_name))
+                        # print(
+                        #     "A bin was reintegrated before position {}"
+                        #     " in scaffold {}".format(my_bin[3], init_name)
+                        # )
                         bin_to_add = [init_name, -1, lost_start, lost_end, ori]
                         scaffold_to_modify.insert(i - 1, bin_to_add)
                         remaining_dna_positions.pop(init_name)
@@ -591,14 +790,10 @@ def integrate_lost_dna(scaffolds, lost_dna_positions):
 
         new_scaffolds[name] = copy.deepcopy(scaffold_to_modify)
     print("Appending the rest...")
-    for remaining_name, remaining_bins in remaining_dna_positions.iteritems():
+    for remaining_name, remaining_bins in remaining_dna_positions.items():
         for my_bin in remaining_bins:
             try:
-                remaining_bin = [remaining_name,
-                                 -1,
-                                 my_bin[2],
-                                 my_bin[3],
-                                 1]
+                remaining_bin = [remaining_name, -1, my_bin[2], my_bin[3], 1]
                 new_scaffolds[remaining_name] = [remaining_bin]
             except ValueError:
                 continue
@@ -608,51 +803,63 @@ def integrate_lost_dna(scaffolds, lost_dna_positions):
 
 def is_block(bin_list):
 
+    """Check if a bin list has exclusively consecutive bin ids.
+    """
     id_set = set((my_bin[1] for my_bin in bin_list))
     start_id, end_id = min(id_set), max(id_set)
     return id_set == set(range(start_id, end_id + 1))
 
 
-if __name__ == "__main__":
+def main():
+    parser = argparse.ArgumentParser(
+        description="Process 3C bin " "formalized scaffolds."
+    )
 
-    parser = argparse.ArgumentParser(description='Process 3C bin '
-                                                 'formalized scaffolds.')
+    parser.add_argument("-m", "--mode", help="Process mode", required=True)
 
-    parser.add_argument('-m', '--mode', help='Process mode', required=True)
+    parser.add_argument(
+        "-i",
+        "--input",
+        type=str,
+        help="Input info_frags.txt to process",
+        required=True,
+    )
 
-    parser.add_argument('-i', '--input',
-                        type=str,
-                        help='Input info_frags.txt to process', required=True)
+    parser.add_argument(
+        "-f",
+        "--fasta",
+        type=str,
+        help="Reference FASTA file to generate "
+        "new genome with info_frags.txt",
+    )
 
-    parser.add_argument('-f', '--fasta',
-                        type=str,
-                        help='Reference FASTA file to generate '
-                             'new genome with info_frags.txt')
+    parser.add_argument("-o", "--output", help="Output file to generate")
 
-    parser.add_argument('-o', '--output', help='Output file to generate')
+    parser.add_argument(
+        "-c", "--criterion", type=str, help="Block criterion stringency"
+    )
 
-    parser.add_argument('-c', '--criterion',
-                        type=str,
-                        help='Block criterion stringency')
+    parser.add_argument(
+        "-s",
+        "--min-scaffold-size",
+        type=int,
+        help="Minimum scaffold size in bins",
+        default=DEFAULT_MIN_SCAFFOLD_SIZE,
+    )
 
-    parser.add_argument('-s', '--min-scaffold-size',
-                        type=int,
-                        help='Minimum scaffold size in bins',
-                        default=DEFAULT_MIN_SCAFFOLD_SIZE)
-
-    parser.add_argument('-j', '--junction',
-                        type=str,
-                        help='Junction sequence',
-                        default='')
+    parser.add_argument(
+        "-j", "--junction", type=str, help="Junction sequence", default=""
+    )
 
     args = parser.parse_args()
 
     info_frags = args.input
     min_size = args.min_scaffold_size
-    scaffolds = {name: scaffold
-                 for (name,
-                      scaffold) in parse_info_frags(info_frags).iteritems()
-                 if len(scaffold) > min_size}
+    scaffolds = {
+        name: scaffold
+        for (name, scaffold) in parse_info_frags(info_frags).items()
+        if len(scaffold) > min_size
+    }
 
     if args.mode == "fasta":
         init_fasta = args.fasta
@@ -660,13 +867,17 @@ if __name__ == "__main__":
         junction = args.junction
 
         if init_fasta is None:
-            print("Error! An initial FASTA file must be provided to write "
-                  "the bins into sequences.")
+            print(
+                "Error! An initial FASTA file must be provided to write "
+                "the bins into sequences."
+            )
 
-        write_fasta(init_fasta=init_fasta,
-                    info_frags=info_frags,
-                    junction=junction,
-                    output=output_file)
+        write_fasta(
+            init_fasta=init_fasta,
+            info_frags=info_frags,
+            junction=junction,
+            output=output_file,
+        )
 
     elif "singleton" in args.mode:
         output_file = args.output
@@ -677,8 +888,9 @@ if __name__ == "__main__":
         output_file = args.output or DEFAULT_NEW_INFO_FRAGS_NAME
         criterion = args.criterion or DEFAULT_CRITERION
 
-        new_scaffolds = correct_spurious_inversions(scaffolds=scaffolds,
-                                                    criterion=criterion)
+        new_scaffolds = correct_spurious_inversions(
+            scaffolds=scaffolds, criterion=criterion
+        )
 
         write_info_frags(new_scaffolds, output=output_file)
 
@@ -686,8 +898,9 @@ if __name__ == "__main__":
         output_file = args.output or DEFAULT_NEW_INFO_FRAGS_NAME
         criterion = args.criterion or DEFAULT_CRITERION_2
 
-        new_scaffolds = reorient_consecutive_blocks(scaffolds=scaffolds,
-                                                    mode=criterion)
+        new_scaffolds = reorient_consecutive_blocks(
+            scaffolds=scaffolds, mode=criterion
+        )
 
         write_info_frags(new_scaffolds, output=output_file)
 
@@ -703,14 +916,16 @@ if __name__ == "__main__":
         output_file = args.output or DEFAULT_NEW_INFO_FRAGS_NAME
 
         if init_fasta is None:
-            print("Error! An initial FASTA file must be provided"
-                  " for bin reincorporation.")
+            print(
+                "Error! An initial FASTA file must be provided"
+                " for bin reincorporation."
+            )
 
-        removed = find_lost_dna(init_fasta=init_fasta,
-                                scaffolds=scaffolds)
+        removed = find_lost_dna(init_fasta=init_fasta, scaffolds=scaffolds)
 
-        new_scaffolds = integrate_lost_dna(scaffolds=scaffolds,
-                                           lost_dna_positions=removed)
+        new_scaffolds = integrate_lost_dna(
+            scaffolds=scaffolds, lost_dna_positions=removed
+        )
 
         write_info_frags(new_scaffolds, output=output_file)
 
@@ -720,20 +935,30 @@ if __name__ == "__main__":
 
         arranged_scaffolds = rearrange_intra_scaffolds(scaffolds=scaffolds)
         reoriented_scaffolds = reorient_consecutive_blocks(arranged_scaffolds)
-        removed = find_lost_dna(init_fasta=init_fasta,
-                                scaffolds=reoriented_scaffolds)
-        new_scaffolds = integrate_lost_dna(scaffolds=reoriented_scaffolds,
-                                           lost_positions=removed)
+        removed = find_lost_dna(
+            init_fasta=init_fasta, scaffolds=reoriented_scaffolds
+        )
+        new_scaffolds = integrate_lost_dna(
+            scaffolds=reoriented_scaffolds, lost_dna_positions=removed
+        )
 
-        write_info_frags(new_scaffolds,
-                         output_file=DEFAULT_NEW_INFO_FRAGS_NAME)
-        write_fasta(init_fasta=init_fasta,
-                    info_frags=DEFAULT_NEW_INFO_FRAGS_NAME,
-                    output_file=output_file)
+        write_info_frags(new_scaffolds, output=DEFAULT_NEW_INFO_FRAGS_NAME)
+        write_fasta(
+            init_fasta=init_fasta,
+            info_frags=DEFAULT_NEW_INFO_FRAGS_NAME,
+            output=output_file,
+        )
 
     elif args.mode == "plot":
         plot_info_frags(scaffolds)
 
     else:
-        print("Wrong mode. Available modes are: "
-              "fasta, singletons, inversions, reincorporations, plot")
+        print(
+            "Wrong mode. Available modes are: "
+            "fasta, singletons, inversions, inversion2, rearrange, "
+            "reincorporations, polishing, plot"
+        )
+
+
+if __name__ == "__main__":
+    main()
