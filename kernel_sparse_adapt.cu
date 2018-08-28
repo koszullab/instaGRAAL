@@ -4,11 +4,26 @@
 #if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 300
 #else
 __device__ inline double __shfl_down(double var, unsigned int srcLane, int width=32) {
-      int2 a = *reinterpret_cast<int2*>(&var);
-      a.x = __shfl_down(a.x, srcLane, width);
-      a.y = __shfl_down(a.y, srcLane, width);
-      return *reinterpret_cast<double*>(&a);
-    }
+    int2 a = *reinterpret_cast<int2*>(&var);
+    a.x = __shfl_down(a.x, srcLane, width);
+    a.y = __shfl_down(a.y, srcLane, width);
+    return *reinterpret_cast<double*>(&a);
+}
+#endif
+#if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 600
+#else
+__device__ double atomicAdd(double* address, double val)
+{
+    unsigned long long int* address_as_ull = (unsigned long long int*)address;
+    unsigned long long int old = *address_as_ull, assumed;
+    do {
+        assumed = old;
+        old = atomicCAS(address_as_ull, assumed,
+                        __double_as_longlong(val +
+                                             __longlong_as_double(assumed)));
+    } while (assumed != old);
+    return __longlong_as_double(old);
+}
 #endif
 
 extern "C"
@@ -81,26 +96,13 @@ extern "C"
         float v_inter __attribute__ ((packed));
     } param_simu;
 
-
-    __device__ double atomicAdd(double* address, double val)
-    {
-        unsigned long long int* address_as_ull = (unsigned long long int*)address;
-        unsigned long long int old = *address_as_ull, assumed;
-        do {
-            assumed = old;
-            old = atomicCAS(address_as_ull, assumed,
-                            __double_as_longlong(val +
-                            __longlong_as_double(assumed)));
-        } while (assumed != old);
-        return __longlong_as_double(old);
-    }
     __global__ void init_rng(int nthreads, curandState *s, unsigned long long seed, unsigned long long offset)
     {
-            int id = blockIdx.x*blockDim.x + threadIdx.x;
+        int id = blockIdx.x*blockDim.x + threadIdx.x;
 
-            if (id >= nthreads)
-                    return;
-            curand_init(seed, id, offset, &s[id]);
+        if (id >= nthreads)
+            return;
+        curand_init(seed, id, offset, &s[id]);
     }
 
     __device__ float factorial(float n)
@@ -108,20 +110,20 @@ extern "C"
 
         float result = 1;
         n = floor(n);
-        if (n<10){
+        if (n<10) {
             for(int c = 1 ; c <= n ; c++ )
                 result = result * c;
         }
-        else{
-            result = powf(n,n) * exp(-n) * sqrtf(2 * M_PI * n) * (1 + (1/(12 * n)));
+        else {
+            result = powf(n,n) * exp(-n) * sqrtf(2 * M_PI * n);
         }
         return ( result );
     }
 
-     __device__ param_simu modify_param_simu(int id_modifier, param_simu p, float var)
-     {
-         param_simu out;
-         if (id_modifier == 0){
+    __device__ param_simu modify_param_simu(int id_modifier, param_simu p, float var)
+    {
+        param_simu out;
+        if (id_modifier == 0) {
             out.kuhn = p.kuhn;
             out.lm = p.lm;
             out.slope = p.slope;
@@ -130,8 +132,8 @@ extern "C"
             out.d_max = p.d_max;
             out.v_inter = p.v_inter;
             out.fact = p.fact;
-         }
-         else if (id_modifier == 1){
+        }
+        else if (id_modifier == 1) {
             out.kuhn = p.kuhn;
             out.lm = p.lm;
             out.slope = var;
@@ -140,9 +142,9 @@ extern "C"
             out.d_max = p.d_max;
             out.v_inter = p.v_inter;
             out.fact = p.fact;
-         }
-         return (out);
-     }
+        }
+        return (out);
+    }
 
 
     __device__ float rippe_contacts(float s, param_simu p)
@@ -150,7 +152,7 @@ extern "C"
         // s = distance in kb
         // p = model's parameters
         float result = 0.0f;
-        if ((s>0.0f) && (s<p.d_max)){
+        if ((s>0.0f) && (s<p.d_max)) {
             result = (p.c1 * pow(s, p.slope) * exp((p.d-2)/(pow(s*p.lm/p.kuhn, 2.0f ) + p.d)  )) * p.fact;
         }
         float out = max(result, p.v_inter);
@@ -202,7 +204,7 @@ extern "C"
         float n_tot = 1.0f;
         float n = 1.0f;
         float K = 1.0f;
-        if ((s > 0.0f) && (s < p.d_max)){
+        if ((s > 0.0f) && (s < p.d_max)) {
 //        if ((s < s_tot) && (s > 0.0) && (s < p.d_max)){
             K = p.lm / p.kuhn;
             n_dist = s ;
@@ -222,18 +224,18 @@ extern "C"
 
     __device__ float evaluate_likelihood_pxl_float(float ex, float ob)
     {
-    // ex = expected n contacts
-    // ob = observed n contacts
+        // ex = expected n contacts
+        // ob = observed n contacts
         float res = 0.0;
         float lim = 15.0;
-        if (ex != 0.0){
-            if (ob >=lim){
-               res = ob * log10(ex) - ex - (ob * log10(ob) - ob + log10(sqrtf(ob * 2.0f * M_PI)));
+        if (ex != 0.0) {
+            if (ob >=lim) {
+                res = ob * log10(ex) - ex - (ob * log10(ob) - ob + log10(sqrtf(ob * 2.0f * M_PI)));
             }
-            else if ((ob>0) && (ob<lim)){
+            else if ((ob>0) && (ob<lim)) {
                 res = ob * log10(ex) - ex - log10(factorial(ob));
-             }
-            else if (ob==0){
+            }
+            else if (ob==0) {
                 res = - ex;
             }
         }
@@ -245,18 +247,18 @@ extern "C"
 
     __device__ double evaluate_likelihood_pxl_double(double ex, double ob)
     {
-    // ex = expected n contacts
-    // ob = observed n contacts
+        // ex = expected n contacts
+        // ob = observed n contacts
         double res = 0;
         double lim = 15;
-        if (ex != 0){
-            if (ob >=lim){
-               res = ob * log10(ex) - ex - (ob * log10(ob) - ob + log10(sqrt(ob * 2.0 * M_PI)));
+        if (ex != 0) {
+            if (ob >=lim) {
+                res = ob * log10(ex) - ex - (ob * log10(ob) - ob + log10(sqrt(ob * 2.0 * M_PI)));
             }
-            else if ((ob>0) && (ob<lim)){
+            else if ((ob>0) && (ob<lim)) {
                 res = ob * log10(ex) - ex - log10((double) factorial((float) ob));
-             }
-            else if (ob==0){
+            }
+            else if (ob==0) {
                 res = - ex;
             }
         }
@@ -372,11 +374,11 @@ extern "C"
 
         __syncthreads();
 
-       // each counting thread writes its index to shared memory
+        // each counting thread writes its index to shared memory
 
-        if (condition == 1){
+        if (condition == 1) {
             pos = fragArray->pos[idx];
-           // each counting thread writes its index to shared memory //
+            // each counting thread writes its index to shared memory //
             if (pos == 0) {
                 len = fragArray->l_cont[idx];
                 id_c = fragArray->id_c[idx];
@@ -394,7 +396,7 @@ extern "C"
         __syncthreads();
 
 
-        if ((selec_smem[threadIdx.x * 2] >= 0) && (condition ==1)){
+        if ((selec_smem[threadIdx.x * 2] >= 0) && (condition ==1)) {
             list_uniq_id_c[counter_smem + threadIdx.x] = selec_smem[threadIdx.x * 2];
             list_uniq_len[counter_smem + threadIdx.x] = selec_smem[threadIdx.x * 2 + 1];
         }
@@ -407,7 +409,7 @@ extern "C"
     {
         int idx = blockIdx.x * blockDim.x + threadIdx.x;
         int condition = idx < n_frags;
-        if (condition){
+        if (condition) {
             fragArray->pos[idx] = 0;
             fragArray->start_bp[idx] = 0;
             fragArray->sub_pos[idx] = 0;
@@ -445,17 +447,17 @@ extern "C"
 
         __syncthreads();
 
-       // each counting thread writes its index to shared memory
+        // each counting thread writes its index to shared memory
 
-        if (condition == 1){
+        if (condition == 1) {
             val = list_vals[idx];
-           // each counting thread writes its index to shared memory //
+            // each counting thread writes its index to shared memory //
             if (val == value) {
                 local_count = atomicAdd(counter_smem_ptr, 1);
             }
         }
         __syncthreads();
-        if ((threadIdx.x == 0) && (condition ==1)){
+        if ((threadIdx.x == 0) && (condition ==1)) {
             counter_smem = atomicAdd(counter, counter_smem);
         }
     }
@@ -470,7 +472,7 @@ extern "C"
         int idx = blockIdx.x * blockDim.x + threadIdx.x;
         int condition = idx < n_contigs;
         int id_c;
-        if (condition ==1){
+        if (condition ==1) {
             id_c = list_uniq_id_c[idx];
             list_old_2_new_id_c[id_c] = idx;
         }
@@ -549,30 +551,30 @@ extern "C"
 
         __syncthreads();
 
-        if (condition == 1){
+        if (condition == 1) {
             fi = spData_row[idx];
             fj = spData_col[idx];
             dat = spData_dat[idx];
             curr_id_ctg1 = vect_id_c[fi];
-           // each counting thread writes its index to shared memory //
+            // each counting thread writes its index to shared memory //
             if ((curr_id_ctg1 == id_ctg1) || (curr_id_ctg1 == id_ctg2)) {
                 curr_id_ctg2 = vect_id_c[fj];
-                if ((curr_id_ctg2 == curr_id_ctg1) && (same_contigs == 1) && (is_circ == 0)){ // same_contig : smart slicing !
+                if ((curr_id_ctg2 == curr_id_ctg1) && (same_contigs == 1) && (is_circ == 0)) { // same_contig : smart slicing !
                     pos_fi = vect_pos[fi];
                     pos_fj = vect_pos[fj];
                     pos_x = min(pos_fi, pos_fj);
                     pos_y = max(pos_fi, pos_fj);
 
-                    if (pos_fb > pos_fa){
+                    if (pos_fb > pos_fa) {
                         condition_1 = (pos_x <= down_bound_fa) && (pos_y >= up_bound_fa);
                         condition_2 = (pos_y >= up_bound_fb) && (pos_x <= down_bound_fb);
                     }
-                    else{
+                    else {
                         condition_1 = (pos_x <= down_bound_fb) && (pos_y >= up_bound_fb);
                         condition_2 = (pos_y >= up_bound_fa) && (pos_x <= down_bound_fa);
                     }
 
-                    if ((condition_1==1) || (condition_2 == 1)){
+                    if ((condition_1==1) || (condition_2 == 1)) {
                         local_count = atomicAdd(counter_smem_ptr, 1);
                         selec_smem[local_count * 3] =  dat;
                         selec_smem[local_count * 3 + 1] = fi;
@@ -594,7 +596,7 @@ extern "C"
             counter_smem = atomicAdd(counter, counter_smem);
         __syncthreads();
 
-        if ((selec_smem[tid3] > 0) && (condition ==1)){
+        if ((selec_smem[tid3] > 0) && (condition ==1)) {
             sub_spData_dat[counter_smem + threadIdx.x] = selec_smem[tid3];
             sub_spData_row[counter_smem + threadIdx.x] = selec_smem[tid3 + 1];
             sub_spData_col[counter_smem + threadIdx.x] = selec_smem[tid3 + 2];
@@ -608,7 +610,7 @@ extern "C"
                               int n_frags, float2 subfrags)
     {
         int id_frag = threadIdx.x + blockDim.x * blockIdx.x;
-        if (id_frag < n_frags){
+        if (id_frag < n_frags) {
 
             int contig_fi = o_fragArray->id_c[id_frag];
             int pos_fi = o_fragArray->pos[id_frag];
@@ -645,10 +647,10 @@ extern "C"
             // UDPATE
             fragArray->circ[id_frag] = circ_fi;
             fragArray->id[id_frag] = id_frag;
-            if (id_frag == id_f_flip){
+            if (id_frag == id_f_flip) {
                 fragArray->ori[id_frag] = or_fi * -1;
             }
-            else{
+            else {
                 fragArray->ori[id_frag] = or_fi;
             }
             fragArray->prev[id_frag] = id_prev_fi;
@@ -667,10 +669,10 @@ extern "C"
 
 
     __global__ void swap_activity_frag(frag* fragArray,frag* o_fragArray, int id_f_unactiv, int max_id_contig,
-                              int n_frags)
+                                       int n_frags)
     {
         int id_frag = threadIdx.x + blockDim.x * blockIdx.x;
-        if (id_frag < n_frags){
+        if (id_frag < n_frags) {
 
             int contig_fi = o_fragArray->id_c[id_frag];
             int pos_fi = o_fragArray->pos[id_frag];
@@ -705,12 +707,12 @@ extern "C"
             fragArray->id[id_frag] = id_frag;
             fragArray->ori[id_frag] = or_fi;
 //            if ((id_frag == id_f_unactiv) && (id_d_fi != id_frag)){
-            if ((id_frag == id_f_unactiv) && (rep_fi == 1)){
+            if ((id_frag == id_f_unactiv) && (rep_fi == 1)) {
                 fragArray->activ[id_frag] = 0 * (activ_fi == 1) + 1 * (activ_fi == 0);
                 fragArray->id_c[id_frag] = contig_fi * (activ_fi == 1) + (max_id_contig + 1) * (activ_fi == 0);
 //                fragArray->id_c[id_frag] = contig_fi * (activ_fi == 1) + (max_id_contig + 1) * (activ_fi == 0);
             }
-            else{
+            else {
                 fragArray->activ[id_frag] = activ_fi;
                 fragArray->id_c[id_frag] = contig_fi;
             }
@@ -738,9 +740,9 @@ extern "C"
         __shared__ int sub_pos_f_pop;
         // UDPATE
         __shared__ int l_cont_f_pop;
-            // UDPATE
+        // UDPATE
         __shared__ int sub_l_cont_f_pop;
-            // UDPATE
+        // UDPATE
         __shared__ int l_cont_bp_f_pop;
         __shared__ int len_bp_f_pop;
         // UDPATE
@@ -754,7 +756,7 @@ extern "C"
 
 
         int id_frag = threadIdx.x + blockDim.x * blockIdx.x;
-        if (threadIdx.x == 0){
+        if (threadIdx.x == 0) {
             contig_f_pop = o_fragArray->id_c[id_f_pop];
             pos_f_pop = o_fragArray->pos[id_f_pop];
             // UDPATE
@@ -777,7 +779,7 @@ extern "C"
         }
         __syncthreads();
 
-        if (id_frag < n_frags){
+        if (id_frag < n_frags) {
             int contig_fi = o_fragArray->id_c[id_frag];
             int pos_fi = o_fragArray->pos[id_frag];
             // UDPATE
@@ -800,9 +802,9 @@ extern "C"
             int rep_fi = o_fragArray->rep[id_frag];
             int id_d_fi = o_fragArray->id_d[id_frag];
             int activ_fi = o_fragArray->activ[id_frag];
-            if (l_cont_f_pop > 2){
-                if ( contig_fi == contig_f_pop){
-                    if (pos_fi < pos_f_pop){
+            if (l_cont_f_pop > 2) {
+                if ( contig_fi == contig_f_pop) {
+                    if (pos_fi < pos_f_pop) {
                         fragArray->pos[id_frag] = pos_fi;
                         // UDPATE
                         fragArray->sub_pos[id_frag] = sub_pos_fi;
@@ -819,16 +821,16 @@ extern "C"
                         fragArray->id[id_frag] = id_frag;
                         fragArray->ori[id_frag] = or_fi;
 //                        fragArray->prev[id_frag] = id_prev_fi;
-                        if ((id_frag == id_next_f_pop) && (circ_f_pop == 1)){
+                        if ((id_frag == id_next_f_pop) && (circ_f_pop == 1)) {
                             fragArray->prev[id_frag] = id_prev_f_pop;
                         }
-                        else{
+                        else {
                             fragArray->prev[id_frag] = id_prev_fi;
                         }
-                        if (pos_fi == (pos_f_pop - 1)){
+                        if (pos_fi == (pos_f_pop - 1)) {
                             fragArray->next[id_frag] = id_next_f_pop;
                         }
-                        else{
+                        else {
                             fragArray->next[id_frag] = id_next_fi;
                         }
                         fragArray->l_cont[id_frag] = l_cont_fi -1;
@@ -840,7 +842,7 @@ extern "C"
                         fragArray->activ[id_frag] = activ_fi;
                         fragArray->id_d[id_frag] = id_d_fi;
                     }
-                    else if (pos_fi == pos_f_pop){
+                    else if (pos_fi == pos_f_pop) {
                         fragArray->pos[id_frag] = 0;
                         // UDPATE
                         fragArray->sub_pos[id_frag] = 0;
@@ -867,7 +869,7 @@ extern "C"
                         fragArray->id_d[id_frag] = id_d_fi;
 
                     }
-                    else if (pos_fi > pos_f_pop){
+                    else if (pos_fi > pos_f_pop) {
                         fragArray->pos[id_frag] = pos_fi - 1;
                         // UDPATE
                         fragArray->sub_pos[id_frag] = sub_pos_fi - sub_len_f_pop;
@@ -882,16 +884,16 @@ extern "C"
                         fragArray->circ[id_frag] = circ_fi;
                         fragArray->id[id_frag] = id_frag;
                         fragArray->ori[id_frag] = or_fi;
-                        if (pos_fi == (pos_f_pop + 1)){
+                        if (pos_fi == (pos_f_pop + 1)) {
                             fragArray->prev[id_frag] = id_prev_f_pop;
                         }
-                        else{
+                        else {
                             fragArray->prev[id_frag] = id_prev_fi;
                         }
-                        if ((id_frag == id_prev_f_pop) && (circ_f_pop == 1)){
+                        if ((id_frag == id_prev_f_pop) && (circ_f_pop == 1)) {
                             fragArray->next[id_frag] = id_next_f_pop;
                         }
-                        else{
+                        else {
                             fragArray->next[id_frag] = id_next_fi;
                         }
 //                        fragArray->next[id_frag] = id_next_fi;
@@ -904,7 +906,7 @@ extern "C"
                     }
 
                 }
-                else{
+                else {
                     fragArray->pos[id_frag] = pos_fi;
                     // UDPATE
                     fragArray->sub_pos[id_frag] = sub_pos_fi;
@@ -932,9 +934,9 @@ extern "C"
 
                 }
             }
-            else if (l_cont_f_pop == 2){
-                if ( contig_fi == contig_f_pop){
-                    if (pos_fi < pos_f_pop){
+            else if (l_cont_f_pop == 2) {
+                if ( contig_fi == contig_f_pop) {
+                    if (pos_fi < pos_f_pop) {
                         fragArray->pos[id_frag] = pos_fi;
                         // UDPATE
                         fragArray->sub_pos[id_frag] = sub_pos_fi;
@@ -960,7 +962,7 @@ extern "C"
                         fragArray->activ[id_frag] = activ_fi;
                         fragArray->id_d[id_frag] = id_d_fi;
                     }
-                    else if (pos_fi == pos_f_pop){
+                    else if (pos_fi == pos_f_pop) {
                         fragArray->pos[id_frag] = 0;
                         // UDPATE
                         fragArray->sub_pos[id_frag] = 0;
@@ -987,7 +989,7 @@ extern "C"
                         fragArray->id_d[id_frag] = id_d_fi;
 
                     }
-                    else if (pos_fi > pos_f_pop){
+                    else if (pos_fi > pos_f_pop) {
                         fragArray->pos[id_frag] = pos_fi - 1;
                         // UDPATE
                         fragArray->sub_pos[id_frag] = sub_pos_fi - sub_len_f_pop;
@@ -1015,7 +1017,7 @@ extern "C"
                     }
 
                 }
-                else{
+                else {
                     fragArray->pos[id_frag] = pos_fi;
                     // UDPATE
                     fragArray->sub_pos[id_frag] = sub_pos_fi;
@@ -1043,7 +1045,7 @@ extern "C"
 
                 }
             }
-            else{
+            else {
                 fragArray->pos[id_frag] = pos_fi;
                 // UDPATE
                 fragArray->sub_pos[id_frag] = sub_pos_fi;
@@ -1107,7 +1109,7 @@ extern "C"
         __shared__ int or_f_ins;
         __shared__ int activ_f_ins;
         int id_frag = threadIdx.x + blockDim.x * blockIdx.x;
-        if (threadIdx.x == 0){
+        if (threadIdx.x == 0) {
             contig_f_pop = o_fragArray->id_c[id_f_pop];
             pos_f_pop = o_fragArray->pos[id_f_pop];
             sub_pos_f_pop = o_fragArray->sub_pos[id_f_pop];              // UDPATE
@@ -1139,8 +1141,8 @@ extern "C"
         __syncthreads();
 
 
-        if ((activ_f_ins == 1) && ( activ_f_pop == 1)){
-            if (id_frag == id_f_pop){
+        if ((activ_f_ins == 1) && ( activ_f_pop == 1)) {
+            if (id_frag == id_f_pop) {
                 fragArray->pos[id_frag] = 0;
                 fragArray->sub_pos[id_frag] = 0;              // UDPATE
                 fragArray->start_bp[id_frag] = 0;
@@ -1151,13 +1153,13 @@ extern "C"
                 fragArray->ori[id_frag] = ori_f_pop;
                 fragArray->prev[id_frag] = -1;
                 fragArray->next[id_frag] = id_f_ins;
-                if (circ_f_ins == 0){
+                if (circ_f_ins == 0) {
                     fragArray->id_c[id_frag] = max_id_contig + 1;
                     fragArray->l_cont[id_frag] = l_cont_f_ins - pos_f_ins + 1;
                     fragArray->l_cont_bp[id_frag] = l_cont_bp_f_ins - start_bp_f_ins + len_bp_f_pop;
                     fragArray->sub_l_cont[id_frag] = sub_l_cont_f_ins - sub_pos_f_ins + sub_len_f_pop;              // UDPATE
                 }
-                else{
+                else {
                     fragArray->id_c[id_frag] = contig_f_ins;
                     fragArray->l_cont[id_frag] = l_cont_f_ins + 1;
                     fragArray->l_cont_bp[id_frag] = l_cont_bp_f_ins + len_bp_f_pop;
@@ -1167,7 +1169,7 @@ extern "C"
                 fragArray->activ[id_frag] = o_fragArray->activ[id_frag];
                 fragArray->id_d[id_frag] = o_fragArray->id_d[id_frag];
             }
-            else if ((id_frag < n_frags) && (id_frag != id_f_pop)){
+            else if ((id_frag < n_frags) && (id_frag != id_f_pop)) {
                 int contig_fi = o_fragArray->id_c[id_frag];
                 int pos_fi = o_fragArray->pos[id_frag];
                 int sub_pos_fi = o_fragArray->sub_pos[id_frag];              // UDPATE
@@ -1185,9 +1187,9 @@ extern "C"
                 int activ_fi = o_fragArray->activ[id_frag];
                 int id_d_fi = o_fragArray->id_d[id_frag];
 
-                if (contig_fi == contig_f_ins){
-                    if (circ_f_ins == 0){
-                        if (pos_fi < pos_f_ins){
+                if (contig_fi == contig_f_ins) {
+                    if (circ_f_ins == 0) {
+                        if (pos_fi < pos_f_ins) {
                             fragArray->pos[id_frag] = pos_fi;
                             fragArray->sub_pos[id_frag] = sub_pos_fi; // UPDATE
                             fragArray->id_c[id_frag] = contig_f_ins;
@@ -1198,10 +1200,10 @@ extern "C"
                             fragArray->id[id_frag] = id_frag;
                             fragArray->ori[id_frag] = or_fi;
                             fragArray->prev[id_frag] = id_prev_fi;
-                            if (pos_fi == (pos_f_ins -1)){
+                            if (pos_fi == (pos_f_ins -1)) {
                                 fragArray->next[id_frag] = -1;
                             }
-                            else{
+                            else {
                                 fragArray->next[id_frag] = id_next_fi;
                             }
                             fragArray->l_cont[id_frag] = pos_f_ins;
@@ -1211,7 +1213,7 @@ extern "C"
                             fragArray->activ[id_frag] = activ_fi;
                             fragArray->id_d[id_frag] = id_d_fi;
                         }
-                        else if (pos_fi == pos_f_ins){
+                        else if (pos_fi == pos_f_ins) {
                             fragArray->pos[id_frag] = 1;
                             fragArray->sub_pos[id_frag] = sub_len_f_pop;  // UPDATE
                             fragArray->id_c[id_frag] = max_id_contig + 1;
@@ -1230,7 +1232,7 @@ extern "C"
                             fragArray->activ[id_frag] = activ_fi;
                             fragArray->id_d[id_frag] = id_d_fi;
                         }
-                        else if (pos_fi > pos_f_ins){
+                        else if (pos_fi > pos_f_ins) {
                             fragArray->pos[id_frag] = pos_fi - (pos_f_ins) + 1;
                             fragArray->sub_pos[id_frag] = sub_pos_fi - (sub_pos_f_ins) + sub_len_f_pop;  // UPDATE
                             fragArray->id_c[id_frag] = max_id_contig + 1;
@@ -1250,32 +1252,32 @@ extern "C"
                             fragArray->id_d[id_frag] = id_d_fi;
                         }
                     }
-                    else{ // contig_f_ins is circular
-                        if (pos_fi < pos_f_ins){
-                                fragArray->pos[id_frag] = l_cont_f_ins - pos_f_ins + pos_fi + 1;
-                                fragArray->sub_pos[id_frag] = sub_l_cont_f_ins - sub_pos_f_ins + sub_pos_fi + sub_len_f_pop;  // UPDATE
-                                fragArray->id_c[id_frag] = contig_f_ins;
-                                fragArray->start_bp[id_frag] = l_cont_bp_f_ins - start_bp_f_ins + start_bp_fi + len_bp_f_pop;
-                                fragArray->len_bp[id_frag] = len_bp_fi;
-                                fragArray->sub_len[id_frag] = sub_len_fi;  // UPDATE
-                                fragArray->circ[id_frag] = 0;
-                                fragArray->id[id_frag] = id_frag;
-                                fragArray->ori[id_frag] = or_fi;
-                                fragArray->prev[id_frag] = id_prev_fi;
-                                if (pos_fi == pos_f_ins - 1){
-                                    fragArray->next[id_frag] = -1;
-                                }
-                                else{
-                                    fragArray->next[id_frag] = id_next_fi;
-                                }
-                                fragArray->l_cont[id_frag] = l_cont_f_ins + 1;
-                                fragArray->l_cont_bp[id_frag] = l_cont_bp_f_ins + len_bp_f_pop;
-                                fragArray->sub_l_cont[id_frag] = sub_l_cont_f_ins + sub_len_f_pop;  // UPDATE
-                                fragArray->rep[id_frag] = rep_fi;
-                                fragArray->activ[id_frag] = activ_fi;
-                                fragArray->id_d[id_frag] = id_d_fi;
+                    else { // contig_f_ins is circular
+                        if (pos_fi < pos_f_ins) {
+                            fragArray->pos[id_frag] = l_cont_f_ins - pos_f_ins + pos_fi + 1;
+                            fragArray->sub_pos[id_frag] = sub_l_cont_f_ins - sub_pos_f_ins + sub_pos_fi + sub_len_f_pop;  // UPDATE
+                            fragArray->id_c[id_frag] = contig_f_ins;
+                            fragArray->start_bp[id_frag] = l_cont_bp_f_ins - start_bp_f_ins + start_bp_fi + len_bp_f_pop;
+                            fragArray->len_bp[id_frag] = len_bp_fi;
+                            fragArray->sub_len[id_frag] = sub_len_fi;  // UPDATE
+                            fragArray->circ[id_frag] = 0;
+                            fragArray->id[id_frag] = id_frag;
+                            fragArray->ori[id_frag] = or_fi;
+                            fragArray->prev[id_frag] = id_prev_fi;
+                            if (pos_fi == pos_f_ins - 1) {
+                                fragArray->next[id_frag] = -1;
+                            }
+                            else {
+                                fragArray->next[id_frag] = id_next_fi;
+                            }
+                            fragArray->l_cont[id_frag] = l_cont_f_ins + 1;
+                            fragArray->l_cont_bp[id_frag] = l_cont_bp_f_ins + len_bp_f_pop;
+                            fragArray->sub_l_cont[id_frag] = sub_l_cont_f_ins + sub_len_f_pop;  // UPDATE
+                            fragArray->rep[id_frag] = rep_fi;
+                            fragArray->activ[id_frag] = activ_fi;
+                            fragArray->id_d[id_frag] = id_d_fi;
                         }
-                        else if (pos_fi == pos_f_ins){
+                        else if (pos_fi == pos_f_ins) {
                             fragArray->pos[id_frag] = 1;
                             fragArray->sub_pos[id_frag] = sub_len_f_pop; // UPDATE
                             fragArray->id_c[id_frag] = contig_f_ins;
@@ -1294,7 +1296,7 @@ extern "C"
                             fragArray->activ[id_frag] = activ_fi;
                             fragArray->id_d[id_frag] = id_d_fi;
                         }
-                        else if (pos_fi > pos_f_ins){
+                        else if (pos_fi > pos_f_ins) {
                             fragArray->pos[id_frag] = pos_fi - pos_f_ins + 1;
                             fragArray->sub_pos[id_frag] = sub_pos_fi - sub_pos_f_ins + sub_len_f_pop; // UPDATE
                             fragArray->id_c[id_frag] = contig_f_ins;
@@ -1305,10 +1307,10 @@ extern "C"
                             fragArray->id[id_frag] = id_frag;
                             fragArray->ori[id_frag] = or_fi;
                             fragArray->prev[id_frag] = id_prev_fi;
-                            if (id_frag == id_prev_f_ins){
+                            if (id_frag == id_prev_f_ins) {
                                 fragArray->next[id_frag] = -1;
                             }
-                            else{
+                            else {
                                 fragArray->next[id_frag] = id_next_fi;
                             }
 //                            fragArray->next[id_frag] = id_next_fi;
@@ -1321,7 +1323,7 @@ extern "C"
                         }
                     }
                 }
-                else{
+                else {
                     fragArray->pos[id_frag] = pos_fi;
                     fragArray->sub_pos[id_frag] = sub_pos_fi;  // UPDATE
                     fragArray->id_c[id_frag] = contig_fi;
@@ -1342,8 +1344,8 @@ extern "C"
                 }
             }
         }
-        else{
-            if (id_frag < n_frags){
+        else {
+            if (id_frag < n_frags) {
                 fragArray->pos[id_frag] = o_fragArray->pos[id_frag];
                 fragArray->sub_pos[id_frag] = o_fragArray->sub_pos[id_frag];  // UPDATE
                 fragArray->id_c[id_frag] = o_fragArray->id_c[id_frag];
@@ -1369,7 +1371,7 @@ extern "C"
                                   int ori_f_pop,
                                   int n_frags)
     {
-    // split insert @ right
+        // split insert @ right
         __shared__ int contig_f_pop;
         __shared__ int pos_f_pop;
         __shared__ int sub_pos_f_pop;  // UPDATE
@@ -1400,7 +1402,7 @@ extern "C"
         __shared__ int activ_f_ins;
 
         int id_frag = threadIdx.x + blockDim.x * blockIdx.x;
-        if (threadIdx.x == 0){
+        if (threadIdx.x == 0) {
             contig_f_pop = o_fragArray->id_c[id_f_pop];
             pos_f_pop = o_fragArray->pos[id_f_pop];
             sub_pos_f_pop = o_fragArray->sub_pos[id_f_pop];  // UPDATE
@@ -1430,9 +1432,9 @@ extern "C"
             activ_f_ins = o_fragArray->activ[id_f_ins];
         }
         __syncthreads();
-        if ((activ_f_ins == 1) && ( activ_f_pop == 1)){
-            if (id_frag == id_f_pop){
-                if (circ_f_ins == 0){
+        if ((activ_f_ins == 1) && ( activ_f_pop == 1)) {
+            if (id_frag == id_f_pop) {
+                if (circ_f_ins == 0) {
                     fragArray->pos[id_frag] = pos_f_ins + 1;
                     fragArray->sub_pos[id_frag] = sub_pos_f_ins + sub_len_f_ins;  // UPDATE
                     fragArray->id_c[id_frag] = contig_f_ins;
@@ -1451,13 +1453,13 @@ extern "C"
                     fragArray->activ[id_frag] = o_fragArray->activ[id_frag];
                     fragArray->id_d[id_frag] = o_fragArray->id_d[id_frag];
                 }
-                else{
+                else {
                     fragArray->pos[id_frag] = (l_cont_f_ins - (pos_f_ins  + 1)) + pos_f_ins + 1;
                     fragArray->sub_pos[id_frag] = (sub_l_cont_f_ins - (sub_pos_f_ins  + sub_len_f_ins))
-                                                    + sub_pos_f_ins + sub_len_f_ins;  // UPDATE
+                                                  + sub_pos_f_ins + sub_len_f_ins;  // UPDATE
                     fragArray->id_c[id_frag] = contig_f_ins;
                     fragArray->start_bp[id_frag] = (l_cont_bp_f_ins - (start_bp_f_ins + len_bp_f_ins))
-                                                    + start_bp_f_ins + len_bp_f_ins;
+                                                   + start_bp_f_ins + len_bp_f_ins;
                     fragArray->len_bp[id_frag] = len_bp_f_pop;
                     fragArray->sub_len[id_frag] = sub_len_f_pop;  // UPDATE
                     fragArray->circ[id_frag] = 0;
@@ -1473,7 +1475,7 @@ extern "C"
                     fragArray->id_d[id_frag] = o_fragArray->id_d[id_frag];
                 }
             }
-            else if ((id_frag < n_frags) && (id_frag != id_f_pop)){
+            else if ((id_frag < n_frags) && (id_frag != id_f_pop)) {
                 int contig_fi = o_fragArray->id_c[id_frag];
                 int pos_fi = o_fragArray->pos[id_frag];
                 int sub_pos_fi = o_fragArray->sub_pos[id_frag];  // UPDATE
@@ -1490,9 +1492,9 @@ extern "C"
                 int rep_fi = o_fragArray->rep[id_frag];
                 int activ_fi = o_fragArray->activ[id_frag];
                 int id_d_fi = o_fragArray->id_d[id_frag];
-                if (contig_fi == contig_f_ins){
-                    if(circ_f_ins == 0){
-                        if (pos_fi < pos_f_ins){
+                if (contig_fi == contig_f_ins) {
+                    if(circ_f_ins == 0) {
+                        if (pos_fi < pos_f_ins) {
                             fragArray->pos[id_frag] = pos_fi;
                             fragArray->sub_pos[id_frag] = sub_pos_fi;  // UPDATE
                             fragArray->id_c[id_frag] = contig_f_ins;
@@ -1511,7 +1513,7 @@ extern "C"
                             fragArray->activ[id_frag] = activ_fi;
                             fragArray->id_d[id_frag] = id_d_fi;
                         }
-                        else if (pos_fi == pos_f_ins){
+                        else if (pos_fi == pos_f_ins) {
                             fragArray->pos[id_frag] = pos_fi;
                             fragArray->sub_pos[id_frag] = sub_pos_fi;  // UPDATE
                             fragArray->id_c[id_frag] = contig_f_ins;
@@ -1531,7 +1533,7 @@ extern "C"
                             fragArray->id_d[id_frag] = id_d_fi;
 
                         }
-                        else if (pos_fi > pos_f_ins){
+                        else if (pos_fi > pos_f_ins) {
                             fragArray->pos[id_frag] = pos_fi - (pos_f_ins + 1);
                             fragArray->sub_pos[id_frag] = sub_pos_fi - (sub_pos_f_ins + sub_len_f_ins);  // UPDATE
                             fragArray->id_c[id_frag] = max_id_contig + 1;
@@ -1541,10 +1543,10 @@ extern "C"
                             fragArray->circ[id_frag] = 0;
                             fragArray->id[id_frag] = id_frag;
                             fragArray->ori[id_frag] = or_fi;
-                            if (pos_fi == (pos_f_ins + 1)){
+                            if (pos_fi == (pos_f_ins + 1)) {
                                 fragArray->prev[id_frag] = -1;
                             }
-                            else{
+                            else {
                                 fragArray->prev[id_frag] = id_prev_fi;
                             }
                             fragArray->next[id_frag] = id_next_fi;
@@ -1557,23 +1559,23 @@ extern "C"
 
                         }
                     }
-                    else{//circular contig
-                        if (pos_fi < pos_f_ins){
+                    else { //circular contig
+                        if (pos_fi < pos_f_ins) {
                             fragArray->pos[id_frag] = (l_cont_f_ins - (pos_f_ins  + 1)) + pos_fi;
                             fragArray->sub_pos[id_frag] = (sub_l_cont_f_ins - (sub_pos_f_ins  + sub_len_f_ins))
-                                                            + sub_pos_fi;  // UPDATE
+                                                          + sub_pos_fi;  // UPDATE
                             fragArray->id_c[id_frag] = contig_f_ins;
                             fragArray->start_bp[id_frag] = (l_cont_bp_f_ins - (start_bp_f_ins + len_bp_f_ins))
-                                                            + start_bp_fi;
+                                                           + start_bp_fi;
                             fragArray->len_bp[id_frag] = len_bp_fi;
                             fragArray->sub_len[id_frag] = sub_len_fi;  // UPDATE
                             fragArray->circ[id_frag] = 0;
                             fragArray->id[id_frag] = id_frag;
                             fragArray->ori[id_frag] = or_fi;
-                            if (id_frag == id_next_f_ins){
+                            if (id_frag == id_next_f_ins) {
                                 fragArray->prev[id_frag] = -1;
                             }
-                            else{
+                            else {
                                 fragArray->prev[id_frag] = id_prev_fi;
                             }
 //                            fragArray->prev[id_frag] = id_prev_fi;
@@ -1586,13 +1588,13 @@ extern "C"
                             fragArray->id_d[id_frag] = id_d_fi;
 
                         }
-                        else if (pos_fi == pos_f_ins){
+                        else if (pos_fi == pos_f_ins) {
                             fragArray->pos[id_frag] = (l_cont_f_ins - (pos_f_ins  + 1)) + pos_f_ins;
                             fragArray->sub_pos[id_frag] = (sub_l_cont_f_ins - (sub_pos_f_ins  + sub_len_f_ins))
-                                                            + sub_pos_f_ins;  // UPDATE
+                                                          + sub_pos_f_ins;  // UPDATE
                             fragArray->id_c[id_frag] = contig_f_ins;
                             fragArray->start_bp[id_frag] = (l_cont_bp_f_ins - (start_bp_f_ins + len_bp_f_ins))
-                                                            + start_bp_f_ins;
+                                                           + start_bp_f_ins;
                             fragArray->len_bp[id_frag] = len_bp_f_ins;
                             fragArray->sub_len[id_frag] = sub_len_f_ins;  // UPDATE
                             fragArray->circ[id_frag] = 0;
@@ -1608,7 +1610,7 @@ extern "C"
                             fragArray->id_d[id_frag] = id_d_fi;
 
                         }
-                        else if (pos_fi > pos_f_ins){
+                        else if (pos_fi > pos_f_ins) {
                             fragArray->pos[id_frag] = pos_fi - (pos_f_ins + 1);
                             fragArray->sub_pos[id_frag] = sub_pos_fi - (sub_pos_f_ins + sub_len_f_ins);  // UPDATE
                             fragArray->id_c[id_frag] = contig_f_ins;
@@ -1618,10 +1620,10 @@ extern "C"
                             fragArray->circ[id_frag] = 0;
                             fragArray->id[id_frag] = id_frag;
                             fragArray->ori[id_frag] = or_fi;
-                            if (pos_fi == pos_f_ins +1){
+                            if (pos_fi == pos_f_ins +1) {
                                 fragArray->prev[id_frag] = -1;
                             }
-                            else{
+                            else {
                                 fragArray->prev[id_frag] = id_prev_fi;
                             }
                             fragArray->next[id_frag] = id_next_fi;
@@ -1635,7 +1637,7 @@ extern "C"
                         }
                     }
                 }
-                else{
+                else {
                     fragArray->pos[id_frag] = pos_fi;
                     fragArray->sub_pos[id_frag] = sub_pos_fi;  // UPDATE
                     fragArray->id_c[id_frag] = contig_fi;
@@ -1657,8 +1659,8 @@ extern "C"
                 }
             }
         }
-        else{
-            if (id_frag < n_frags){
+        else {
+            if (id_frag < n_frags) {
                 fragArray->pos[id_frag] = o_fragArray->pos[id_frag];
                 fragArray->sub_pos[id_frag] = o_fragArray->sub_pos[id_frag];  // UPDATE
                 fragArray->id_c[id_frag] = o_fragArray->id_c[id_frag];
@@ -1715,7 +1717,7 @@ extern "C"
         __shared__ int activ_f_ins;
 
         int id_frag = threadIdx.x + blockDim.x * blockIdx.x;
-        if (threadIdx.x == 0){
+        if (threadIdx.x == 0) {
             contig_f_pop = o_fragArray->id_c[id_f_pop];
             pos_f_pop = o_fragArray->pos[id_f_pop];
             sub_pos_f_pop = o_fragArray->sub_pos[id_f_pop];  // UPDATE
@@ -1745,8 +1747,8 @@ extern "C"
             activ_f_ins = o_fragArray->activ[id_f_ins];
         }
         __syncthreads();
-        if ((activ_f_ins == 1) && ( activ_f_pop == 1)){
-            if (id_frag == id_f_pop){
+        if ((activ_f_ins == 1) && ( activ_f_pop == 1)) {
+            if (id_frag == id_f_pop) {
                 fragArray->pos[id_frag] = pos_f_ins + 1;
                 fragArray->sub_pos[id_frag] = sub_pos_f_ins + sub_len_f_ins;  // UPDATE
                 fragArray->id_c[id_frag] = contig_f_ins;
@@ -1765,7 +1767,7 @@ extern "C"
                 fragArray->activ[id_frag] = o_fragArray->activ[id_frag];
                 fragArray->id_d[id_frag] = o_fragArray->id_d[id_frag];
             }
-            else if ((id_frag < n_frags) && (id_frag != id_f_pop)){
+            else if ((id_frag < n_frags) && (id_frag != id_f_pop)) {
                 int contig_fi = o_fragArray->id_c[id_frag];
                 int pos_fi = o_fragArray->pos[id_frag];
                 int sub_pos_fi = o_fragArray->sub_pos[id_frag];  // UPDATE
@@ -1782,8 +1784,8 @@ extern "C"
                 int rep_fi = o_fragArray->rep[id_frag];
                 int activ_fi = o_fragArray->activ[id_frag];
                 int id_d_fi = o_fragArray->id_d[id_frag];
-                if (contig_fi == contig_f_ins){
-                    if (pos_fi < pos_f_ins){
+                if (contig_fi == contig_f_ins) {
+                    if (pos_fi < pos_f_ins) {
                         fragArray->pos[id_frag] = pos_fi;
                         fragArray->sub_pos[id_frag] = sub_pos_fi; // UPDATE
                         fragArray->id_c[id_frag] = contig_f_ins;
@@ -1793,10 +1795,10 @@ extern "C"
                         fragArray->circ[id_frag] = circ_f_ins;
                         fragArray->id[id_frag] = id_frag;
                         fragArray->ori[id_frag] = or_fi;
-                        if ((id_frag == id_next_f_ins) && ( circ_f_ins == 1)){
+                        if ((id_frag == id_next_f_ins) && ( circ_f_ins == 1)) {
                             fragArray->prev[id_frag] = id_f_pop;
                         }
-                        else{
+                        else {
                             fragArray->prev[id_frag] = id_prev_fi;
                         }
                         fragArray->next[id_frag] = id_next_fi;
@@ -1808,7 +1810,7 @@ extern "C"
                         fragArray->id_d[id_frag] = id_d_fi;
 
                     }
-                    else if (pos_fi == pos_f_ins){
+                    else if (pos_fi == pos_f_ins) {
                         fragArray->pos[id_frag] = pos_fi;
                         fragArray->sub_pos[id_frag] = sub_pos_fi;  // UPDATE
                         fragArray->id_c[id_frag] = contig_f_ins;
@@ -1828,7 +1830,7 @@ extern "C"
                         fragArray->id_d[id_frag] = id_d_fi;
 
                     }
-                    else if (pos_fi > pos_f_ins){
+                    else if (pos_fi > pos_f_ins) {
                         fragArray->pos[id_frag] = pos_fi + 1;
                         fragArray->sub_pos[id_frag] = sub_pos_fi + sub_len_f_pop;  // UPDATE
                         fragArray->id_c[id_frag] = contig_f_ins;
@@ -1838,10 +1840,10 @@ extern "C"
                         fragArray->circ[id_frag] = circ_f_ins;
                         fragArray->id[id_frag] = id_frag;
                         fragArray->ori[id_frag] = or_fi;
-                        if (pos_fi == (pos_f_ins + 1)){
+                        if (pos_fi == (pos_f_ins + 1)) {
                             fragArray->prev[id_frag] = id_f_pop;
                         }
-                        else{
+                        else {
                             fragArray->prev[id_frag] = id_prev_fi;
                         }
                         fragArray->next[id_frag] = id_next_fi;
@@ -1854,7 +1856,7 @@ extern "C"
 
                     }
                 }
-                else{
+                else {
                     fragArray->pos[id_frag] = pos_fi;
                     fragArray->sub_pos[id_frag] = sub_pos_fi;  // UPDATE
                     fragArray->id_c[id_frag] = contig_fi;
@@ -1876,8 +1878,8 @@ extern "C"
                 }
             }
         }
-        else{
-            if (id_frag < n_frags){
+        else {
+            if (id_frag < n_frags) {
                 fragArray->pos[id_frag] = o_fragArray->pos[id_frag];
                 fragArray->sub_pos[id_frag] = o_fragArray->sub_pos[id_frag];  // UPDATE
                 fragArray->id_c[id_frag] = o_fragArray->id_c[id_frag];
@@ -2137,7 +2139,7 @@ extern "C"
         int id_frag = threadIdx.x + blockDim.x * blockIdx.x;
         int thread_can_write = id_frag == 0;
         int same_contigs, ins_is_ext, pop_is_ext, l_cont_f_pop, l_cont_f_ins, pos_f_pop, pos_f_ins;
-        if (threadIdx.x == 0){
+        if (threadIdx.x == 0) {
             contig_f_pop = fragArray->id_c[id_f_pop];
             contig_f_ins = fragArray->id_c[id_f_ins];
 
@@ -2152,111 +2154,111 @@ extern "C"
             ins_is_ext = (pos_f_ins == 0) || (pos_f_ins == (l_cont_f_ins - 1));
             pop_is_ext = (pos_f_pop == 0) || (pos_f_pop == (l_cont_f_pop - 1));
 
-            for(i = 0; i < n_bounds; i++){
-                 if (i == 0){
-                    if (same_contigs){ // local flip
+            for(i = 0; i < n_bounds; i++) {
+                if (i == 0) {
+                    if (same_contigs) { // local flip
                         if ((pos_f_ins < pos_f_pop - 1)) { // cut upstream and intra flip ok
                             pos_cut_up = pos_f_ins + 1;
                             pos_cut_down = pos_f_pop;
                         }
-                        else if (pos_f_ins > pos_f_pop + 1){ // cut downstream and intra flip ok
+                        else if (pos_f_ins > pos_f_pop + 1) { // cut downstream and intra flip ok
                             pos_cut_down = pos_f_ins - 1;
                             pos_cut_up = pos_f_pop;
                         }
-                        else{
+                        else {
                             pos_cut_up = pos_f_pop;
                             pos_cut_down = pos_f_pop;
                         }
                     }
-                    else{
+                    else {
                         pos_cut_up = pos_f_pop;
                         pos_cut_down = pos_f_pop;
                     }
-                 }
-                 else if ((i > 0) && ( i < n_bounds - 1)){ // inter intra insert block
-                    pos_cut_up = max(0 , pos_f_pop - list_bounds[i - 1]);
+                }
+                else if ((i > 0) && ( i < n_bounds - 1)) { // inter intra insert block
+                    pos_cut_up = max(0, pos_f_pop - list_bounds[i - 1]);
                     pos_cut_down = min(l_cont_f_pop - 1, pos_f_pop + list_bounds[i - 1]);
-                 }
-                 else{ // inter intra big insert
+                }
+                else { // inter intra big insert
                     pos_cut_up = 0;
                     pos_cut_down = l_cont_f_pop - 1;
-                 }
-                 ///////////////////////////////////////////////////////////////////////////////////////////////////////
-                 if (same_contigs && (pos_f_ins <= pos_f_pop) && (pos_f_ins >=pos_cut_up)){ // test validity
-                     list_pos_cut_up[i] = -1;
-                     if (thread_can_write){
-                         list_valid_insert[i * 2] = -1;
-                     }
-                 }
-                 else{ // test on unicity of the mutation
-                     list_pos_cut_up[i] = pos_cut_up;
-                     if (pos_cut_up == 0){
+                }
+                ///////////////////////////////////////////////////////////////////////////////////////////////////////
+                if (same_contigs && (pos_f_ins <= pos_f_pop) && (pos_f_ins >=pos_cut_up)) { // test validity
+                    list_pos_cut_up[i] = -1;
+                    if (thread_can_write) {
+                        list_valid_insert[i * 2] = -1;
+                    }
+                }
+                else { // test on unicity of the mutation
+                    list_pos_cut_up[i] = pos_cut_up;
+                    if (pos_cut_up == 0) {
                         size_extract = pos_f_pop - pos_cut_up;
-                        if ((size_extract == 1) || (ins_is_ext)){
-                            if (thread_can_write){
+                        if ((size_extract == 1) || (ins_is_ext)) {
+                            if (thread_can_write) {
                                 list_valid_insert[i * 2] = -1;
                             }
                             list_pos_cut_up[i] = -1;
 
                         }
-                        else{
-                            if (thread_can_write){
+                        else {
+                            if (thread_can_write) {
                                 list_valid_insert[i * 2] = 1;
                             }
                         }
-                     }
-                     else{
-                        if (thread_can_write){
+                    }
+                    else {
+                        if (thread_can_write) {
                             list_valid_insert[i * 2] = 1;
                         }
-                     }
+                    }
 
-                 }
-                 ///////////////////////////////////////////////////////////////////////////////////////////////////////
-                 if (same_contigs && (((pos_f_ins >= pos_f_pop) && (pos_f_ins <= pos_cut_down)) || (pos_f_ins == (pos_f_pop - 1)))){// test validity
-                     list_pos_cut_down[i] = -1;
-                     if (thread_can_write){
-                         list_valid_insert[i * 2 + 1] = -1;
-                     }
-                 }
-                 else{ // test on unicity of the mutation
-                     list_pos_cut_down[i] = pos_cut_down;
-                     if (pos_cut_down == l_cont_f_pop - 1){
+                }
+                ///////////////////////////////////////////////////////////////////////////////////////////////////////
+                if (same_contigs && (((pos_f_ins >= pos_f_pop) && (pos_f_ins <= pos_cut_down)) || (pos_f_ins == (pos_f_pop - 1)))) { // test validity
+                    list_pos_cut_down[i] = -1;
+                    if (thread_can_write) {
+                        list_valid_insert[i * 2 + 1] = -1;
+                    }
+                }
+                else { // test on unicity of the mutation
+                    list_pos_cut_down[i] = pos_cut_down;
+                    if (pos_cut_down == l_cont_f_pop - 1) {
                         size_extract = pos_cut_down - pos_f_pop;
-                        if ((size_extract == 1) || (ins_is_ext)){
-                            if (thread_can_write){
+                        if ((size_extract == 1) || (ins_is_ext)) {
+                            if (thread_can_write) {
                                 list_valid_insert[i * 2 + 1] = -1;
                             }
                             list_pos_cut_down[i] = -1;
                         }
-                        else{
-                            if (thread_can_write){
+                        else {
+                            if (thread_can_write) {
                                 list_valid_insert[i * 2 + 1] = 1;
                             }
                         }
-                     }
-                     else{
-                        if (thread_can_write){
+                    }
+                    else {
+                        if (thread_can_write) {
                             list_valid_insert[i * 2 + 1] = 1;
                         }
-                     }
-                 }
+                    }
+                }
 
             }
             ////////////////////////////////////////////////////////////////////////////////////////////////////////////
         }
         __syncthreads();
 
-        if (id_frag < n_frags){
-            if (fragArray->id_c[id_frag] == contig_f_pop){
-                for (i = 0; i < n_bounds; i++){
+        if (id_frag < n_frags) {
+            if (fragArray->id_c[id_frag] == contig_f_pop) {
+                for (i = 0; i < n_bounds; i++) {
 //                    id_f_cut_upstream[i] = -1;
 //                    id_f_cut_downstream[i] = -1;
 
-                    if (fragArray->pos[id_frag] == list_pos_cut_down[i]){
+                    if (fragArray->pos[id_frag] == list_pos_cut_down[i]) {
                         id_f_cut_downstream[i] = id_frag;
                     }
-                    if (fragArray->pos[id_frag] == list_pos_cut_up[i]){
+                    if (fragArray->pos[id_frag] == list_pos_cut_up[i]) {
                         id_f_cut_upstream[i] = id_frag;
                     }
                 }
@@ -2436,7 +2438,7 @@ extern "C"
 
         int id_frag = threadIdx.x + blockDim.x * blockIdx.x;
 
-        if (threadIdx.x == 0){
+        if (threadIdx.x == 0) {
 
 
             contig_f_cut = o_fragArray->id_c[id_f_cut_a];
@@ -2456,7 +2458,7 @@ extern "C"
             activ_f_cut_a = o_fragArray->activ[id_f_cut_a];
 
             id_f_cut_b = list_id_f_cut_b[id_fb];
-            if (id_f_cut_b >= 0){
+            if (id_f_cut_b >= 0) {
                 pos_f_cut_b = o_fragArray->pos[id_f_cut_b];
                 sub_pos_f_cut_b = o_fragArray->sub_pos[id_f_cut_b]; //UPDATE
                 len_bp_f_cut_b = o_fragArray->len_bp[id_f_cut_b];
@@ -2467,24 +2469,24 @@ extern "C"
                 or_f_cut_b = o_fragArray->ori[id_f_cut_b];
                 activ_f_cut_b = o_fragArray->activ[id_f_cut_b];
 
-                if (upstream == 1){
+                if (upstream == 1) {
                     size_extract = pos_f_cut_a - pos_f_cut_b + 1;
                     sub_size_extract = sub_pos_f_cut_a - sub_pos_f_cut_b + sub_len_f_cut_a;
 
                     size_extract_bp = start_bp_f_cut_a - start_bp_f_cut_b + len_bp_f_cut_a;
                 }
-                else{
+                else {
                     size_extract = pos_f_cut_b - pos_f_cut_a + 1;
                     sub_size_extract = sub_pos_f_cut_b - sub_pos_f_cut_a + sub_len_f_cut_b;
                     size_extract_bp = start_bp_f_cut_b - start_bp_f_cut_a + len_bp_f_cut_b;
                 }
             }
-            else{
+            else {
                 activ_f_cut_b = 0;
             }
         }
         __syncthreads();
-        if (id_frag < n_frags){
+        if (id_frag < n_frags) {
             int contig_fi = o_fragArray->id_c[id_frag];
             int pos_fi = o_fragArray->pos[id_frag];
             int sub_pos_fi = o_fragArray->sub_pos[id_frag]; //UPDATE
@@ -2502,10 +2504,10 @@ extern "C"
             int activ_fi = o_fragArray->activ[id_frag];
             int id_d_fi = o_fragArray->id_d[id_frag];
 //            if ((activ_f_cut_a == 1) && (activ_f_cut_b == 1) && (l_cont_f_cut > 2)){
-            if ((activ_f_cut_a == 1) && (activ_f_cut_b == 1)){
-                if (contig_fi == contig_f_cut){
-                    if (upstream == 1){
-                        if (pos_fi < pos_f_cut_b){
+            if ((activ_f_cut_a == 1) && (activ_f_cut_b == 1)) {
+                if (contig_fi == contig_f_cut) {
+                    if (upstream == 1) {
+                        if (pos_fi < pos_f_cut_b) {
                             fragArray->pos[id_frag] = pos_fi;
                             fragArray->sub_pos[id_frag] = sub_pos_fi; // UPDATE
                             fragArray->id_c[id_frag] = contig_f_cut;
@@ -2517,10 +2519,10 @@ extern "C"
                             fragArray->id[id_frag] = id_frag;
                             fragArray->ori[id_frag] = or_fi;
                             fragArray->prev[id_frag] = id_prev_fi;
-                            if (pos_fi == pos_f_cut_b - 1){
+                            if (pos_fi == pos_f_cut_b - 1) {
                                 fragArray->next[id_frag] = id_next_f_cut_a;
                             }
-                            else{
+                            else {
                                 fragArray->next[id_frag] = id_next_fi;
                             }
                             fragArray->l_cont[id_frag] = l_cont_f_cut - size_extract;
@@ -2530,7 +2532,7 @@ extern "C"
                             fragArray->activ[id_frag] = activ_fi;
                             fragArray->rep[id_frag] = rep_fi;
                         }
-                        else if((pos_fi >= pos_f_cut_b) && (pos_fi <= pos_f_cut_a)){
+                        else if((pos_fi >= pos_f_cut_b) && (pos_fi <= pos_f_cut_a)) {
                             fragArray->pos[id_frag] = pos_fi - pos_f_cut_b;
                             fragArray->sub_pos[id_frag] = sub_pos_fi - sub_pos_f_cut_b; //UPDATE
                             fragArray->id_c[id_frag] = max_id_contig + 1;
@@ -2541,16 +2543,16 @@ extern "C"
                             fragArray->circ[id_frag] = 0;
                             fragArray->id[id_frag] = id_frag;
                             fragArray->ori[id_frag] = or_fi;
-                            if (pos_fi == pos_f_cut_b){
+                            if (pos_fi == pos_f_cut_b) {
                                 fragArray->prev[id_frag] = -1;
                             }
-                            else{
+                            else {
                                 fragArray->prev[id_frag] = id_prev_fi;
                             }
-                            if (pos_fi == pos_f_cut_a){
+                            if (pos_fi == pos_f_cut_a) {
                                 fragArray->next[id_frag] = -1;
                             }
-                            else{
+                            else {
                                 fragArray->next[id_frag] = id_next_fi;
                             }
                             fragArray->l_cont[id_frag] = size_extract;
@@ -2560,7 +2562,7 @@ extern "C"
                             fragArray->activ[id_frag] = activ_fi;
                             fragArray->rep[id_frag] = rep_fi;
                         }
-                        else if (pos_fi > pos_f_cut_a){
+                        else if (pos_fi > pos_f_cut_a) {
                             fragArray->pos[id_frag] = pos_fi - size_extract;
                             fragArray->sub_pos[id_frag] = sub_pos_fi - sub_size_extract; //UPDATE
                             fragArray->id_c[id_frag] = contig_f_cut;
@@ -2571,10 +2573,10 @@ extern "C"
                             fragArray->circ[id_frag] = circ_f_cut;
                             fragArray->id[id_frag] = id_frag;
                             fragArray->ori[id_frag] = or_fi;
-                            if (pos_fi == pos_f_cut_a + 1){
+                            if (pos_fi == pos_f_cut_a + 1) {
                                 fragArray->prev[id_frag] = id_prev_f_cut_b;
                             }
-                            else{
+                            else {
                                 fragArray->prev[id_frag] = id_prev_fi;
                             }
 
@@ -2588,7 +2590,7 @@ extern "C"
                         }
                     }
                     else {
-                        if (pos_fi < pos_f_cut_a){
+                        if (pos_fi < pos_f_cut_a) {
                             fragArray->pos[id_frag] = pos_fi;
                             fragArray->sub_pos[id_frag] = sub_pos_fi; //UPDATE
                             fragArray->id_c[id_frag] = contig_f_cut;
@@ -2600,10 +2602,10 @@ extern "C"
                             fragArray->id[id_frag] = id_frag;
                             fragArray->ori[id_frag] = or_fi;
                             fragArray->prev[id_frag] = id_prev_fi;
-                            if (pos_fi == pos_f_cut_a - 1){
+                            if (pos_fi == pos_f_cut_a - 1) {
                                 fragArray->next[id_frag] = id_next_f_cut_b;
                             }
-                            else{
+                            else {
                                 fragArray->next[id_frag] = id_next_fi;
                             }
                             fragArray->l_cont[id_frag] = l_cont_f_cut - size_extract;
@@ -2613,7 +2615,7 @@ extern "C"
                             fragArray->activ[id_frag] = activ_fi;
                             fragArray->rep[id_frag] = rep_fi;
                         }
-                        else if((pos_fi >= pos_f_cut_a) && (pos_fi <= pos_f_cut_b)){
+                        else if((pos_fi >= pos_f_cut_a) && (pos_fi <= pos_f_cut_b)) {
                             fragArray->pos[id_frag] = pos_fi - pos_f_cut_a;
                             fragArray->sub_pos[id_frag] = sub_pos_fi - sub_pos_f_cut_a; //UPDATE
                             fragArray->id_c[id_frag] = max_id_contig + 1;
@@ -2624,16 +2626,16 @@ extern "C"
                             fragArray->circ[id_frag] = 0;
                             fragArray->id[id_frag] = id_frag;
                             fragArray->ori[id_frag] = or_fi;
-                            if (pos_fi == pos_f_cut_a){
+                            if (pos_fi == pos_f_cut_a) {
                                 fragArray->prev[id_frag] = -1;
                             }
-                            else{
+                            else {
                                 fragArray->prev[id_frag] = id_prev_fi;
                             }
-                            if (pos_fi == pos_f_cut_b){
+                            if (pos_fi == pos_f_cut_b) {
                                 fragArray->next[id_frag] = -1;
                             }
-                            else{
+                            else {
                                 fragArray->next[id_frag] = id_next_fi;
                             }
                             fragArray->l_cont[id_frag] = size_extract;
@@ -2643,7 +2645,7 @@ extern "C"
                             fragArray->activ[id_frag] = activ_fi;
                             fragArray->rep[id_frag] = rep_fi;
                         }
-                        else if (pos_fi > pos_f_cut_b){
+                        else if (pos_fi > pos_f_cut_b) {
                             fragArray->pos[id_frag] = pos_fi - size_extract;
                             fragArray->sub_pos[id_frag] = sub_pos_fi - sub_size_extract;//UPDATE
                             fragArray->id_c[id_frag] = contig_f_cut;
@@ -2654,10 +2656,10 @@ extern "C"
                             fragArray->circ[id_frag] = circ_f_cut;
                             fragArray->id[id_frag] = id_frag;
                             fragArray->ori[id_frag] = or_fi;
-                            if (pos_fi == pos_f_cut_b + 1){
+                            if (pos_fi == pos_f_cut_b + 1) {
                                 fragArray->prev[id_frag] = id_prev_f_cut_a;
                             }
-                            else{
+                            else {
                                 fragArray->prev[id_frag] = id_prev_fi;
                             }
                             fragArray->next[id_frag] = id_next_fi;
@@ -2671,7 +2673,7 @@ extern "C"
                     }
 
                 }
-                else{
+                else {
                     fragArray->pos[id_frag] = pos_fi;
                     fragArray->sub_pos[id_frag] = sub_pos_fi; //UPDATE
                     fragArray->id_c[id_frag] = contig_fi;
@@ -2692,7 +2694,7 @@ extern "C"
                     fragArray->rep[id_frag] = rep_fi;
                 }
             }
-            else{
+            else {
                 fragArray->pos[id_frag] = pos_fi;
                 fragArray->sub_pos[id_frag] = sub_pos_fi; //UPDATE
                 fragArray->id_c[id_frag] = contig_fi;
@@ -2752,7 +2754,7 @@ extern "C"
         __shared__ int id_extremity;
 
         int id_frag = threadIdx.x + blockDim.x * blockIdx.x;
-        if (threadIdx.x == 0){
+        if (threadIdx.x == 0) {
             contig_f_pop = o_fragArray->id_c[id_f_pop];
             l_cont_f_pop = o_fragArray->l_cont[id_f_pop];
             sub_l_cont_f_pop = o_fragArray->sub_l_cont[id_f_pop];//UPDATE
@@ -2776,8 +2778,8 @@ extern "C"
             id_extremity = list_id_bounds[id_bound];
         }
         __syncthreads();
-        if ((activ_f_ins == 1) && ( activ_f_pop == 1) && (contig_f_ins != contig_f_pop) && (list_valid_insert[id_mutation] != -1)){
-            if (id_frag < n_frags){
+        if ((activ_f_ins == 1) && ( activ_f_pop == 1) && (contig_f_ins != contig_f_pop) && (list_valid_insert[id_mutation] != -1)) {
+            if (id_frag < n_frags) {
                 int contig_fi = o_fragArray->id_c[id_frag];
                 int pos_fi = o_fragArray->pos[id_frag];
                 int sub_pos_fi = o_fragArray->sub_pos[id_frag]; //UPDATE
@@ -2794,8 +2796,8 @@ extern "C"
                 int rep_fi = o_fragArray->rep[id_frag];
                 int activ_fi = o_fragArray->activ[id_frag];
                 int id_d_fi = o_fragArray->id_d[id_frag];
-                if (contig_fi == contig_f_ins){
-                    if (pos_fi < pos_f_ins){
+                if (contig_fi == contig_f_ins) {
+                    if (pos_fi < pos_f_ins) {
                         fragArray->pos[id_frag] = pos_fi;
                         fragArray->sub_pos[id_frag] = sub_pos_fi; //UPDATE
                         fragArray->id_c[id_frag] = contig_f_ins;
@@ -2805,10 +2807,10 @@ extern "C"
                         fragArray->circ[id_frag] = circ_f_ins;
                         fragArray->id[id_frag] = id_frag;
                         fragArray->ori[id_frag] = or_fi;
-                        if ((id_frag == id_next_f_ins) && ( circ_f_ins == 1)){
+                        if ((id_frag == id_next_f_ins) && ( circ_f_ins == 1)) {
                             fragArray->prev[id_frag] = id_extremity;
                         }
-                        else{
+                        else {
                             fragArray->prev[id_frag] = id_prev_fi;
                         }
                         fragArray->next[id_frag] = id_next_fi;
@@ -2819,7 +2821,7 @@ extern "C"
                         fragArray->activ[id_frag] = activ_fi;
                         fragArray->id_d[id_frag] = id_d_fi;
                     }
-                    else if (pos_fi == pos_f_ins){
+                    else if (pos_fi == pos_f_ins) {
                         fragArray->pos[id_frag] = pos_fi;
                         fragArray->sub_pos[id_frag] = sub_pos_fi; //UPDATE
                         fragArray->id_c[id_frag] = contig_f_ins;
@@ -2838,7 +2840,7 @@ extern "C"
                         fragArray->activ[id_frag] = activ_fi;
                         fragArray->id_d[id_frag] = id_d_fi;
                     }
-                    else if (pos_fi > pos_f_ins){
+                    else if (pos_fi > pos_f_ins) {
                         fragArray->pos[id_frag] = pos_fi + l_cont_f_pop;
                         fragArray->sub_pos[id_frag] = sub_pos_fi + sub_l_cont_f_pop; //UPDATE
                         fragArray->id_c[id_frag] = contig_f_ins;
@@ -2848,10 +2850,10 @@ extern "C"
                         fragArray->circ[id_frag] = circ_f_ins;
                         fragArray->id[id_frag] = id_frag;
                         fragArray->ori[id_frag] = or_fi;
-                        if (pos_fi == (pos_f_ins + 1)){
+                        if (pos_fi == (pos_f_ins + 1)) {
                             fragArray->prev[id_frag] = id_extremity;
                         }
-                        else{
+                        else {
                             fragArray->prev[id_frag] = id_prev_fi;
                         }
                         fragArray->next[id_frag] = id_next_fi;
@@ -2863,8 +2865,8 @@ extern "C"
                         fragArray->id_d[id_frag] = id_d_fi;
                     }
                 }
-                else if (contig_fi == contig_f_pop){
-                    if (upstream == 0){
+                else if (contig_fi == contig_f_pop) {
+                    if (upstream == 0) {
                         fragArray->pos[id_frag] = pos_f_ins + 1 + pos_fi;
                         fragArray->sub_pos[id_frag] = sub_pos_f_ins + sub_len_f_ins + sub_pos_fi; //UPDATE
                         fragArray->id_c[id_frag] = contig_f_ins;
@@ -2874,16 +2876,16 @@ extern "C"
                         fragArray->circ[id_frag] = circ_f_ins;
                         fragArray->id[id_frag] = id_frag;
                         fragArray->ori[id_frag] = or_fi;
-                        if (pos_fi == 0){
+                        if (pos_fi == 0) {
                             fragArray->prev[id_frag] = id_f_ins;
                         }
-                        else{
+                        else {
                             fragArray->prev[id_frag] = id_prev_fi;
                         }
-                        if (pos_fi == l_cont_fi - 1){
+                        if (pos_fi == l_cont_fi - 1) {
                             fragArray->next[id_frag] = id_next_f_ins;
                         }
-                        else{
+                        else {
                             fragArray->next[id_frag] = id_next_fi;
                         }
                         fragArray->l_cont[id_frag] = l_cont_f_ins + l_cont_f_pop;
@@ -2893,28 +2895,28 @@ extern "C"
                         fragArray->activ[id_frag] = activ_fi;
                         fragArray->id_d[id_frag] = id_d_fi;
                     }
-                    else{
+                    else {
                         fragArray->pos[id_frag] = pos_f_ins + 1 + (l_cont_f_pop - pos_fi - 1);
                         fragArray->sub_pos[id_frag] = sub_pos_f_ins + sub_len_f_ins + (sub_l_cont_f_pop - sub_pos_fi -
-                                                                                       sub_len_fi); //UPDATE
+                                                      sub_len_fi); //UPDATE
                         fragArray->id_c[id_frag] = contig_f_ins;
                         fragArray->start_bp[id_frag] = start_bp_f_ins + len_bp_f_ins + (l_cont_bp_f_pop - start_bp_fi -
-                                                                                        len_bp_fi);
+                                                       len_bp_fi);
                         fragArray->len_bp[id_frag] = len_bp_fi;
                         fragArray->sub_len[id_frag] = sub_len_fi; //UPDATE
                         fragArray->circ[id_frag] = circ_f_ins;
                         fragArray->id[id_frag] = id_frag;
                         fragArray->ori[id_frag] = or_fi * -1;
-                        if (pos_fi == l_cont_fi - 1){
+                        if (pos_fi == l_cont_fi - 1) {
                             fragArray->prev[id_frag] = id_f_ins;
                         }
-                        else{
+                        else {
                             fragArray->prev[id_frag] = id_next_fi;
                         }
-                        if (pos_fi == 0){
+                        if (pos_fi == 0) {
                             fragArray->next[id_frag] = id_next_f_ins;
                         }
-                        else{
+                        else {
                             fragArray->next[id_frag] = id_prev_fi;
                         }
                         fragArray->l_cont[id_frag] = l_cont_f_ins + l_cont_f_pop;
@@ -2925,7 +2927,7 @@ extern "C"
                         fragArray->id_d[id_frag] = id_d_fi;
                     }
                 }
-                else{
+                else {
                     fragArray->pos[id_frag] = pos_fi;
                     fragArray->sub_pos[id_frag] = sub_pos_fi; //UPDATE
                     fragArray->id_c[id_frag] = contig_fi;
@@ -2947,8 +2949,8 @@ extern "C"
                 }
             }
         }
-        else{
-            if (id_frag < n_frags){
+        else {
+            if (id_frag < n_frags) {
                 fragArray->pos[id_frag] = init_fragArray->pos[id_frag];
                 fragArray->sub_pos[id_frag] = init_fragArray->sub_pos[id_frag]; //UPDATE
                 fragArray->id_c[id_frag] = init_fragArray->id_c[id_frag];
@@ -2990,7 +2992,7 @@ extern "C"
         __shared__ int activ_f_cut;
 
         int id_frag = threadIdx.x + blockDim.x * blockIdx.x;
-        if (threadIdx.x == 0){
+        if (threadIdx.x == 0) {
             contig_f_cut = o_fragArray->id_c[id_f_cut];
             pos_f_cut = o_fragArray->pos[id_f_cut];
             sub_pos_f_cut = o_fragArray->sub_pos[id_f_cut];  // UPDATE
@@ -3007,7 +3009,7 @@ extern "C"
             activ_f_cut = o_fragArray->activ[id_f_cut];
         }
         __syncthreads();
-        if (id_frag < n_frags){
+        if (id_frag < n_frags) {
             int contig_fi = o_fragArray->id_c[id_frag];
             int pos_fi = o_fragArray->pos[id_frag];
             int sub_pos_fi = o_fragArray->sub_pos[id_frag]; // UPDATE
@@ -3024,11 +3026,11 @@ extern "C"
             int rep_fi = o_fragArray->rep[id_frag];
             int activ_fi = o_fragArray->activ[id_frag];
             int id_d_fi = o_fragArray->id_d[id_frag];
-            if ((activ_f_cut == 1) && (l_cont_f_cut > 1)){
-                if (contig_fi == contig_f_cut){
-                    if (circ_f_cut == 0){ // linear contig
-                        if (upstream == 1){
-                            if (pos_fi < pos_f_cut){
+            if ((activ_f_cut == 1) && (l_cont_f_cut > 1)) {
+                if (contig_fi == contig_f_cut) {
+                    if (circ_f_cut == 0) { // linear contig
+                        if (upstream == 1) {
+                            if (pos_fi < pos_f_cut) {
                                 fragArray->pos[id_frag] = pos_fi;
                                 fragArray->sub_pos[id_frag] = sub_pos_fi;  // UPDATE
                                 fragArray->id_c[id_frag] = contig_f_cut;
@@ -3040,10 +3042,10 @@ extern "C"
                                 fragArray->id[id_frag] = id_frag;
                                 fragArray->ori[id_frag] = or_fi;
                                 fragArray->prev[id_frag] = id_prev_fi;
-                                if (pos_fi == pos_f_cut - 1){
+                                if (pos_fi == pos_f_cut - 1) {
                                     fragArray->next[id_frag] = -1;
                                 }
-                                else{
+                                else {
                                     fragArray->next[id_frag] = id_next_fi;
                                 }
                                 fragArray->l_cont[id_frag] = pos_f_cut;
@@ -3053,7 +3055,7 @@ extern "C"
                                 fragArray->activ[id_frag] = activ_fi;
                                 fragArray->rep[id_frag] = rep_fi;
                             }
-                            else if(pos_fi == pos_f_cut){
+                            else if(pos_fi == pos_f_cut) {
                                 fragArray->pos[id_frag] = 0;
                                 fragArray->sub_pos[id_frag] = 0;  // UPDATE
                                 fragArray->id_c[id_frag] = max_id_contig + 1;
@@ -3073,7 +3075,7 @@ extern "C"
                                 fragArray->activ[id_frag] = activ_fi;
                                 fragArray->rep[id_frag] = rep_fi;
                             }
-                            else if (pos_fi > pos_f_cut){
+                            else if (pos_fi > pos_f_cut) {
                                 fragArray->pos[id_frag] = pos_fi - pos_f_cut;
                                 fragArray->sub_pos[id_frag] = sub_pos_fi - sub_pos_f_cut;  // UPDATE
                                 fragArray->id_c[id_frag] = max_id_contig + 1;
@@ -3094,8 +3096,8 @@ extern "C"
                                 fragArray->rep[id_frag] = rep_fi;
                             }
                         }
-                        else{
-                            if (pos_fi < pos_f_cut){
+                        else {
+                            if (pos_fi < pos_f_cut) {
                                 fragArray->pos[id_frag] = pos_fi;
                                 fragArray->sub_pos[id_frag] = sub_pos_fi;  // UPDATE
                                 fragArray->id_c[id_frag] = contig_f_cut;
@@ -3115,7 +3117,7 @@ extern "C"
                                 fragArray->activ[id_frag] = activ_fi;
                                 fragArray->rep[id_frag] = rep_fi;
                             }
-                            else if(pos_fi == pos_f_cut){
+                            else if(pos_fi == pos_f_cut) {
                                 fragArray->pos[id_frag] = pos_f_cut;
                                 fragArray->sub_pos[id_frag] = sub_pos_f_cut;  // UPDATE
                                 fragArray->id_c[id_frag] = contig_f_cut;
@@ -3135,7 +3137,7 @@ extern "C"
                                 fragArray->activ[id_frag] = activ_fi;
                                 fragArray->rep[id_frag] = rep_fi;
                             }
-                            else if (pos_fi > pos_f_cut){
+                            else if (pos_fi > pos_f_cut) {
                                 fragArray->pos[id_frag] = pos_fi - (pos_f_cut + 1);
                                 fragArray->sub_pos[id_frag] = sub_pos_fi - (sub_pos_f_cut + sub_len_f_cut);  // UPDATE
                                 fragArray->id_c[id_frag] = max_id_contig + 1;
@@ -3146,10 +3148,10 @@ extern "C"
                                 fragArray->circ[id_frag] = 0;
                                 fragArray->id[id_frag] = id_frag;
                                 fragArray->ori[id_frag] = or_fi;
-                                if (pos_fi == pos_f_cut + 1){
+                                if (pos_fi == pos_f_cut + 1) {
                                     fragArray->prev[id_frag] = -1;
                                 }
-                                else{
+                                else {
                                     fragArray->prev[id_frag] = id_prev_fi;
                                 }
                                 fragArray->next[id_frag] = id_next_fi;
@@ -3162,9 +3164,9 @@ extern "C"
                             }
                         }
                     }
-                    else{ // circular contig
-                        if (upstream ==1){
-                            if (pos_fi < pos_f_cut){
+                    else { // circular contig
+                        if (upstream ==1) {
+                            if (pos_fi < pos_f_cut) {
                                 fragArray->pos[id_frag] = l_cont_f_cut - pos_f_cut + pos_fi;
                                 fragArray->sub_pos[id_frag] = sub_l_cont_f_cut - sub_pos_f_cut + sub_pos_fi;  // UPDATE
                                 fragArray->id_c[id_frag] = contig_f_cut;
@@ -3176,10 +3178,10 @@ extern "C"
                                 fragArray->id[id_frag] = id_frag;
                                 fragArray->ori[id_frag] = or_fi;
                                 fragArray->prev[id_frag] = id_prev_fi;
-                                if (pos_fi == pos_f_cut - 1){
+                                if (pos_fi == pos_f_cut - 1) {
                                     fragArray->next[id_frag] = -1;
                                 }
-                                else{
+                                else {
                                     fragArray->next[id_frag] = id_next_fi;
                                 }
                                 fragArray->l_cont[id_frag] = l_cont_f_cut;
@@ -3189,7 +3191,7 @@ extern "C"
                                 fragArray->activ[id_frag] = activ_fi;
                                 fragArray->rep[id_frag] = rep_fi;
                             }
-                            else if (pos_fi == pos_f_cut){
+                            else if (pos_fi == pos_f_cut) {
                                 fragArray->pos[id_frag] = 0;
                                 fragArray->sub_pos[id_frag] = 0;
                                 fragArray->id_c[id_frag] = contig_f_cut;
@@ -3209,7 +3211,7 @@ extern "C"
                                 fragArray->activ[id_frag] = activ_fi;
                                 fragArray->rep[id_frag] = rep_fi;
                             }
-                            else if (pos_fi > pos_f_cut){
+                            else if (pos_fi > pos_f_cut) {
                                 fragArray->pos[id_frag] = pos_fi - pos_f_cut;
                                 fragArray->sub_pos[id_frag] = sub_pos_fi - sub_pos_f_cut;  // UPDATE
                                 fragArray->id_c[id_frag] = contig_f_cut;
@@ -3221,10 +3223,10 @@ extern "C"
                                 fragArray->id[id_frag] = id_frag;
                                 fragArray->ori[id_frag] = or_fi;
                                 fragArray->prev[id_frag] = id_prev_fi;
-                                if (id_frag == id_prev_f_cut){
+                                if (id_frag == id_prev_f_cut) {
                                     fragArray->next[id_frag] = -1;
                                 }
-                                else{
+                                else {
                                     fragArray->next[id_frag] = id_next_fi;
                                 }
 //                                fragArray->next[id_frag] = id_next_fi;
@@ -3236,25 +3238,25 @@ extern "C"
                                 fragArray->rep[id_frag] = rep_fi;
                             }
                         }
-                        else{
-                            if (pos_fi < pos_f_cut){
+                        else {
+                            if (pos_fi < pos_f_cut) {
                                 fragArray->pos[id_frag] = (l_cont_f_cut - (pos_f_cut  + 1)) + pos_fi;
                                 fragArray->sub_pos[id_frag] = (sub_l_cont_f_cut - (sub_pos_f_cut  + sub_len_f_cut))
-                                                                + sub_pos_fi;  // UPDATE
+                                                              + sub_pos_fi;  // UPDATE
                                 fragArray->id_c[id_frag] = contig_f_cut;
                                 split_id_contigs[id_frag] = contig_f_cut;
                                 fragArray->start_bp[id_frag] = (l_cont_bp_f_cut - (start_bp_f_cut + len_bp_f_cut))
-                                                                + start_bp_fi;
+                                                               + start_bp_fi;
                                 fragArray->len_bp[id_frag] = len_bp_fi;
                                 fragArray->sub_len[id_frag] = sub_len_fi;  // UPDATE
                                 fragArray->circ[id_frag] = 0;
                                 fragArray->id[id_frag] = id_frag;
                                 fragArray->ori[id_frag] = or_fi;
 //                                fragArray->prev[id_frag] = id_prev_fi;
-                                if (id_frag == id_next_f_cut){
+                                if (id_frag == id_next_f_cut) {
                                     fragArray->prev[id_frag] = -1;
                                 }
-                                else{
+                                else {
                                     fragArray->prev[id_frag] = id_prev_fi;
                                 }
                                 fragArray->next[id_frag] = id_next_fi;
@@ -3265,14 +3267,14 @@ extern "C"
                                 fragArray->activ[id_frag] = activ_fi;
                                 fragArray->rep[id_frag] = rep_fi;
                             }
-                            else if (pos_fi == pos_f_cut){
+                            else if (pos_fi == pos_f_cut) {
                                 fragArray->pos[id_frag] = (l_cont_f_cut - (pos_f_cut  + 1)) + pos_fi;
                                 fragArray->sub_pos[id_frag] = (sub_l_cont_f_cut - (sub_pos_f_cut  + sub_len_f_cut))
-                                                                + sub_pos_f_cut;  // UPDATE
+                                                              + sub_pos_f_cut;  // UPDATE
                                 fragArray->id_c[id_frag] = contig_f_cut;
                                 split_id_contigs[id_frag] = contig_f_cut;
                                 fragArray->start_bp[id_frag] = (l_cont_bp_f_cut - (start_bp_f_cut + len_bp_f_cut))
-                                                                + start_bp_f_cut;
+                                                               + start_bp_f_cut;
                                 fragArray->len_bp[id_frag] = len_bp_f_cut;
                                 fragArray->sub_len[id_frag] = sub_len_f_cut;  // UPDATE
                                 fragArray->circ[id_frag] = 0;
@@ -3287,7 +3289,7 @@ extern "C"
                                 fragArray->activ[id_frag] = activ_fi;
                                 fragArray->rep[id_frag] = rep_fi;
                             }
-                            else if (pos_fi > pos_f_cut){
+                            else if (pos_fi > pos_f_cut) {
                                 fragArray->pos[id_frag] = pos_fi - (pos_f_cut + 1);
                                 fragArray->sub_pos[id_frag] = sub_pos_fi - (sub_pos_f_cut + sub_len_f_cut);  // UPDATE
                                 fragArray->id_c[id_frag] = contig_f_cut;
@@ -3298,10 +3300,10 @@ extern "C"
                                 fragArray->circ[id_frag] = 0;
                                 fragArray->id[id_frag] = id_frag;
                                 fragArray->ori[id_frag] = or_fi;
-                                if (pos_fi == pos_f_cut +1){
+                                if (pos_fi == pos_f_cut +1) {
                                     fragArray->prev[id_frag] = -1;
                                 }
-                                else{
+                                else {
                                     fragArray->prev[id_frag] = id_prev_fi;
                                 }
                                 fragArray->next[id_frag] = id_next_fi;
@@ -3315,7 +3317,7 @@ extern "C"
                         }
                     }
                 }
-                else{
+                else {
                     fragArray->pos[id_frag] = pos_fi;
                     fragArray->sub_pos[id_frag] = sub_pos_fi;  // UPDATE
                     fragArray->id_c[id_frag] = contig_fi;
@@ -3336,7 +3338,7 @@ extern "C"
                     fragArray->rep[id_frag] = rep_fi;
                 }
             }
-            else{
+            else {
                 fragArray->pos[id_frag] = pos_fi;
                 fragArray->sub_pos[id_frag] = sub_pos_fi;  // UPDATE
                 fragArray->id_c[id_frag] = contig_fi;
@@ -3393,7 +3395,7 @@ extern "C"
         __shared__ int activ_fB;
 
         int id_frag = threadIdx.x + blockDim.x * blockIdx.x;
-        if (threadIdx.x == 0){
+        if (threadIdx.x == 0) {
             contig_fA = o_fragArray->id_c[id_fA];
             pos_fA = o_fragArray->pos[id_fA];
             sub_pos_fA = o_fragArray->sub_pos[id_fA]; // UPDATE
@@ -3443,11 +3445,11 @@ extern "C"
         int activ_fi = o_fragArray->activ[id_frag];
         int id_d_fi = o_fragArray->id_d[id_frag];
 
-        if (id_frag < n_frags){
-            if ( (activ_fA == 1) && ( activ_fB == 1) ){
-                if (contig_fA != contig_fB){
-                    if (contig_fi == contig_fA){
-                        if (pos_fA == 0){
+        if (id_frag < n_frags) {
+            if ( (activ_fA == 1) && ( activ_fB == 1) ) {
+                if (contig_fA != contig_fB) {
+                    if (contig_fi == contig_fA) {
+                        if (pos_fA == 0) {
                             fragArray->pos[id_frag] = l_cont_fA - (pos_fi + 1);
                             fragArray->sub_pos[id_frag] = sub_l_cont_fA - (sub_pos_fi + sub_len_fi);  // UPDATE
                             fragArray->id_c[id_frag] = contig_fA;
@@ -3457,16 +3459,16 @@ extern "C"
                             fragArray->circ[id_frag] = 0;
                             fragArray->id[id_frag] = id_frag;
                             fragArray->ori[id_frag] = or_fi * -1;
-                            if (pos_fi == l_cont_fA - 1){
+                            if (pos_fi == l_cont_fA - 1) {
                                 fragArray->prev[id_frag] = -1;
                             }
-                            else{
+                            else {
                                 fragArray->prev[id_frag] = id_next_fi;
                             }
-                            if (pos_fi == pos_fA){
+                            if (pos_fi == pos_fA) {
                                 fragArray->next[id_frag] = id_fB;
                             }
-                            else{
+                            else {
                                 fragArray->next[id_frag] = id_prev_fi;
                             }
                             fragArray->l_cont[id_frag] = l_cont_fA + l_cont_fB;
@@ -3478,7 +3480,7 @@ extern "C"
 
 
                         }
-                        else{
+                        else {
                             fragArray->pos[id_frag] = pos_fi;
                             fragArray->sub_pos[id_frag] = sub_pos_fi;  // UPDATE
                             fragArray->id_c[id_frag] = contig_fA;
@@ -3489,10 +3491,10 @@ extern "C"
                             fragArray->id[id_frag] = id_frag;
                             fragArray->ori[id_frag] = or_fi;
                             fragArray->prev[id_frag] = id_prev_fi;
-                            if (pos_fi == pos_fA){
+                            if (pos_fi == pos_fA) {
                                 fragArray->next[id_frag] = id_fB;
                             }
-                            else{
+                            else {
                                 fragArray->next[id_frag] = id_next_fi;
                             }
                             fragArray->l_cont[id_frag] = l_cont_fA + l_cont_fB;
@@ -3504,8 +3506,8 @@ extern "C"
 
                         }
                     }
-                    else if (contig_fi == contig_fB){
-                        if (pos_fB == 0){
+                    else if (contig_fi == contig_fB) {
+                        if (pos_fB == 0) {
                             fragArray->pos[id_frag] = l_cont_fA + pos_fi;
                             fragArray->sub_pos[id_frag] = sub_l_cont_fA + sub_pos_fi;  // UPDATE
                             fragArray->id_c[id_frag] = contig_fA;
@@ -3515,10 +3517,10 @@ extern "C"
                             fragArray->circ[id_frag] = 0;
                             fragArray->id[id_frag] = id_frag;
                             fragArray->ori[id_frag] = or_fi;
-                            if (pos_fi == pos_fB){
+                            if (pos_fi == pos_fB) {
                                 fragArray->prev[id_frag] = id_fA;
                             }
-                            else{
+                            else {
                                 fragArray->prev[id_frag] = id_prev_fi;
                             }
                             fragArray->next[id_frag] = id_next_fi;
@@ -3529,7 +3531,7 @@ extern "C"
                             fragArray->activ[id_frag] = activ_fi;
                             fragArray->rep[id_frag] = rep_fi;
                         }
-                        else{
+                        else {
                             fragArray->pos[id_frag] = l_cont_fA + (l_cont_fB - (pos_fi + 1));
                             fragArray->sub_pos[id_frag] = sub_l_cont_fA + (sub_l_cont_fB - (sub_pos_fi + sub_len_fi));  // UPDATE
                             fragArray->id_c[id_frag] = contig_fA;
@@ -3538,17 +3540,17 @@ extern "C"
                             fragArray->sub_len[id_frag] = sub_len_fi;  // UPDATE
                             fragArray->circ[id_frag] = 0;
                             fragArray->id[id_frag] = id_frag;
-                                fragArray->ori[id_frag] = or_fi * -1;
-                            if (pos_fi == pos_fB){
+                            fragArray->ori[id_frag] = or_fi * -1;
+                            if (pos_fi == pos_fB) {
                                 fragArray->prev[id_frag] = id_fA;
                             }
-                            else{
+                            else {
                                 fragArray->prev[id_frag] = id_next_fi;
                             }
-                            if (pos_fi == 0){
+                            if (pos_fi == 0) {
                                 fragArray->next[id_frag] = -1;
                             }
-                            else{
+                            else {
                                 fragArray->next[id_frag] = id_prev_fi;
                             }
                             fragArray->l_cont[id_frag] = l_cont_fA + l_cont_fB;
@@ -3559,7 +3561,7 @@ extern "C"
                             fragArray->rep[id_frag] = rep_fi;
                         }
                     }
-                    else{
+                    else {
                         fragArray->pos[id_frag] = pos_fi;
                         fragArray->sub_pos[id_frag] = sub_pos_fi; // UPDATE
                         fragArray->id_c[id_frag] = contig_fi;
@@ -3580,9 +3582,9 @@ extern "C"
                     }
 
                 }
-                else if (contig_fA == contig_fB){ // circular contig
-                    if (contig_fi == contig_fA){
-                        if ((pos_fA == 0) && (pos_fB == l_cont_fA - 1)){ //  creation of a circular contig !
+                else if (contig_fA == contig_fB) { // circular contig
+                    if (contig_fi == contig_fA) {
+                        if ((pos_fA == 0) && (pos_fB == l_cont_fA - 1)) { //  creation of a circular contig !
                             fragArray->pos[id_frag] = pos_fi;
                             fragArray->sub_pos[id_frag] = sub_pos_fi; // UPDATE
                             fragArray->id_c[id_frag] = contig_fi;
@@ -3592,16 +3594,16 @@ extern "C"
                             fragArray->circ[id_frag] = 1;
                             fragArray->ori[id_frag] = or_fi;
                             fragArray->id[id_frag] = id_frag;
-                            if (pos_fi == pos_fA){
+                            if (pos_fi == pos_fA) {
                                 fragArray->prev[id_frag] = id_fB;
                             }
-                            else{
+                            else {
                                 fragArray->prev[id_frag] = id_prev_fi;
                             }
-                            if (pos_fi == l_cont_fA - 1){
+                            if (pos_fi == l_cont_fA - 1) {
                                 fragArray->next[id_frag] = id_fA;
                             }
-                            else{
+                            else {
                                 fragArray->next[id_frag] = id_next_fi;
                             }
                             fragArray->l_cont[id_frag] = l_cont_fA;
@@ -3612,7 +3614,7 @@ extern "C"
                             fragArray->rep[id_frag] = rep_fi;
 
                         }
-                        else if((pos_fA == l_cont_fA - 1) && (pos_fB == 0)){ //  creation of a circular contig !
+                        else if((pos_fA == l_cont_fA - 1) && (pos_fB == 0)) { //  creation of a circular contig !
                             fragArray->pos[id_frag] = pos_fi;
                             fragArray->sub_pos[id_frag] = sub_pos_fi; // UPDATE
                             fragArray->id_c[id_frag] = contig_fi;
@@ -3622,16 +3624,16 @@ extern "C"
                             fragArray->circ[id_frag] = 1;
                             fragArray->id[id_frag] = id_frag;
                             fragArray->ori[id_frag] = or_fi;
-                            if (pos_fi == pos_fB){
+                            if (pos_fi == pos_fB) {
                                 fragArray->prev[id_frag] = id_fA;
                             }
-                            else{
+                            else {
                                 fragArray->prev[id_frag] = id_prev_fi;
                             }
-                            if (pos_fi == l_cont_fA - 1){
+                            if (pos_fi == l_cont_fA - 1) {
                                 fragArray->next[id_frag] = id_fB;
                             }
-                            else{
+                            else {
                                 fragArray->next[id_frag] = id_next_fi;
                             }
                             fragArray->l_cont[id_frag] = l_cont_fA;
@@ -3643,7 +3645,7 @@ extern "C"
 
                         }
                     }
-                    else{
+                    else {
                         fragArray->pos[id_frag] = pos_fi;
                         fragArray->sub_pos[id_frag] = sub_pos_fi; // UPDATE
                         fragArray->id_c[id_frag] = contig_fi;
@@ -3665,7 +3667,7 @@ extern "C"
 
                 }
             }
-            else{
+            else {
                 fragArray->pos[id_frag] = pos_fi;
                 fragArray->sub_pos[id_frag] = sub_pos_fi; // UPDATE
                 fragArray->id_c[id_frag] = contig_fi;
@@ -3691,20 +3693,20 @@ extern "C"
 
 
 
-     __global__ void fill_vect_dist(const float4* __restrict__ subFrags2Frags,
-                                    frag* fragArray,
-                                    float* sub_vect_dist,
-                                    int* sub_vect_id_c,
-                                    float* sub_vect_s_tot,
-                                    int* sub_vect_pos,
-                                    int* sub_vect_len,
-                                    const int* __restrict__ collector_id,
-                                    const int2* __restrict__ dispatcher,
-                                    const int* __restrict__ sub_collector_id,
-                                    const int2* __restrict__ sub_dispatcher,
-                                    int n_sub_frags,
-                                    int id_mut)
-     {
+    __global__ void fill_vect_dist(const float4* __restrict__ subFrags2Frags,
+                                   frag* fragArray,
+                                   float* sub_vect_dist,
+                                   int* sub_vect_id_c,
+                                   float* sub_vect_s_tot,
+                                   int* sub_vect_pos,
+                                   int* sub_vect_len,
+                                   const int* __restrict__ collector_id,
+                                   const int2* __restrict__ dispatcher,
+                                   const int* __restrict__ sub_collector_id,
+                                   const int2* __restrict__ sub_dispatcher,
+                                   int n_sub_frags,
+                                   int id_mut)
+    {
         int2 dispatch_fi;
         int2 sub_dispatch_fi;
         int fi, pos_i, sub_len, sub_l_cont, sub_pos_i, frag_sub_pos,  or_fi, is_activ_fi, sub_fi, is_rep_fi, swap,s_tot;
@@ -3714,13 +3716,13 @@ extern "C"
         int id_rep_fi, is_circle;
         int i = 0;
         int id_pix0 = blockIdx.x * blockDim.x + threadIdx.x;
-        if (id_pix0 < n_sub_frags){
+        if (id_pix0 < n_sub_frags) {
             info_fi = subFrags2Frags[id_pix0];
             dispatch_fi = dispatcher[(int) info_fi.x];
             sub_pos_i = (int) info_fi.w;
             sub_dispatch_fi = sub_dispatcher[id_pix0];
             i = 0;
-            for(id_rep_fi = dispatch_fi.x; id_rep_fi < dispatch_fi.y; id_rep_fi ++){
+            for(id_rep_fi = dispatch_fi.x; id_rep_fi < dispatch_fi.y; id_rep_fi ++) {
                 fi = collector_id[id_rep_fi];
                 sub_fi = sub_collector_id[sub_dispatch_fi.x + i];
                 is_activ_fi = fragArray->activ[fi];
@@ -3735,11 +3737,11 @@ extern "C"
                 fi_start_bp =  int2float(fragArray->start_bp[fi]) ;
 //                dfi = (or_fi == 1) * info_fi.y + (or_fi != 1) * info_fi.z ;
 //                df_posi = (or_fi == 1) * ( pos_i + sub_pos_i) + (or_fi != 1) * (pos_i + sub_len - sub_pos_i);
-                if (or_fi == 1){
+                if (or_fi == 1) {
                     dfi = info_fi.y;
                     frag_sub_pos = pos_i + sub_pos_i;
                 }
-                else{
+                else {
                     dfi = info_fi.z;
                     frag_sub_pos = pos_i + sub_len - (sub_pos_i + 1);
                 }
@@ -3755,19 +3757,19 @@ extern "C"
     }
 
 
-     __global__ void uni_fill_vect_dist(const float4* __restrict__ subFrags2Frags,
-                                             frag* fragArray,
-                                             float* sub_vect_dist,
-                                             int* sub_vect_id_c,
-                                             float* sub_vect_s_tot,
-                                             int* sub_vect_pos,
-                                             int* sub_vect_len,
-                                             const int* __restrict__ collector_id,
-                                             const int2* __restrict__ dispatcher,
-                                             const int* __restrict__ sub_collector_id,
-                                             const int2* __restrict__ sub_dispatcher,
-                                             int n_sub_frags)
-     {
+    __global__ void uni_fill_vect_dist(const float4* __restrict__ subFrags2Frags,
+                                       frag* fragArray,
+                                       float* sub_vect_dist,
+                                       int* sub_vect_id_c,
+                                       float* sub_vect_s_tot,
+                                       int* sub_vect_pos,
+                                       int* sub_vect_len,
+                                       const int* __restrict__ collector_id,
+                                       const int2* __restrict__ dispatcher,
+                                       const int* __restrict__ sub_collector_id,
+                                       const int2* __restrict__ sub_dispatcher,
+                                       int n_sub_frags)
+    {
         int2 dispatch_fi;
         int2 sub_dispatch_fi;
         int fi, pos_i, sub_len, sub_pos_i, frag_sub_pos, or_fi, is_activ_fi, sub_fi, is_rep_fi, swap,s_tot;
@@ -3777,13 +3779,13 @@ extern "C"
         int id_rep_fi, is_circle;
         int i = 0;
         int id_pix0 = blockIdx.x * blockDim.x + threadIdx.x;
-        if (id_pix0 < n_sub_frags){
+        if (id_pix0 < n_sub_frags) {
             info_fi = subFrags2Frags[id_pix0];
             dispatch_fi = dispatcher[(int) info_fi.x];
             sub_pos_i = (int) info_fi.w;
             sub_dispatch_fi = sub_dispatcher[id_pix0];
             i = 0;
-            for(id_rep_fi = dispatch_fi.x; id_rep_fi < dispatch_fi.y; id_rep_fi ++){
+            for(id_rep_fi = dispatch_fi.x; id_rep_fi < dispatch_fi.y; id_rep_fi ++) {
                 fi = collector_id[id_rep_fi];
                 sub_fi = sub_collector_id[sub_dispatch_fi.x + i];
                 is_activ_fi = fragArray->activ[fi];
@@ -3796,11 +3798,11 @@ extern "C"
                 s_tot = is_circle * int2float(fragArray->l_cont_bp[fi]) / 1000.0f;
                 fi_start_bp =  int2float(fragArray->start_bp[fi]);
 //                dfi = (or_fi == 1) * info_fi.y + (or_fi != 1) * info_fi.z;
-                if (or_fi == 1){
+                if (or_fi == 1) {
                     dfi = info_fi.y;
                     frag_sub_pos = pos_i + sub_pos_i;
                 }
-                else{
+                else {
                     dfi = info_fi.z;
                     frag_sub_pos = pos_i + sub_len - sub_pos_i;
                 }
@@ -3816,33 +3818,30 @@ extern "C"
         }
     }
 
-
-
-
     __inline__ __device__ double warpReduceSum(double val) {
-      for (int offset = warpSize/2; offset > 0; offset /= 2)
-        val += __shfl_down(val, offset);
-      return val;
+        for (int offset = warpSize/2; offset > 0; offset /= 2)
+            val += __shfl_down(val, offset);
+        return val;
     }
 
     __inline__ __device__ double blockReduceSum(double val) {
 
-      static __shared__ double shared[32]; // Shared mem for 32 partial sums
-      int lane = threadIdx.x % warpSize;
-      int wid = threadIdx.x / warpSize;
+        static __shared__ double shared[32]; // Shared mem for 32 partial sums
+        int lane = threadIdx.x % warpSize;
+        int wid = threadIdx.x / warpSize;
 
-      val = warpReduceSum(val);     // Each warp performs partial reduction
+        val = warpReduceSum(val);     // Each warp performs partial reduction
 
-      if (lane==0) shared[wid]=val;	// Write reduced value to shared memory
+        if (lane==0) shared[wid]=val;	// Write reduced value to shared memory
 
-      __syncthreads();              // Wait for all partial reductions
+        __syncthreads();              // Wait for all partial reductions
 
-      //read from shared memory only if that warp existed
-      val = (threadIdx.x < blockDim.x / warpSize) ? shared[lane] : 0.0f;
+        //read from shared memory only if that warp existed
+        val = (threadIdx.x < blockDim.x / warpSize) ? shared[lane] : 0.0f;
 
-      if (wid==0) val = warpReduceSum(val); //Final reduce within first warp
+        if (wid==0) val = warpReduceSum(val); //Final reduce within first warp
 
-      return val;
+        return val;
     }
 
     __global__ void eval_likelihood_on_zero(int* sub_vect_id_c,
@@ -3868,27 +3867,27 @@ extern "C"
         double tmp_likelihood = 0.0f;
         int id_frag = id;
         int condition = id_frag < n_frags;
-        if (id_frag < n_frags){
+        if (id_frag < n_frags) {
 //        for (int id_frag = id; id_frag < n_frags; id_frag += blockDim.x * gridDim.x){
             pos = sub_vect_pos[id_frag];
             len_cont = sub_vect_len[id_frag];
             s_tot = sub_vect_s_tot[id_frag];
-            if (pos == 0){
+            if (pos == 0) {
                 tmp_len_cont = len_cont * (len_cont - 1);
                 atomicAdd(&n_vals_intra[0], tmp_len_cont / 2);
             }
-            if (pos > 0){
+            if (pos > 0) {
                 s = int2float(pos) * mean_size_frag;
                 s_tot_z = int2float(len_cont) * mean_size_frag;
-                if (s < p.d_max){
-                    if (s_tot == 0){
+                if (s < p.d_max) {
+                    if (s_tot == 0) {
                         val_expected = (double) rippe_contacts(s, p);
                     }
-                    else{
+                    else {
                         val_expected = (double) rippe_contacts_circ(s, s_tot_z, p);
                     }
                 }
-                else{
+                else {
                     val_expected = (double) p.v_inter;
                 }
                 n_tmp_vals = __int2double_rn(len_cont -  pos);
@@ -3900,8 +3899,8 @@ extern "C"
 //        val_likelihood = blockReduceSum(val_likelihood); // KEPLER CODE !!!
         sdata[tid] = val_likelihood;
         __syncthreads();
-        for(int offset = blockDim.x / 2; offset > 0; offset >>= 1){
-            if(threadIdx.x < offset){
+        for(int offset = blockDim.x / 2; offset > 0; offset >>= 1) {
+            if(threadIdx.x < offset) {
                 // add a partial sum upstream to our own
                 sdata[tid] += sdata[tid + offset];
             }
@@ -3909,24 +3908,24 @@ extern "C"
             // updated their partial sums
             __syncthreads();
         }
-        if ((tid == 0) && (condition ==1)){
+        if ((tid == 0) && (condition ==1)) {
             atomicAdd(&vect_likelihood[0], sdata[0]);
         }
     }
 
     __global__ void eval_all_likelihood_on_zero_1st(int* sub_vect_id_c,
-                                                float* sub_vect_s_tot,
-                                                int* sub_vect_pos,
-                                                int* sub_vect_len,
-                                                param_simu* P,
-                                                float mean_size_frag,
+            float* sub_vect_s_tot,
+            int* sub_vect_pos,
+            int* sub_vect_len,
+            param_simu* P,
+            float mean_size_frag,
 
-                                                int* list_uniq_mutations,
-                                                int* n_uniq_mutations,
+            int* list_uniq_mutations,
+            int* n_uniq_mutations,
 
-                                                double* vect_likelihood,
-                                                int* n_vals_intra,
-                                                int n_frags)
+            double* vect_likelihood,
+            int* n_vals_intra,
+            int n_frags)
     {
         __shared__ double sdata[1024]; // FERMI COMPATIBILITY
         int tid = threadIdx.x;
@@ -3940,28 +3939,28 @@ extern "C"
         param_simu p = P[0];
         double n_tmp_vals = 0.0;
         int condition = id < n_frags;
-        for (int id_frag = id; id_frag < n_frags; id_frag += blockDim.x * gridDim.x){
-            for (k = 0; k < n_uniq_mutations[0]; k ++){
+        for (int id_frag = id; id_frag < n_frags; id_frag += blockDim.x * gridDim.x) {
+            for (k = 0; k < n_uniq_mutations[0]; k ++) {
                 id_mut = list_uniq_mutations[k];
                 pos = sub_vect_pos[id_frag * N_TMP_STRUCT + id_mut];
                 len_cont = sub_vect_len[id_frag * N_TMP_STRUCT + id_mut];
                 tmp_len_cont = len_cont * (len_cont -1);
                 s_tot = sub_vect_s_tot[id_frag * N_TMP_STRUCT + id_mut];
-                if (pos == 0){
+                if (pos == 0) {
                     atomicAdd(&n_vals_intra[id_mut], tmp_len_cont / 2);
                 }
-                if (pos > 0){
+                if (pos > 0) {
                     s = int2float(pos) * mean_size_frag;
                     s_tot_z = int2float(len_cont) * mean_size_frag;
-                    if (s < p.d_max){
-                        if (s_tot == 0){
+                    if (s < p.d_max) {
+                        if (s_tot == 0) {
                             val_expected = (double) rippe_contacts(s, p);
                         }
-                        else{
+                        else {
                             val_expected = (double) rippe_contacts_circ(s, s_tot_z, p);
                         }
                     }
-                    else{
+                    else {
                         val_expected = (double) p.v_inter;
                     }
                     n_tmp_vals = __int2double_rn(len_cont -  pos);
@@ -3980,20 +3979,20 @@ extern "C"
 //            atomicAdd(&vect_likelihood[tid], val_likelihood[tid]);
 //        }
 
-        for (k = 0; k < n_uniq_mutations[0]; k ++){
+        for (k = 0; k < n_uniq_mutations[0]; k ++) {
             id_mut = list_uniq_mutations[k];
 
             sdata[tid] = val_likelihood[id_mut];
             __syncthreads();
-            for(int offset = blockDim.x / 2; offset > 0; offset >>= 1){
-                if(threadIdx.x < offset){
+            for(int offset = blockDim.x / 2; offset > 0; offset >>= 1) {
+                if(threadIdx.x < offset) {
                     // add a partial sum upstream to our own
                     sdata[tid] += sdata[tid + offset];
                 }
                 // wait until all threads in the block have updated their partial sums
                 __syncthreads();
             }
-            if ((tid == 0) && (condition == 1)){
+            if ((tid == 0) && (condition == 1)) {
                 atomicAdd(&vect_likelihood[id_mut], sdata[0]);
             }
         }
@@ -4001,11 +4000,11 @@ extern "C"
 
 
     __global__ void eval_all_likelihood_on_zero_2nd(int* list_uniq_mutations,
-                                                    int* n_uniq_mutations,
-                                                    param_simu* P,
-                                                    double* vect_likelihood,
-                                                    int* n_vals_intra,
-                                                    double* n_tot_pxl)
+            int* n_uniq_mutations,
+            param_simu* P,
+            double* vect_likelihood,
+            int* n_vals_intra,
+            double* n_tot_pxl)
     {
         int tid = threadIdx.x;
         int id = blockIdx.x * blockDim.x + tid;
@@ -4015,7 +4014,7 @@ extern "C"
         double val_inter;
         double val_intra;
         double log_e =  0.43429448190325182f;
-        if (tid < n_uniq_mutations[0]){
+        if (tid < n_uniq_mutations[0]) {
             id_mut = list_uniq_mutations[tid];
             intra_vals = __int2double_rn(n_vals_intra[id_mut]);
             val_inter = -1.0 * log_e *  (n_tot_pxl[0] - intra_vals) * p.v_inter;
@@ -4024,18 +4023,18 @@ extern "C"
         }
     }
 
-       __global__ void eval_all_scores(int* list_uniq_mutations,
-                                       int* n_uniq_mutations,
-                                       double* vect_likelihood_z,
-                                       double* vect_likelihood_nz,
-                                       double* curr_likelihood_nz_extract,
-                                       double* curr_likelihood_nz,
-                                       double* vect_all_score)
+    __global__ void eval_all_scores(int* list_uniq_mutations,
+                                    int* n_uniq_mutations,
+                                    double* vect_likelihood_z,
+                                    double* vect_likelihood_nz,
+                                    double* curr_likelihood_nz_extract,
+                                    double* curr_likelihood_nz,
+                                    double* vect_all_score)
     {
         int tid = threadIdx.x;
         int id = blockIdx.x * blockDim.x + tid;
         int id_mut;
-        if (id < n_uniq_mutations[0]){
+        if (id < n_uniq_mutations[0]) {
             id_mut = list_uniq_mutations[tid];
             vect_all_score[id_mut] = vect_likelihood_nz[id_mut] +
                                      vect_likelihood_z[id_mut] +
@@ -4043,11 +4042,11 @@ extern "C"
         }
     }
 
-     __global__ void prepare_sparse_call(const int* __restrict__ spData_row,
-                                         int3* info_block,
-                                         int* spData_block_csr,
-                                         int *counter,
-                                         int size_arr)
+    __global__ void prepare_sparse_call(const int* __restrict__ spData_row,
+                                        int3* info_block,
+                                        int* spData_block_csr,
+                                        int *counter,
+                                        int size_arr)
     {
         __shared__ int selec_smem[SIZE_BLOCK_4_SUB];
         __shared__ int counter_smem;
@@ -4068,18 +4067,18 @@ extern "C"
         }
         selec_smem[threadIdx.x] = -1;
         __syncthreads();
-        if (condition == 1){
-           // each counting thread writes its index to shared memory //
+        if (condition == 1) {
+            // each counting thread writes its index to shared memory //
             id_next = min(idx + 1, size_arr - 1);
             curr = spData_row[idx];
             next = spData_row[id_next];
-            if ((curr != next) || (threadIdx.x == 0) ||(threadIdx.x == SIZE_BLOCK_4_SUB - 1) || (idx == size_arr - 1) ){
+            if ((curr != next) || (threadIdx.x == 0) ||(threadIdx.x == SIZE_BLOCK_4_SUB - 1) || (idx == size_arr - 1) ) {
                 local_count = atomicAdd(counter_smem_ptr, 1);
                 selec_smem[local_count] =  curr;
-             }
+            }
         }
         __syncthreads();
-        if (threadIdx.x == 0){
+        if (threadIdx.x == 0) {
             local_count = counter_smem;
             counter_smem = atomicAdd(counter, counter_smem);
             info.x = local_count;
@@ -4088,29 +4087,29 @@ extern "C"
             info_block[blockIdx.x] = info;
         }
         __syncthreads();
-        if (selec_smem[threadIdx.x] >= 0){
+        if (selec_smem[threadIdx.x] >= 0) {
             spData_block_csr[counter_smem + threadIdx.x] = selec_smem[threadIdx.x];
         }
 
     }
 
-     __global__ void extract_sub_likelihood(const int* __restrict__ spData_dat,
-                                            const int3* __restrict__ info_block,
-                                            const int* __restrict__ spData_block_csr,
-                                            const int* __restrict__ spData_row,
-                                            const int* __restrict__ spData_col,
-                                            param_simu* P,
-                                            float mean_size_frag,
-                                            float* sub_vect_pos_bp,
-                                            int* sub_vect_id_c,
-                                            float* sub_vect_s_tot,
-                                            int* sub_vect_pos,
-                                            int* sub_vect_len,
+    __global__ void extract_sub_likelihood(const int* __restrict__ spData_dat,
+                                           const int3* __restrict__ info_block,
+                                           const int* __restrict__ spData_block_csr,
+                                           const int* __restrict__ spData_row,
+                                           const int* __restrict__ spData_col,
+                                           param_simu* P,
+                                           float mean_size_frag,
+                                           float* sub_vect_pos_bp,
+                                           int* sub_vect_id_c,
+                                           float* sub_vect_s_tot,
+                                           int* sub_vect_pos,
+                                           int* sub_vect_len,
 
-                                            double* vect_likelihood,
-                                            int n_data,
-                                            int n_sub_frags)
-     {
+                                           double* vect_likelihood,
+                                           int n_data,
+                                           int n_sub_frags)
+    {
 
         __shared__ double sdata[SIZE_BLOCK_4_SUB]; // FERMI CODE
         __shared__ float4 all_data_row[SIZE_BLOCK_4_SUB]; //
@@ -4132,14 +4131,14 @@ extern "C"
         double val_expected_z = 0.0f;
         double tmp_likelihood = 0.0f;
 
-        if (tid == 0){
+        if (tid == 0) {
             param_block = info_block[blockIdx.x];
         }
         __syncthreads();
 
         int condition = (glob_id < n_data) ;
 
-        if ((tid < param_block.x) && (condition == 1)){
+        if ((tid < param_block.x) && (condition == 1)) {
             fi = spData_block_csr[param_block.y + tid];
             list_fi[tid] = fi;
             all_data_row[tid].x = int2float(sub_vect_id_c[fi]); // contig id
@@ -4150,11 +4149,11 @@ extern "C"
 
         __syncthreads();
 
-        if ((condition == 1)){
+        if ((condition == 1)) {
 //            val_expected_z = 0.0f;
             curr_fi = spData_row[glob_id];
-            for (i = 0; i < param_block.x; i ++){
-                if ( curr_fi == list_fi[i]){
+            for (i = 0; i < param_block.x; i ++) {
+                if ( curr_fi == list_fi[i]) {
                     local_id_i = i;
                 }
             }
@@ -4177,28 +4176,28 @@ extern "C"
             s = abs(sf);
             s_z = abs(pos_i - pos_j) * mean_size_frag;
 
-            if (contig_i == contig_j){
-                if (s_tot == 0){
+            if (contig_i == contig_j) {
+                if (s_tot == 0) {
                     val_expected = (double) rippe_contacts(s, p);
-                    if (s_z < p.d_max){
+                    if (s_z < p.d_max) {
                         val_expected_z = (double) rippe_contacts(s_z, p);
                     }
-                    else{
+                    else {
                         val_expected_z = (double) p.v_inter;
                     }
                 }
-                else{
+                else {
                     val_expected =  (double) rippe_contacts_circ(s, s_tot, p);
                     s_tot_z = int2float(sub_vect_len[fj]) * mean_size_frag;
-                    if (s_z < p.d_max){
+                    if (s_z < p.d_max) {
                         val_expected_z = (double) rippe_contacts_circ(s_z, s_tot_z, p);
                     }
-                    else{
+                    else {
                         val_expected_z = (double) p.v_inter;
                     }
                 }
             }
-            else{
+            else {
                 val_expected = (double) p.v_inter;
                 val_expected_z = (double) p.v_inter;
             }
@@ -4215,8 +4214,8 @@ extern "C"
 
         sdata[tid] = loc_likelihood;
         __syncthreads();
-        for(int offset = blockDim.x / 2; offset > 0; offset >>= 1){
-            if(threadIdx.x < offset){
+        for(int offset = blockDim.x / 2; offset > 0; offset >>= 1) {
+            if(threadIdx.x < offset) {
                 // add a partial sum upstream to our own
                 sdata[tid] += sdata[tid + offset];
             }
@@ -4225,32 +4224,32 @@ extern "C"
             __syncthreads();
         }
 
-        if ((tid == 0) && (condition == 1)){
+        if ((tid == 0) && (condition == 1)) {
             atomicAdd(&vect_likelihood[0], sdata[0]);
         }
     }
 
 
-     __global__ void eval_sub_likelihood(const int* __restrict__ spData_dat,
-                                         const int3* __restrict__ info_block,
-                                         const int* __restrict__ spData_block_csr,
-                                         const int* __restrict__ spData_row,
-                                         const int* __restrict__ spData_col,
-                                         param_simu* P,
-                                         float mean_size_frag,
-                                         const float* __restrict__ sub_vect_pos_bp,
-                                         const int* __restrict__ sub_vect_id_c,
-                                         const float* __restrict__ sub_vect_s_tot,
-                                         const int* __restrict__ sub_vect_pos,
-                                         const int* __restrict__ sub_vect_len,
+    __global__ void eval_sub_likelihood(const int* __restrict__ spData_dat,
+                                        const int3* __restrict__ info_block,
+                                        const int* __restrict__ spData_block_csr,
+                                        const int* __restrict__ spData_row,
+                                        const int* __restrict__ spData_col,
+                                        param_simu* P,
+                                        float mean_size_frag,
+                                        const float* __restrict__ sub_vect_pos_bp,
+                                        const int* __restrict__ sub_vect_id_c,
+                                        const float* __restrict__ sub_vect_s_tot,
+                                        const int* __restrict__ sub_vect_pos,
+                                        const int* __restrict__ sub_vect_len,
 
-                                         int* list_uniq_mutations,
-                                         int* n_uniq_mutations,
+                                        int* list_uniq_mutations,
+                                        int* n_uniq_mutations,
 
-                                         double* vect_likelihood,
-                                         int n_data,
-                                         int n_sub_frags)
-     {
+                                        double* vect_likelihood,
+                                        int n_data,
+                                        int n_sub_frags)
+    {
         __shared__ double loc_likelihood[N_STRUCT_BY_BLOCK_SIZE]; // SIZE_BLOCK_4_SUB * N_TMP_STRUCT
         __shared__ float4 all_data_row[N_STRUCT_BY_BLOCK_SIZE]    ; // SIZE_BLOCK_4_SUB * N_TMP_STRUCT
         __shared__ int list_fi[SIZE_BLOCK_4_SUB];
@@ -4269,18 +4268,18 @@ extern "C"
         double val_expected_z = 0.0f;
         double tmp_likelihood = 0.0f;
 
-        if (tid == 0){
+        if (tid == 0) {
             param_block = info_block[blockIdx.x];
         }
         __syncthreads();
 
         int condition = (glob_id < n_data) ;
 
-        if ((tid < param_block.x) && (condition == 1)){
+        if ((tid < param_block.x) && (condition == 1)) {
             fi = spData_block_csr[param_block.y + tid];
             fiN_TMP_STRUCT = spData_block_csr[param_block.y + tid] * N_TMP_STRUCT;
             list_fi[tid] = fi;
-            for (i = 0; i < N_TMP_STRUCT; i ++){
+            for (i = 0; i < N_TMP_STRUCT; i ++) {
 
                 all_data_row[tidN_TMP_STRUCT + i].x = int2float(sub_vect_id_c[fiN_TMP_STRUCT + i]); // contig id
                 all_data_row[tidN_TMP_STRUCT + i].y = sub_vect_pos_bp[fiN_TMP_STRUCT + i]; // kbp position
@@ -4291,16 +4290,16 @@ extern "C"
 
         __syncthreads();
 
-        if ((condition == 1)){
+        if ((condition == 1)) {
             curr_fi = spData_row[glob_id];
-            for (i = 0; i < param_block.x; i ++){
-                if ( curr_fi == list_fi[i]){
+            for (i = 0; i < param_block.x; i ++) {
+                if ( curr_fi == list_fi[i]) {
                     local_id_i = i * N_TMP_STRUCT;
                 }
             }
             dat = (double) (spData_dat[glob_id]);
             curr_fj = spData_col[glob_id];
-            for (k = 0; k < n_uniq_mutations[0]; k ++){
+            for (k = 0; k < n_uniq_mutations[0]; k ++) {
                 id_mut = list_uniq_mutations[k];
 
                 val_expected_z = 0.0f;
@@ -4322,28 +4321,28 @@ extern "C"
                 s_z = abs(pos_i - pos_j) * mean_size_frag;
 
 
-                if (contig_i == contig_j){
-                    if (s_tot == 0){
+                if (contig_i == contig_j) {
+                    if (s_tot == 0) {
                         val_expected = (double) rippe_contacts(s, p);
-                        if (s_z < p.d_max){
+                        if (s_z < p.d_max) {
                             val_expected_z = (double) rippe_contacts(s_z, p);
                         }
-                        else{
+                        else {
                             val_expected_z = (double) p.v_inter;
                         }
                     }
-                    else{
+                    else {
                         val_expected =  (double) rippe_contacts_circ(s, s_tot, p);
-                        if (s_z < p.d_max){
+                        if (s_z < p.d_max) {
                             s_tot_z = int2float(sub_vect_len[fj]) * mean_size_frag;
                             val_expected_z = (double) rippe_contacts_circ(s_z, s_tot_z, p);
                         }
-                        else{
+                        else {
                             val_expected_z = (double) p.v_inter;
                         }
                     }
                 }
-                else{
+                else {
                     val_expected = (double)  p.v_inter;
                     val_expected_z = (double) p.v_inter;
                 }
@@ -4351,16 +4350,16 @@ extern "C"
                 loc_likelihood[tidN_TMP_STRUCT + id_mut] = tmp_likelihood + val_expected_z * 0.43429448190325182f;
             }
         }
-        else{
-            for (id_mut = 0; id_mut < N_TMP_STRUCT; id_mut ++){
+        else {
+            for (id_mut = 0; id_mut < N_TMP_STRUCT; id_mut ++) {
                 loc_likelihood[tidN_TMP_STRUCT + id_mut] =  0.0f;
             }
         }
         __syncthreads();
-        if ((tid < n_uniq_mutations[0]) && (condition == 1)){ // tid = id mutation ok
+        if ((tid < n_uniq_mutations[0]) && (condition == 1)) { // tid = id mutation ok
             tmp_likelihood = 0.0f;
             id_mut = list_uniq_mutations[tid];
-            for (i = 0; i < SIZE_BLOCK_4_SUB; i+=1){
+            for (i = 0; i < SIZE_BLOCK_4_SUB; i+=1) {
                 tmp_likelihood += loc_likelihood[i * N_TMP_STRUCT + id_mut];
             }
             atomicAdd(&vect_likelihood[id_mut], tmp_likelihood);
@@ -4369,25 +4368,25 @@ extern "C"
 
 
 
-     __global__ void evaluate_likelihood_sparse(const int* __restrict__ spData_dat,
-                                                const int* __restrict__ spData_row,
-                                                const int* __restrict__ spData_col,
-                                                const int* __restrict__ id_single,
+    __global__ void evaluate_likelihood_sparse(const int* __restrict__ spData_dat,
+            const int* __restrict__ spData_row,
+            const int* __restrict__ spData_col,
+            const int* __restrict__ id_single,
 
-                                                param_simu* P,
-                                                float mean_size_frag,
+            param_simu* P,
+            float mean_size_frag,
 
-                                                float* sub_vect_pos_bp,
-                                                int* sub_vect_id_c,
-                                                float* sub_vect_s_tot,
-                                                int* sub_vect_pos,
-                                                int* sub_vect_len,
+            float* sub_vect_pos_bp,
+            int* sub_vect_id_c,
+            float* sub_vect_s_tot,
+            int* sub_vect_pos,
+            int* sub_vect_len,
 
-                                                double* vect_likelihood,
+            double* vect_likelihood,
 
-                                                int n_data_pxl,
-                                                int n_frags)
-     {
+            int n_data_pxl,
+            int n_frags)
+    {
         __shared__ double sdata[1024];
         int tid = threadIdx.x;
         int id_pix0 = blockIdx.x * blockDim.x + tid;
@@ -4404,7 +4403,7 @@ extern "C"
         double loc_likelihood = 0.0f;
         int id_pix = id_pix0;
 
-        for(id_pix = id_pix0; id_pix < n_data_pxl; id_pix += blockDim.x * gridDim.x){
+        for(id_pix = id_pix0; id_pix < n_data_pxl; id_pix += blockDim.x * gridDim.x) {
 
             dat = (double) (spData_dat[id_pix]);
 
@@ -4425,22 +4424,22 @@ extern "C"
             s_z = abs(pos_i - pos_j) * mean_size_frag;
             s_tot_z = int2float(sub_vect_len[fi]) * mean_size_frag;
 
-            if (contig_i == contig_j){
-                if (s_tot == 0){
+            if (contig_i == contig_j) {
+                if (s_tot == 0) {
                     val_expected = (double) rippe_contacts(s, p);
-                    if (s_z < p.d_max){
+                    if (s_z < p.d_max) {
                         val_expected_z = (double) rippe_contacts(s_z, p);
                     }
-                    else{
+                    else {
                         val_expected_z = (double) p.v_inter;
                     }
                 }
-                else{
+                else {
                     val_expected =  (double) rippe_contacts_circ(s, s_tot, p);
-                    if (s_z < p.d_max){
+                    if (s_z < p.d_max) {
                         val_expected_z = (double) rippe_contacts_circ(s_z, s_tot_z, p);
                     }
-                    else{
+                    else {
                         val_expected_z = (double) p.v_inter;
                     }
                 }
@@ -4451,7 +4450,7 @@ extern "C"
 //                    val_expected_z = (double) p.v_inter;
 //                }
             }
-            else{
+            else {
                 val_expected = (double) p.v_inter;
                 val_expected_z = (double) p.v_inter;
             }
@@ -4470,8 +4469,8 @@ extern "C"
 
         sdata[tid] = loc_likelihood;
         __syncthreads();
-        for(int offset = blockDim.x / 2; offset > 0; offset >>= 1){
-            if(threadIdx.x < offset){
+        for(int offset = blockDim.x / 2; offset > 0; offset >>= 1) {
+            if(threadIdx.x < offset) {
                 // add a partial sum upstream to our own
                 sdata[tid] += sdata[tid + offset];
             }
@@ -4480,7 +4479,7 @@ extern "C"
             __syncthreads();
         }
 
-        if (tid == 0){
+        if (tid == 0) {
             atomicAdd(&vect_likelihood[0], sdata[0]);
         }
     }
@@ -4500,8 +4499,8 @@ extern "C"
         int n;
         int start = 0;
         int j = 0;
-        if (id_pix ==0 ){
-            if (flip_eject == 1){
+        if (id_pix ==0 ) {
+            if (flip_eject == 1) {
                 list_uniq_mutations[0] = 0;
                 list_uniq_mutations[1] = 1;
                 list_uniq_mutations[2] = 2;
@@ -4509,7 +4508,7 @@ extern "C"
                 start = 4;
                 n = N_TMP_STRUCT;
             }
-            else{
+            else {
                 list_uniq_mutations[0] = 2;
                 list_uniq_mutations[1] = 3;
                 start = 2;
@@ -4517,32 +4516,32 @@ extern "C"
             }
             len_ci = fragArray->l_cont[frag_a];
             len_cj = fragArray->l_cont[frag_b];
-            if (len_cj == 1){
+            if (len_cj == 1) {
                 n -= 4;
             }
-            else{
+            else {
                 list_uniq_mutations[start + 0] = 4;
                 list_uniq_mutations[start + 1] = 5;
                 list_uniq_mutations[start + 2] = 6;
                 list_uniq_mutations[start + 3] = 7;
                 start += 4;
             }
-            if (len_ci == 1){
+            if (len_ci == 1) {
                 n -= 4;
             }
-            else{
+            else {
                 list_uniq_mutations[start + 0] = 8;
                 list_uniq_mutations[start + 1] = 9;
                 list_uniq_mutations[start + 2] = 10;
                 list_uniq_mutations[start + 3] = 11;
                 start += 4;
             }
-            for (int i=12; i<N_TMP_STRUCT; i++){
-                if (list_valid_insert[i - 12] != -1){
+            for (int i=12; i<N_TMP_STRUCT; i++) {
+                if (list_valid_insert[i - 12] != -1) {
                     list_uniq_mutations[start + j] = i;
                     j += 1;
                 }
-                else{
+                else {
                     n -= 1;
                 }
             }
@@ -4555,7 +4554,7 @@ extern "C"
     __global__ void set_null(float* vect, int max_id)
     {
         int id_pix = threadIdx.x + blockDim.x * blockIdx.x;
-        if (id_pix < max_id){
+        if (id_pix < max_id) {
             vect[id_pix] = 0.0;
         }
     }
@@ -4565,7 +4564,7 @@ extern "C"
     {
         int id_frag = threadIdx.x + blockDim.x * blockIdx.x;
         int id_c = 0;
-        if (id_frag  < n_frags){
+        if (id_frag  < n_frags) {
             fragArray->pos[id_frag] = smplfragArray->pos[id_frag];
             fragArray->sub_pos[id_frag] = smplfragArray->sub_pos[id_frag];
             id_c = smplfragArray->id_c[id_frag];
@@ -4591,8 +4590,8 @@ extern "C"
     __global__ void copy_gpu_array(double* dest, double* input, int max_id)
     {
         int id_pix_out = threadIdx.x + blockDim.x * blockIdx.x;
-        if (id_pix_out < max_id){
-            for (int id_pix = id_pix_out; id_pix < max_id; id_pix += blockDim.x * gridDim.x){
+        if (id_pix_out < max_id) {
+            for (int id_pix = id_pix_out; id_pix < max_id; id_pix += blockDim.x * gridDim.x) {
                 dest[id_pix] = input[id_pix];
             }
         }
@@ -4602,7 +4601,7 @@ extern "C"
     __global__ void simple_copy(frag* fragArray, frag* smplfragArray, int n_frags)
     {
         int id_frag = threadIdx.x + blockDim.x * blockIdx.x;
-        if (id_frag  < n_frags){
+        if (id_frag  < n_frags) {
             fragArray->pos[id_frag] = smplfragArray->pos[id_frag];
             fragArray->sub_pos[id_frag] = smplfragArray->sub_pos[id_frag];
             fragArray->id_c[id_frag] = smplfragArray->id_c[id_frag];
@@ -4627,23 +4626,23 @@ extern "C"
 
 
     __global__ void update_gpu_vect_frags(int* list_len,
-                              frag* fragArray,
-                              int * old_2_new_idx,
-                              int* id_contigs,
-                              float max_id,
-                              int n_frags,
-                              int* vect_min_id_c_new )
+                                          frag* fragArray,
+                                          int * old_2_new_idx,
+                                          int* id_contigs,
+                                          float max_id,
+                                          int n_frags,
+                                          int* vect_min_id_c_new )
     {
         __shared__ float max_len;
 
         //get our index in the array
         int id_frag =  threadIdx.x + blockDim.x * blockIdx.x;
-        if (threadIdx.x == 0){
+        if (threadIdx.x == 0) {
             max_len = __float2int_rd(list_len[0]);
         }
         __syncthreads();
         int min_id_c_new = vect_min_id_c_new[0];
-        if (id_frag  < n_frags){
+        if (id_frag  < n_frags) {
             int id_c = fragArray->id_c[id_frag];
             int id_c_new = max_id - old_2_new_idx[id_c];
             fragArray->id_c[id_frag] = id_c_new;
@@ -4673,12 +4672,12 @@ extern "C"
 
         //get our index in the array
         int id_frag =  threadIdx.x + blockDim.x * blockIdx.x;
-        if (threadIdx.x == 0){
+        if (threadIdx.x == 0) {
             max_len = __float2int_rd(list_len[0]);
         }
         __syncthreads();
         float min_id_c_new = int2float(vect_min_id_c_new[0]);
-        if (id_frag  < n_frags){
+        if (id_frag  < n_frags) {
 
             int id_rng = id_frag % n_rng;
             float shift_y = (curand_normal(&state[id_rng]))*0.01;
@@ -4695,10 +4694,10 @@ extern "C"
             float pos_x;
             float l_cont;
             float radius;
-            if (fragArray->l_cont[id_frag] > 1){
+            if (fragArray->l_cont[id_frag] > 1) {
 
                 pos_x = (int2float(fragArray->pos[id_frag]))/ max_len;
-                if (is_circ == 1){
+                if (is_circ == 1) {
                     radius = (int2float(id_c_new - min_id_c_new) + shift_y * (id_frag == id_fi)) / (max_id-min_id_c_new) / 2 ;
                     l_cont = int2float(fragArray->l_cont[id_frag]) / max_len + 0.01f;
                     pos[id_frag].x = radius * 2;
@@ -4706,17 +4705,17 @@ extern "C"
                     pos[id_frag].z = 0 + radius * sin((pos_x + shift_rot) * 2 * M_PI / l_cont ); // y plan coord;
 
                 }
-                else{
+                else {
                     pos[id_frag].x = pos_x;
                     pos[id_frag].y = ((int2float(id_c_new) - min_id_c_new) + shift_y * (id_frag == id_fi)) / max(1.0f,(max_id-min_id_c_new));
-    //                pos[id_frag].x = int2float(fragArray->pos[id_frag])/ max_len + 0.01f;
-    //                pos[id_frag].y = (int2float(id_c_new - min_id_c_new) + shift_y * (id_frag == id_fi)) / (max_id-min_id_c_new) + 0.01f;
+                    //                pos[id_frag].x = int2float(fragArray->pos[id_frag])/ max_len + 0.01f;
+                    //                pos[id_frag].y = (int2float(id_c_new - min_id_c_new) + shift_y * (id_frag == id_fi)) / (max_id-min_id_c_new) + 0.01f;
                     pos[id_frag].z = 0;
 
                 }
                 color[id_frag].w = 1.5;
             }
-            else{
+            else {
                 float4 p = pos[id_frag];
                 float4 v = vel[id_frag];
                 life -= dt;
@@ -4746,18 +4745,18 @@ extern "C"
 
 
     __global__ void gpu_struct_2_pxl(frag* fragArray,
-                                    int* pxl_frags,
-                                    int* cumul_length,
-                                    int max_id,
-                                    float size_im_gl,
-                                    int n_frags)
+                                     int* pxl_frags,
+                                     int* cumul_length,
+                                     int max_id,
+                                     float size_im_gl,
+                                     int n_frags)
     {
 
         int id_frag =  threadIdx.x + blockDim.x * blockIdx.x;
         float pos, offset, tmp_pos;
         int id_c, pos_pix;
 
-        if (id_frag < n_frags){
+        if (id_frag < n_frags) {
             id_c = max_id - fragArray->id_c[id_frag];
             pos = int2float(fragArray->pos[id_frag]);
             offset = int2float(cumul_length[id_c]);
@@ -4804,20 +4803,20 @@ extern "C"
         float val_cos_sin = (sqrtf(2)) / 2.0f;
         float size_im = int2float(size_im_gl);
         float mm = size_im * sqrtf(2.0f);
-        if (tid == 0){
+        if (tid == 0) {
             param_block = info_block[blockIdx.x];
         }
 
         __syncthreads();
 
-        if ((tid < param_block.x) && (condition == 1)){
+        if ((tid < param_block.x) && (condition == 1)) {
             sdata_contact[tid] = 0;
             sdata_coord[tid] = spData_block_csr[param_block.y + tid];
         }
 
         __syncthreads();
 
-        if (condition == 1){
+        if (condition == 1) {
             fi = pxl_frags[spData_4GL_row[id_pix]];
             fj = pxl_frags[spData_4GL_col[id_pix]];
             x = min(fi, fj);
@@ -4833,8 +4832,8 @@ extern "C"
 
 //            coord = i * size_im_gl + j;
 
-            for (i = 0; i < param_block.x; i ++){
-                if ( coord == sdata_coord[i]){
+            for (i = 0; i < param_block.x; i ++) {
+                if ( coord == sdata_coord[i]) {
                     local_bin = i;
                 }
             }
@@ -4843,7 +4842,7 @@ extern "C"
         }
         __syncthreads();
 
-        if ((tid < param_block.x) && (condition == 1)){
+        if ((tid < param_block.x) && (condition == 1)) {
             atomicAdd(&im_gl[sdata_coord[tid]], sdata_contact[tid]);
         }
     }
@@ -4856,7 +4855,7 @@ extern "C"
         int pix_x = threadIdx.x + blockDim.x * blockIdx.x;
         unsigned char out;
         float outf = 0.0f;
-        if (pix_x < id_max){
+        if (pix_x < id_max) {
             outf = (float) min(im_cuda[pix_x], thresh);
             out = (unsigned char) ( outf * 255/ (float) thresh );
             im_gl[pix_x] = out;
@@ -4864,14 +4863,14 @@ extern "C"
     }
 
 
-     __global__ void prepare_sparse_call_4_gl(const int* __restrict__ spData_row,
-                                              const int* __restrict__ spData_col,
-                                              int* spData_block_csr,
-                                              const int* __restrict__ pxl_frags,
-                                              int3* info_block,
-                                              int *counter,
-                                              int size_im_gl,
-                                              int size_arr)
+    __global__ void prepare_sparse_call_4_gl(const int* __restrict__ spData_row,
+            const int* __restrict__ spData_col,
+            int* spData_block_csr,
+            const int* __restrict__ pxl_frags,
+            int3* info_block,
+            int *counter,
+            int size_im_gl,
+            int size_arr)
     {
         __shared__ int selec_smem[1024];
         __shared__ int counter_smem;
@@ -4897,8 +4896,8 @@ extern "C"
         }
         selec_smem[threadIdx.x] = -1;
         __syncthreads();
-        if (condition == 1){
-           // each counting thread writes its index to shared memory //
+        if (condition == 1) {
+            // each counting thread writes its index to shared memory //
             id_next = min(idx + 1, size_arr - 1);
             curr_row = spData_row[idx];
             next_row = spData_row[id_next];
@@ -4929,14 +4928,14 @@ extern "C"
             condition_pix = (coord_pix >= 0) && ( coord_pix < max_coord);
 
 //            if ((condition_pix) &&( (condition_row || condition_col) || (threadIdx.x == 0) || (threadIdx.x == 1023) || (idx == size_arr - 1) )){
-            if (( (condition_row || condition_col) || (threadIdx.x == 0) || (threadIdx.x == 1023) || (idx == size_arr - 1) )){
+            if (( (condition_row || condition_col) || (threadIdx.x == 0) || (threadIdx.x == 1023) || (idx == size_arr - 1) )) {
                 local_count = atomicAdd(counter_smem_ptr, 1);
 //                selec_smem[local_count] =  coord_pix;
                 selec_smem[local_count] =  coord_pix;
-             }
+            }
         }
         __syncthreads();
-        if ((threadIdx.x == 0) && (condition == 1)){
+        if ((threadIdx.x == 0) && (condition == 1)) {
             local_count = counter_smem;
             counter_smem = atomicAdd(counter, counter_smem);
             info.x = local_count;
@@ -4945,7 +4944,7 @@ extern "C"
             info_block[blockIdx.x] = info;
         }
         __syncthreads();
-        if ((selec_smem[threadIdx.x] >= 0) && (condition == 1)){
+        if ((selec_smem[threadIdx.x] >= 0) && (condition == 1)) {
             spData_block_csr[counter_smem + threadIdx.x] = selec_smem[threadIdx.x];
         }
 

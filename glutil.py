@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from OpenGL.GL import *
 from OpenGL.GLU import *
 
@@ -6,18 +8,16 @@ from vector import Vec
 
 def init(width, height):
 
-    #glEnable(GL_DEPTH_TEST)
+    # glEnable(GL_DEPTH_TEST)
     glEnable(GL_NORMALIZE)
     glShadeModel(GL_SMOOTH)
-
 
     glViewport(0, 0, width, height)
     # glMatrixMode(GL_PROJECTION)
     # glLoadIdentity()
     # gluPerspective(60.0, width/float(height), .1, 8192)
-    #glEnable(GL_DEPTH_TEST)
+    # glEnable(GL_DEPTH_TEST)
     glMatrixMode(GL_MODELVIEW)
-
 
 
 def lights():
@@ -42,16 +42,15 @@ def lights():
     mat_ambient_back = [.5, .2, .2, 1.0]
     mat_diffuse_back = [1.0, .2, .2, 1.0]
 
-    glMaterialfv(GL_FRONT, GL_AMBIENT,   mat_ambient)
-    glMaterialfv(GL_FRONT, GL_DIFFUSE,   mat_diffuse)
-    glMaterialfv(GL_FRONT, GL_SPECULAR,  mat_specular)
+    glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient)
+    glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse)
+    glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular)
     glMaterialfv(GL_FRONT, GL_SHININESS, high_shininess)
 
-    glMaterialfv(GL_BACK, GL_AMBIENT,   mat_ambient_back)
-    glMaterialfv(GL_BACK, GL_DIFFUSE,   mat_diffuse_back)
-    glMaterialfv(GL_BACK, GL_SPECULAR,  mat_specular)
+    glMaterialfv(GL_BACK, GL_AMBIENT, mat_ambient_back)
+    glMaterialfv(GL_BACK, GL_DIFFUSE, mat_diffuse_back)
+    glMaterialfv(GL_BACK, GL_SPECULAR, mat_specular)
     glMaterialfv(GL_BACK, GL_SHININESS, high_shininess)
-
 
 
 def draw_line(v1, v2):
@@ -62,23 +61,21 @@ def draw_line(v1, v2):
 
 
 def draw_axes():
-    #X Axis
-    glColor3f(1,0,0)    #red
-    v1 = Vec([0,0,0])
-    v2 = Vec([1,0,0])
+    # X Axis
+    glColor3f(1, 0, 0)  # red
+    v1 = Vec([0, 0, 0])
+    v2 = Vec([1, 0, 0])
     draw_line(v1, v2)
 
     # Y Axis
-    glColor3f(0,1,0)    #green
-    v1 = Vec([0,0,0])
-    v2 = Vec([0,1,0])
+    glColor3f(0, 1, 0)  # green
+    v1 = Vec([0, 0, 0])
+    v2 = Vec([0, 1, 0])
     draw_line(v1, v2)
 
-    #Z Axis
-    glColor3f(0,0,1)    #blue
-    v1 = Vec([0,0,0])
-    v2 = Vec([0,0,1])
+    # Z Axis
+    glColor3f(0, 0, 1)  # blue
+    v1 = Vec([0, 0, 0])
+    v2 = Vec([0, 0, 1])
     draw_line(v1, v2)
-
-
 

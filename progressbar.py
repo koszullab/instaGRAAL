@@ -10,14 +10,14 @@ Usage:
 import terminal_progress as terminal
 import sys
 
+
 class ProgressBar(object):
     """Terminal progress bar class"""
-    TEMPLATE = (
-     '%(percent)-2s%% %(color)s%(progress)s%(normal)s%(empty)s %(message)s\n'
-    )
+
+    TEMPLATE = "%(percent)-2s%% %(color)s%(progress)s%(normal)s%(empty)s %(message)s\n"
     PADDING = 7
 
-    def __init__(self, color=None, width=None, block='█', empty=' '):
+    def __init__(self, color=None, width=None, block="█", empty=" "):
         """
         color -- color name (BLUE GREEN CYAN RED MAGENTA YELLOW WHITE BLACK)
         width -- bar width (optinal)
@@ -27,7 +27,7 @@ class ProgressBar(object):
         if color:
             self.color = getattr(terminal, color.upper())
         else:
-            self.color = ''
+            self.color = ""
         if width and width < terminal.COLUMNS - self.PADDING:
             self.width = width
         else:
@@ -38,7 +38,7 @@ class ProgressBar(object):
         self.progress = None
         self.lines = 0
 
-    def render(self, percent, message = ''):
+    def render(self, percent, message=""):
         """Print the progress bar
         percent -- the progress percentage %
         message -- message string (optional)
@@ -50,7 +50,7 @@ class ProgressBar(object):
         if inline_msg_len + self.width + self.PADDING > terminal.COLUMNS:
             # The message is too long to fit in one line.
             # Adjust the bar width to fit.
-            bar_width = terminal.COLUMNS - inline_msg_len -self.PADDING
+            bar_width = terminal.COLUMNS - inline_msg_len - self.PADDING
         else:
             bar_width = self.width
 
@@ -59,20 +59,21 @@ class ProgressBar(object):
             self.clear()
         self.progress = int((bar_width * percent) / 100)
         data = self.TEMPLATE % {
-            'percent': percent,
-            'color': self.color,
-            'progress': self.block * self.progress,
-            'normal': terminal.NORMAL,
-            'empty': self.empty * (bar_width - self.progress),
-            'message': message
+            "percent": percent,
+            "color": self.color,
+            "progress": self.block * self.progress,
+            "normal": terminal.NORMAL,
+            "empty": self.empty * (bar_width - self.progress),
+            "message": message,
         }
-        sys.stdout.write(data)
+        sys.stdout.write(data.decode("utf-8"))
         sys.stdout.flush()
         # The number of lines printed
         self.lines = len(data.splitlines())
 
     def clear(self):
         """Clear all printed lines"""
-        sys.stdout.write(
-            self.lines * (terminal.UP + terminal.BOL + terminal.CLEAR_EOL)
+        to_write = self.lines * (
+            terminal.UP + terminal.BOL + terminal.CLEAR_EOL
         )
+        sys.stdout.write(to_write.decode("utf-8"))

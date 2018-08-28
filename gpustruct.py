@@ -1,10 +1,9 @@
-#
-# GPUStruct
-#
+#!/usr/bin/env python3
 
 import numpy as np
 import struct
 import pycuda.driver as cuda
+
 
 class GPUStruct(object):
     def __init__(self, objs):
@@ -45,39 +44,39 @@ class GPUStruct(object):
 
         """
         # set the objs
-        #self.__formats,self.__objs = zip(*[(obj[0],obj[1]) for obj in objs])
+        # self.__formats,self.__objs = zip(*[(obj[0],obj[1]) for obj in objs])
         # make them tuples to prevent modification
         self.__objs = []
         self.__objnames = []
         inits = {}
         for obj in objs:
-            oname = obj[1].replace('*','')
-            self.__objs.append((obj[0],obj[1]))
+            oname = obj[1].replace("*", "")
+            self.__objs.append((obj[0], obj[1]))
             self.__objnames.append(oname)
             inits[oname] = obj[2]
 
         # make them both tuples
         self.__objs = tuple(self.__objs)
         self.__objnames = tuple(self.__objnames)
-        #self.__objs = tuple(objs)
-        #self.__objnames = tuple([obj.replace('*','') for fmt,obj in self.__objs])
+        # self.__objs = tuple(objs)
+        # self.__objnames = tuple([obj.replace('*','') for fmt,obj in self.__objs])
 
         # set a dict for holding nbytes
         self.__nbytes = {}
         self.__ptrs = {}
-        
+
         # loop over objs, setting attributes from kwargs
-        for fmt,obj in self.__objs:
-            if obj.find('*') == 0:
+        for fmt, obj in self.__objs:
+            if obj.find("*") == 0:
                 # set the obj name without the *
                 obj = obj[1:]
                 # it's a pointer
                 self.__ptrs[obj] = None
 
             # also save the data
-            #setattr(self,obj,kwargs[obj])
-            setattr(self,obj,inits[obj])
-            
+            # setattr(self,obj,kwargs[obj])
+            setattr(self, obj, inits[obj])
+
         self.__ptr = None
         self.__fromstr = None
 
@@ -97,26 +96,25 @@ class GPUStruct(object):
     def __str__(self):
         ostring = ""
         for oname in self.__objnames:
-            ostring+="%s: %s\n" % (oname, str(getattr(self,oname)))
+            ostring += "%s: %s\n" % (oname, str(getattr(self, oname)))
         return ostring
-    
+
     def copy_to_gpu(self, skip=None):
         # get skip list
         if skip is None:
             skip = []
-        
+
         # loop over obj and send the data for the pointers
-        for fmt,obj in self.__objs:
-            if obj.find('*') == 0:
+        for fmt, obj in self.__objs:
+            if obj.find("*") == 0:
                 # set the obj name without the *
                 obj = obj[1:]
                 # verify the nbytes did not change, if so, free old
                 # ptr and allocate for new one.
                 # get the current bytes
-                dat = np.ascontiguousarray(fmt(getattr(self,obj)))
+                dat = np.ascontiguousarray(fmt(getattr(self, obj)))
                 cur_nbytes = dat.nbytes
-                if self.__nbytes.has_key(obj) and \
-                       self.__nbytes[obj] != cur_nbytes:
+                if obj in self.__nbytes and self.__nbytes[obj] != cur_nbytes:
                     # free it
                     self.__ptrs[obj].free()
                     self.__ptrs[obj] = None
@@ -129,7 +127,7 @@ class GPUStruct(object):
 
                 # send the data to the memory space
                 if not obj in skip:
-                    cuda.memcpy_htod(self.__ptrs[obj],dat)
+                    cuda.memcpy_htod(self.__ptrs[obj], dat)
 
         # pack everything and send struct to device
         self.__packstr = self._pack()
@@ -141,8 +139,8 @@ class GPUStruct(object):
             cuda.memcpy_htod(self.__ptr, self.__packstr)
 
         # create a fromstring to get data back
-        self.__fromstr = np.array(' '*len(self.__packstr))
-        
+        self.__fromstr = np.array(b" " * len(self.__packstr))
+
     def get_ptr(self):
         if self.__ptr is None:
             raise RuntimeError("You never called copy_to_gpu.")
@@ -152,23 +150,23 @@ class GPUStruct(object):
         return self.__packstr
 
     def _pack(self):
-        packed = ''
-        self.__fmt = ''
+        packed = ""
+        self.__fmt = ""
         topack = []
-        for fmt,obj in self.__objs:
-            if obj.find('*') == 0:
+        for fmt, obj in self.__objs:
+            if obj.find("*") == 0:
                 # set the obj name without the *
                 obj = obj[1:]
                 # is pointer
-                self.__fmt += 'P'
+                self.__fmt += "P"
                 topack.append(np.intp(int(self.__ptrs[obj])))
             else:
                 # is normal, so just get it
-                toadd = fmt(getattr(self,obj))
+                toadd = fmt(getattr(self, obj))
                 self.__fmt += toadd.dtype.char
                 topack.append(toadd)
         # pack it up
-        return struct.pack(self.__fmt,*topack)
+        return struct.pack(self.__fmt, *topack)
 
     def copy_from_gpu(self, skip=None):
         #         try:
@@ -186,30 +184,29 @@ class GPUStruct(object):
         # makre sure we've sent there
         if self.__fromstr is None:
             raise RuntimeError("You never called copy_to_gpu.")
-        
+
         # try and get the passed struct back
         cuda.memcpy_dtoh(self.__fromstr, self.__ptr)
         self.__unpacked = struct.unpack(self.__fmt, self.__fromstr)
 
         # now fill the attributes from the unpacked data
-        for ind,(fmt,obj) in enumerate(self.__objs):
-            if obj.find('*') == 0:
+        for ind, (fmt, obj) in enumerate(self.__objs):
+            if obj.find("*") == 0:
                 # set the obj name without the *
                 obj = obj[1:]
                 # is a pointer, so retrieve from card
                 if not obj in skip:
                     # first make sure dest is correct datatype
-                    setattr(self,obj,fmt(getattr(self, obj)))
-                    cuda.memcpy_dtoh(getattr(self, obj),
-                                     self.__ptrs[obj])
+                    setattr(self, obj, fmt(getattr(self, obj)))
+                    cuda.memcpy_dtoh(getattr(self, obj), self.__ptrs[obj])
             else:
                 # get it from the unpacked values
                 # trying to keep the dtype with a hack
-                #setattr(self, obj,
+                # setattr(self, obj,
                 #        getattr(np,str(getattr(self,obj).dtype))(self.__unpacked[ind]))
-                setattr(self, obj,
-                        fmt(self.__unpacked[ind]))
-                
+                setattr(self, obj, fmt(self.__unpacked[ind]))
+
+
 #     def __getattr__(self, attr):
 
 #         if attr in self.__objnames:
