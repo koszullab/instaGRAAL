@@ -4,30 +4,37 @@
 
 Usage:
     main_single_proc.py <hic_folder> <reference.fa> [<output_folder>]
-                        [--level=4] [--cycles=100] [--coverage-std=10]
-                        [--circular] [--bomb]
+                        [--level=4] [--cycles=100] [--coverage-std=1]
+                        [--neighborhood=5] [--circular] [--bomb]
 
 Options:
     -h, --help              Display this help message.
     --version               Display the program's current version.
-    -l 4, --level=4         Level (resolution) of the contact map.
+    -l 4, --level 4         Level (resolution) of the contact map. 
                             Increasing level by one means a threefold smaller
                             resolution but also a threefold faster computation
-                            time.
-    -n 100, --cycles=100    Number of iterations to perform for each bin
+                            time. [default: 4]
+    -n 100, --cycles 100    Number of iterations to perform for each bin.
                             (row/column of the contact map). A high number of
                             cycles has diminishing returns but there is a
                             necessary minimum for assembly convergence.
-    -c 1, --coverage-std=1  Number of standard deviations below the mean
+                            [default: 100]
+    -c 1, --coverage-std 1  Number of standard deviations below the mean.
                             coverage, below which fragments should be filtered
-                            out prior to binning.
-    -C, --circular          Indicates genome is circular.
-    -b, --bomb              Explode the genome prior to scaffolding.
+                            out prior to binning. [default: 1]
+    -N 5, --neighborhood 5  Number of neighbors to sample for potential
+                            mutations for each bin. [default: 5]
+    -C, --circular          Indicates genome is circular. [default: False]
+    -b, --bomb              Explode the genome prior to scaffolding. 
+                            [default: True]
 
 """
 
-import docopt
 import sys
+import os
+import docopt
+
+# os.environ['PYOPENGL_PLATFORM'] = 'egl'
 import pycuda.driver as cuda
 import pycuda.gl as cudagl
 
@@ -41,7 +48,6 @@ import OpenGL.GLUT
 
 # helper modules
 import glutil
-import os
 from vector import Vec
 import numpy as np
 import matplotlib.pyplot as plt
@@ -76,6 +82,7 @@ class window(object):
         gl_size_im,
         sample_param,
         thresh_factor,
+        output_folder,
     ):
         # mouse handling for transforming scene
         self.mouse_down = False
@@ -93,6 +100,7 @@ class window(object):
         self.dt = np.float32(0.01)
         self.white = 1
         self.gl_size_im = gl_size_im
+
         OpenGL.GLUT.glutInit(sys.argv)
         OpenGL.GLUT.glutInitDisplayMode(
             OpenGL.GLUT.GLUT_RGBA
@@ -136,6 +144,7 @@ class window(object):
             use_rippe,
             gl_size_im,
             thresh_factor,
+            output_folder=output_folder
         )
         self.gl_size_im = self.simulation.gl_size_im
         self.texid = self.simulation.texid
@@ -1972,7 +1981,7 @@ class window(object):
             h.close()
             try:
                 self.simulation.export_new_fasta()
-            except:
+            except OSError:
                 print(
                     ("Warning, could not write fasta file at cycle " + str(j))
                 )
@@ -1985,7 +1994,7 @@ class window(object):
                     np.savetxt(
                         my_file_path, self.simulation.sampler.gpu_im_gl.get()
                     )
-            except:
+            except OSError:
                 print(("Warning, could not write matrix at cycle " + str(j)))
 
         self.save_behaviour_to_txt()
@@ -2003,6 +2012,7 @@ if __name__ == "__main__":
     number_cycles = int(arguments["--cycles"])
     level = int(arguments["--level"])
     thresh_factor = int(arguments["--coverage-std"])
+    neighborhood = int(arguments["--neighborhood"])
     circ = arguments["--circular"]
     bomb = arguments["--bomb"]
 
@@ -2018,6 +2028,9 @@ if __name__ == "__main__":
     gl_size_im = 1000
     sample_param = True
 
+    if not output_folder:
+        output_folder = None
+
     p2 = window(
         name,
         level=level,
@@ -2030,13 +2043,14 @@ if __name__ == "__main__":
         gl_size_im=DEFAULT_GL_SIZE_IM,
         sample_param=True,
         thresh_factor=thresh_factor,
+        output_folder=output_folder
     )
     if circ:
         p2.simulation.level.S_o_A_frags["circ"] += 1
 
     p2.full_em(
         n_cycles=number_cycles,
-        n_neighbours=DEFAULT_NEIGHBOURS,
+        n_neighbours=neighborhood,
         bomb=bomb,
         id_start_sample_param=4,
     )

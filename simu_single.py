@@ -38,12 +38,38 @@ class simulation:
         use_rippe,
         gl_size_im,
         thresh_factor=1,
+        output_folder=None,
     ):
         self.name = name
         self.use_rippe = use_rippe
         self.str_sub_level = str(level - 1)
         self.str_level = str(level)
         self.thresh_factor = thresh_factor
+
+        self.data_set = name
+
+        toolbox_directory = os.path.dirname(os.path.abspath(__file__))
+        self.fasta = os.path.join(
+            toolbox_directory, "fasta", self.data_set + ".fa"
+        )
+        
+        self.data_set_root = toolbox_directory
+        self.dir_home = toolbox_directory
+        self.data_set_root = toolbox_directory
+
+        self.fasta = os.path.join(
+            toolbox_directory, "fasta", self.data_set + ".fa"
+        )
+        # default_level = size_pyramid - 1
+        self.base_folder = os.path.join(
+            self.data_set_root, self.data_set, "analysis"
+        )
+
+        if output_folder is None:
+            self.output_folder = os.path.join(self.data_set_root, "results")
+        else:
+            self.output_folder = output_folder
+
         self.select_data_set(name)
         self.n_iterations = n_iterations
         self.gl_size_im = gl_size_im
@@ -705,21 +731,6 @@ class simulation:
         size_pyramid = 9
         factor = 3
 
-        self.data_set = dict()
-
-        selected = name
-        toolbox_directory = os.path.dirname(os.path.abspath(__file__))
-        self.fasta = os.path.join(toolbox_directory, "fasta", selected + ".fa")
-        self.data_set = dict({selected: selected})
-        self.data_set_root = toolbox_directory
-        self.dir_home = toolbox_directory
-        self.data_set_root = toolbox_directory
-
-        self.fasta = os.path.join(toolbox_directory, "fasta", selected + ".fa")
-        # default_level = size_pyramid - 1
-        self.base_folder = os.path.join(
-            self.data_set_root, self.data_set[selected], "analysis"
-        )
         self.hic_pyr = pyr.build_and_filter(
             self.base_folder,
             size_pyramid,
@@ -728,21 +739,13 @@ class simulation:
         )
         print("pyramid loaded")
 
-        self.output_folder = os.path.join(self.data_set_root, "results")
+        if not (os.path.exists(self.output_folder)):
+            os.mkdir(self.output_folder)
+        self.output_folder = os.path.join(self.output_folder, self.data_set)
         if not (os.path.exists(self.output_folder)):
             os.mkdir(self.output_folder)
         self.output_folder = os.path.join(
-            self.data_set_root, "results", self.data_set[selected]
-        )
-        if not (os.path.exists(self.output_folder)):
-            os.mkdir(self.output_folder)
-        if not (os.path.exists(self.output_folder)):
-            os.mkdir(self.output_folder)
-        self.output_folder = os.path.join(
-            self.data_set_root,
-            "results",
-            self.data_set[selected],
-            "test_mcmc_" + self.str_level,
+            self.output_folder, "test_mcmc_" + self.str_level
         )
         if not (os.path.exists(self.output_folder)):
             os.mkdir(self.output_folder)
