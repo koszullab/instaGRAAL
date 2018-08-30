@@ -7,8 +7,8 @@ A couple of functions to manipulate info_frags.txt files and BED files.
 This module started as a couple scripts to flip back artefact inversions
 introduced by the GRAAL assembler and its derivatives (see:
 https://github.com/koszullab/GRAAL, https://github.com/koszullab/instaGRAAL).
-It has greatly evolved since, and provides a range of functions to attempt
-at polishing assemblies and correct potential missassemblies found in them.
+It has greatly evolved since, and provides a range of functions to polish
+assemblies and correct potential missassemblies.
 
 
 """
