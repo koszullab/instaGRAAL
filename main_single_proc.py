@@ -5,12 +5,13 @@
 Usage:
     main_single_proc.py <hic_folder> <reference.fa> [<output_folder>]
                         [--level=4] [--cycles=100] [--coverage-std=1]
-                        [--neighborhood=5] [--circular] [--bomb]
+                        [--neighborhood=5] [--device=0] [--circular]
+                        [--bomb] [--quiet] [--debug]
 
 Options:
     -h, --help              Display this help message.
     --version               Display the program's current version.
-    -l 4, --level 4         Level (resolution) of the contact map. 
+    -l 4, --level 4         Level (resolution) of the contact map.
                             Increasing level by one means a threefold smaller
                             resolution but also a threefold faster computation
                             time. [default: 4]
@@ -24,9 +25,16 @@ Options:
                             out prior to binning. [default: 1]
     -N 5, --neighborhood 5  Number of neighbors to sample for potential
                             mutations for each bin. [default: 5]
+    --device 0              If multiple graphic cards are available, select
+                            a specific device (numbered from 0). [default: 0]
     -C, --circular          Indicates genome is circular. [default: False]
-    -b, --bomb              Explode the genome prior to scaffolding. 
-                            [default: True]
+    -b, --bomb              Explode the genome prior to scaffolding.
+                            [default: False]
+    --quiet                 Only display warnings and errors as outputs.
+                            [default: False]
+    --debug                 Display debug information. For development purposes
+                            only. Mutually exclusive with --quiet, and will
+                            override it. [default: False]
 
 """
 
@@ -34,7 +42,6 @@ import sys
 import os
 import docopt
 
-# os.environ['PYOPENGL_PLATFORM'] = 'egl'
 import pycuda.driver as cuda
 import pycuda.gl as cudagl
 
@@ -52,6 +59,10 @@ from vector import Vec
 import numpy as np
 import matplotlib.pyplot as plt
 from simu_single import simulation
+
+import logging
+import log
+from log import logger
 
 VERSION_NUMBER = "0.1a"
 
@@ -72,6 +83,9 @@ class window(object):
     def __init__(
         self,
         name,
+        folder_path,
+        fasta,
+        device,
         level,
         n_iterations_em,
         n_iterations_mcmc,
@@ -84,6 +98,7 @@ class window(object):
         thresh_factor,
         output_folder,
     ):
+        self.device = device
         # mouse handling for transforming scene
         self.mouse_down = False
         self.size_points = 6
@@ -137,6 +152,8 @@ class window(object):
 
         self.simulation = simulation(
             name,
+            folder_path,
+            fasta,
             level,
             n_iterations_em,
             is_simu,
@@ -144,7 +161,7 @@ class window(object):
             use_rippe,
             gl_size_im,
             thresh_factor,
-            output_folder=output_folder
+            output_folder=output_folder,
         )
         self.gl_size_im = self.simulation.gl_size_im
         self.texid = self.simulation.texid
@@ -327,9 +344,9 @@ class window(object):
             self.str_curr_temp = "current temperature = " + str(0)
 
     def start_EM(self,):
-        print("start expectation maximization ... ")
+        logger.info("start expectation maximization ... ")
         delta = 15
-        print((self.simulation.n_iterations))
+        logger.info(self.simulation.n_iterations)
         delta = np.int32(
             np.floor(np.linspace(3, 5, np.floor(self.n_iterations_em / 3.)))
         )  # param ok simu
@@ -342,8 +359,8 @@ class window(object):
             )
         )  # param ok simu
         delta.extend(d_ext)
-        print(delta)
-        print(("len delta = ", len(delta)))
+        logger.info(delta)
+        logger.info(("len delta = ", len(delta)))
         o, d, d_high = self.simulation.sampler.display_current_matrix(
             self.simulation.input_matrix
         )
@@ -367,7 +384,7 @@ class window(object):
         n_iter = np.float32(self.n_iterations_em)
         self.bins_rippe = self.simulation.sampler.bins
         for j in range(0, self.n_iterations_em):
-            print(("cycle = ", j))
+            logger.info("cycle = {}".format(j))
             self.str_curr_cycle = "current cycle = " + str(j)
             np.random.shuffle(list_frags)
             # d = self.simulation.sampler.step_nuisance_parameters(0, 0, 0)
@@ -480,9 +497,9 @@ class window(object):
         self.save_behaviour_to_txt()
 
     def start_EM_all(self,):
-        print("start expectation maximization ... ")
+        logger.info("start expectation maximization ... ")
         delta = 15
-        print((self.simulation.n_iterations))
+        logger.info((self.simulation.n_iterations))
         delta = np.int32(
             np.floor(np.linspace(3, 4, np.floor(self.n_iterations_em / 2.)))
         )  # param ok simu
@@ -497,8 +514,8 @@ class window(object):
         # d_ext = list(np.floor(np.linspace(10, 15,
         # np.floor(self.n_iterations_em / 2.) + 1)))
         delta.extend(d_ext)
-        print(delta)
-        print(("len delta = ", len(delta)))
+        logger.info(delta)
+        logger.info(("len delta = ", len(delta)))
         o, d, d_high = self.simulation.sampler.display_current_matrix(
             self.simulation.input_matrix
         )
@@ -545,7 +562,7 @@ class window(object):
             self.dt, np.float32(0), n_iter
         )
         for j in range(0, self.n_iterations_em):
-            print(("cycle = ", j))
+            logger.info("cycle = {}".format(j))
             self.str_curr_cycle = "current cycle = " + str(j)
             np.random.shuffle(list_frags)
             # d = self.simulation.sampler.step_nuisance_parameters(0, 0, 0)
@@ -655,9 +672,9 @@ class window(object):
         self.simulation.plot_all_info_simu(self.collect_all, self.header)
 
     def start_EM_nuisance(self,):
-        print("start expectation maximization ... ")
+        logger.info("start expectation maximization ... ")
         delta = 15
-        print((self.simulation.n_iterations))
+        logger.info((self.simulation.n_iterations))
         delta = np.int32(
             np.floor(np.linspace(3, 4, np.floor(self.n_iterations_em / 2.)))
         )  # param ok simu
@@ -672,8 +689,8 @@ class window(object):
         # d_ext = list(np.floor(np.linspace(10, 15,
         # np.floor(self.n_iterations_em / 2.) + 1)))
         delta.extend(d_ext)
-        print(delta)
-        print(("len delta = ", len(delta)))
+        logger.info(delta)
+        logger.info(("len delta = ", len(delta)))
         o, d, d_high = self.simulation.sampler.display_current_matrix(
             self.simulation.input_matrix
         )
@@ -697,7 +714,7 @@ class window(object):
         n_iter = np.float32(self.n_iterations_em)
         self.bins_rippe = self.simulation.sampler.bins
         for j in range(0, self.n_iterations_em):
-            print(("cycle = ", j))
+            logger.info("cycle = {}".format(j))
             self.str_curr_cycle = "current cycle = " + str(j)
             np.random.shuffle(list_frags)
             # d = self.simulation.sampler.step_nuisance_parameters(0, 0, 0)
@@ -776,9 +793,9 @@ class window(object):
         # self.save_behaviour_to_txt()
 
     def start_EM_no_scrambled(self,):
-        print("start expectation maximization ... ")
+        logger.info("start expectation maximization ... ")
         delta = 15
-        print((self.simulation.n_iterations))
+        logger.info((self.simulation.n_iterations))
         # delta = np.int32(np.floor(np.linspace(3, 4,
         # np.floor(self.n_iterations_em / 2.)))) # param ok simu
         delta = np.int32(
@@ -793,8 +810,8 @@ class window(object):
             )
         )
         delta.extend(d_ext)
-        print(delta)
-        print(("len delta = ", len(delta)))
+        logger.info(delta)
+        logger.info(("len delta = ", len(delta)))
         o, d, d_high = self.simulation.sampler.display_current_matrix(
             self.simulation.input_matrix
         )
@@ -809,7 +826,7 @@ class window(object):
         iter = 0
         n_iter = np.float32(self.n_iterations_em)
         for j in range(0, self.n_iterations_em):
-            print(("cycle = ", j))
+            logger.info("cycle = {}".format(j))
             self.str_curr_cycle = "current cycle = " + str(j)
             np.random.shuffle(list_frags)
             # d = self.simulation.sampler.step_nuisance_parameters(0, 0, 0)
@@ -920,14 +937,14 @@ class window(object):
         f_mutations.close()
 
     def start_MCMC(self,):
-        print("set jumping distribution...")
+        logger.info("set jumping distribution...")
         delta = 5
         self.simulation.sampler.set_jumping_distributions_parameters(delta)
         self.simulation.sampler.init_likelihood()
-        print("start sampling launched ... ")
-        print((self.simulation.n_iterations))
+        logger.info("start sampling launched ... ")
+        logger.info((self.simulation.n_iterations))
         delta = list(range(5, 5 + self.simulation.n_iterations * 2, 2))
-        print(delta)
+        logger.info(delta)
         # if self.scrambled:
         #     self.simulation.sampler.modify_genome(500)
         # o, d, d_high =
@@ -937,7 +954,7 @@ class window(object):
         n_iter = np.float32(self.simulation.n_iterations)
         list_frags = np.arange(0, self.n_frags, dtype=np.int32)
         for j in range(0, self.n_iterations_mcmc):
-            print(("cycle = ", j))
+            logger.info("cycle = {}".format(j))
             self.str_curr_cycle = "current cycle = " + str(j)
             np.random.shuffle(list_frags)
             for i in list_frags:
@@ -1013,14 +1030,14 @@ class window(object):
         self.save_behaviour_to_txt()
 
     def start_MTM(self,):
-        print("set jumping distribution...")
+        logger.info("set jumping distribution...")
         delta = 5
         self.simulation.sampler.set_jumping_distributions_parameters(delta)
         self.simulation.sampler.init_likelihood()
-        print("start sampling launched ... ")
-        print((self.simulation.n_iterations))
+        logger.info("start sampling launched ... ")
+        logger.info((self.simulation.n_iterations))
         delta = list(range(5, 5 + self.simulation.n_iterations * 2, 2))
-        print(delta)
+        logger.info(delta)
         # if self.scrambled:
         #     self.simulation.sampler.modify_genome(500)
         # o, d, d_high =
@@ -1033,7 +1050,7 @@ class window(object):
         n_iter = np.float32(self.simulation.n_iterations)
         list_frags = np.arange(0, self.n_frags, dtype=np.int32)
         for j in range(0, self.n_iterations_mcmc):
-            print(("cycle = ", j))
+            logger.info("cycle = {}".format(j))
             self.str_curr_cycle = "current cycle = " + str(j)
             np.random.shuffle(list_frags)
             for i in list_frags:
@@ -1132,7 +1149,7 @@ class window(object):
         )
         id_neighbors.sort()
         np.sort(id_neighbors)
-        print(("physic model = ", self.simulation.sampler.param_simu))
+        logger.info(("physic model = ", self.simulation.sampler.param_simu))
         j = 0
         n_iter = self.n_iterations_em
         self.simulation.sampler.step_max_likelihood(
@@ -1231,7 +1248,7 @@ class window(object):
         # plt.show()
         plt.figure()
         for i in range(0, self.simulation.sampler.n_tmp_struct):
-            print(i)
+            logger.info(i)
             plt.plot(
                 id_neighbors,
                 nscore[
@@ -1256,7 +1273,7 @@ class window(object):
         )
         id_neighbors.sort()
         np.sort(id_neighbors)
-        print(("physic model = ", self.simulation.sampler.param_simu))
+        logger.info(("physic model = ", self.simulation.sampler.param_simu))
         self.simulation.sampler.debug_step_max_likelihood(
             id_fi, delta, 512, self.dt
         )
@@ -1338,7 +1355,7 @@ class window(object):
         # plt.show()
         plt.figure()
         for i in range(0, self.simulation.sampler.n_tmp_struct):
-            print(i)
+            logger.info(i)
             plt.plot(
                 id_neighbors,
                 nscore[
@@ -1365,16 +1382,9 @@ class window(object):
     def cuda_gl_init(self,):
         cuda.init()
         if bool(OpenGL.GLUT.glutMainLoopEvent):
-            print("----SELECT DISPLAY DEVICE----")
-            num_gpu = cuda.Device.count()
-            for i in range(0, num_gpu):
-                tmp_dev = cuda.Device(i)
-                print(("device_id = ", i, tmp_dev.name()))
-            # id_gpu = raw_input("Select GPU: ")
-            id_gpu = 0
-            id_gpu = int(id_gpu)
+            id_gpu = self.device
             curr_gpu = cuda.Device(id_gpu)
-            print(("you have selected ", curr_gpu.name()))
+            logger.info("Selected_device: {}".format(curr_gpu.name()))
             self.ctx_gl = cudagl.make_context(
                 curr_gpu, flags=cudagl.graphics_map_flags.NONE
             )
@@ -1867,7 +1877,7 @@ class window(object):
                 list_frags_extremities, dtype=np.int32
             )
             np.random.shuffle(list_frags_extremities)
-            print(("cycle = ", j))
+            logger.info("cycle = {}".format(j))
             # np.random.shuffle(list_frags)
             for id_frag in list_frags_extremities:
                 if bool(OpenGL.GLUT.glutMainLoopEvent):
@@ -1906,7 +1916,7 @@ class window(object):
             sampler.gpu_vect_frags.copy_from_gpu()
 
             np.random.shuffle(list_frags)
-            print(("cycle = ", j))
+            logger.info("cycle = {}".format(j))
             # np.random.shuffle(list_frags)
             for id_frag in list_frags:
                 if bool(OpenGL.GLUT.glutMainLoopEvent):
@@ -1982,7 +1992,7 @@ class window(object):
             try:
                 self.simulation.export_new_fasta()
             except OSError:
-                print(
+                logger.warning(
                     ("Warning, could not write fasta file at cycle " + str(j))
                 )
             try:
@@ -1995,7 +2005,7 @@ class window(object):
                         my_file_path, self.simulation.sampler.gpu_im_gl.get()
                     )
             except OSError:
-                print(("Warning, could not write matrix at cycle " + str(j)))
+                logger.warning("Could not write matrix at cycle " + str(j))
 
         self.save_behaviour_to_txt()
 
@@ -2011,10 +2021,25 @@ if __name__ == "__main__":
 
     number_cycles = int(arguments["--cycles"])
     level = int(arguments["--level"])
-    thresh_factor = int(arguments["--coverage-std"])
+    thresh_factor = float(arguments["--coverage-std"])
     neighborhood = int(arguments["--neighborhood"])
+    device = int(arguments["--device"])
     circ = arguments["--circular"]
     bomb = arguments["--bomb"]
+    quiet = arguments["--quiet"]
+    debug = arguments["--debug"]
+
+    log_level = logging.INFO
+
+    if quiet:
+        log_level = logging.WARNING
+
+    if debug:
+        log_level = logging.DEBUG
+
+    logger.setLevel(log_level)
+
+    log.CURRENT_LOG_LEVEL = log_level
 
     name = os.path.basename(os.path.normpath(project_folder))
 
@@ -2032,7 +2057,10 @@ if __name__ == "__main__":
         output_folder = None
 
     p2 = window(
-        name,
+        name=name,
+        folder_path=project_folder,
+        fasta=reference_fasta,
+        device=device,
         level=level,
         n_iterations_em=DEFAULT_ITERATIONS_EM,
         n_iterations_mcmc=DEFAULT_ITERATIONS_MCMC,
@@ -2043,7 +2071,7 @@ if __name__ == "__main__":
         gl_size_im=DEFAULT_GL_SIZE_IM,
         sample_param=True,
         thresh_factor=thresh_factor,
-        output_folder=output_folder
+        output_folder=output_folder,
     )
     if circ:
         p2.simulation.level.S_o_A_frags["circ"] += 1

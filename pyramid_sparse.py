@@ -4,10 +4,13 @@ import shutil
 import h5py
 import sys
 import numpy as np
-from progressbar import ProgressBar
 from fragment import basic_fragment as B_frag
 from matplotlib import pyplot as plt
 import scipy.sparse as sp
+import log
+from log import logger
+
+logger.setLevel(log.CURRENT_LOG_LEVEL)
 
 
 def file_len(fname):
@@ -59,7 +62,7 @@ def build_and_filter(base_folder, size_pyramid, factor, thresh_factor=1):
     pyramid_level_folder = os.path.join(pyramid_folder, "level_" + str(level))
     if not (os.path.exists(pyramid_level_folder)):
         os.mkdir(pyramid_level_folder)
-    print("test 1")
+
     current_contig_info = os.path.join(
         pyramid_level_folder, str(level) + "_contig_info.txt"
     )
@@ -77,9 +80,9 @@ def build_and_filter(base_folder, size_pyramid, factor, thresh_factor=1):
         # if not(os.path.exists(current_contig_info) and
         # os.path.exists(current_frag_list)) :
         #
-        print("start filtering")
+        logger.info("start filtering")
         pyramid_0 = h5py.File(init_pyramid_file)
-        print(pyramid_0)
+
         remove_problematic_fragments(
             contig_info,
             fragments_list,
@@ -93,7 +96,7 @@ def build_and_filter(base_folder, size_pyramid, factor, thresh_factor=1):
         pyramid_0.close()
         #
     else:
-        print("filtering already done...")
+        logger.info("filtering already done...")
 
     hdf5_pyramid_file = os.path.join(pyramid_folder, "pyramid.hdf5")
 
@@ -131,10 +134,10 @@ def build_and_filter(base_folder, size_pyramid, factor, thresh_factor=1):
                 # if os.path.exists(new_contig_list_file) and
                 # os.path.exists(new_fragments_list_file) and
                 # os.path.exists((sub_2_super_frag_index_file)):
-                print("level already built")
+                logger.info("level already built")
                 nfrags = file_len(new_fragments_list_file) - 1
             else:  # this should never append !!!
-                print("writing new_files..")
+                logger.info("writing new_files..")
                 nfrags = subsample_data_set(
                     current_contig_info,
                     current_frag_list,
@@ -154,7 +157,7 @@ def build_and_filter(base_folder, size_pyramid, factor, thresh_factor=1):
             ):
                 # if os.path.exists(new_contig_list_file) and
                 # os.path.exists(new_fragments_list_file) :
-                print("level already built...")
+                logger.info("level already built...")
                 nfrags = file_len(new_fragments_list_file) - 1
 
         try:
@@ -163,7 +166,7 @@ def build_and_filter(base_folder, size_pyramid, factor, thresh_factor=1):
             pyramid_handle.attrs[str(level)] = "pending"
             status = False
         if not (status):
-            print("Start filling the pyramid")
+            logger.info("Start filling the pyramid")
             # level_to_fill = pyramid_handle.create_dataset(str(level),
             # (nfrags,nfrags), 'i')
             # fill_pyramid_level(level_to_fill,new_abs_fragments_contacts_file,
@@ -179,7 +182,7 @@ def build_and_filter(base_folder, size_pyramid, factor, thresh_factor=1):
         sub_2_super_frag_index_file = os.path.join(
             pyramid_level_folder, level_pyramid + "sub_2_super_index_frag.txt"
         )
-    print("pyramid built.")
+    logger.info("pyramid built.")
     ###############################################
     obj_pyramid = pyramid(pyramid_folder, size_pyramid)
     pyramid_handle.close()
@@ -259,10 +262,10 @@ def build(base_folder, size_pyramid, factor, min_bin_per_contig):
                 and os.path.exists(new_abs_fragments_contacts_file)
                 and os.path.exists(sub_2_super_frag_index_file)
             ):
-                print("level already built...")
+                logger.info("level already built...")
                 nfrags = file_len(new_fragments_list_file) - 1
             else:
-                print("writing new_files..")
+                logger.info("writing new_files..")
                 nfrags = subsample_data_set(
                     current_contig_info,
                     current_frag_list,
@@ -282,7 +285,7 @@ def build(base_folder, size_pyramid, factor, min_bin_per_contig):
             pyramid_handle.attrs[str(level)] = "pending"
             status = False
         if not (status):
-            print("Start filling the pyramid")
+            logger.info("Start filling the pyramid")
             fill_sparse_pyramid_level(
                 pyramid_handle, level, new_abs_fragments_contacts_file, nfrags
             )
@@ -294,7 +297,7 @@ def build(base_folder, size_pyramid, factor, min_bin_per_contig):
         sub_2_super_frag_index_file = os.path.join(
             pyramid_level_folder, level_pyramid + "sub_2_super_index_frag.txt"
         )
-    print("pyramid built.")
+    logger.info("pyramid built.")
     pyramid_handle.close()
     ###############################################
     # obj_pyramid =
@@ -304,8 +307,6 @@ def build(base_folder, size_pyramid, factor, min_bin_per_contig):
 
 
 def abs_contact_2_coo_file(abs_contact_file, coo_file):
-    print("here we go")
-    p = ProgressBar("green", width=20, block="▣", empty="□")
 
     sparse_dict = dict()
     h = open(abs_contact_file, "r")
@@ -313,13 +314,7 @@ def abs_contact_2_coo_file(abs_contact_file, coo_file):
     n_lines = len(all_lines)
     # index start at
     for i in range(1, n_lines):
-        pt = np.float32(i) / n_lines
-        if i % 10 ** 6 == 0:
-            p.render(
-                pt * 100,
-                "step %s\nProcessing...\nDescription: "
-                "convert dense file to COO sparse data." % i,
-            )
+
         line = all_lines[i]
         dat = line.split()
         mates = [int(dat[0]), int(dat[1])]
@@ -350,13 +345,8 @@ def abs_contact_2_coo_file(abs_contact_file, coo_file):
     h_coo.close()
     h.close()
 
-    print("Done.")
-
 
 def fill_sparse_pyramid_level(pyramid_handle, level, contact_file, nfrags):
-
-    print("here we go")
-    p = ProgressBar("green", width=20, block="▣", empty="□")
 
     sparse_dict = dict()
     h = open(contact_file, "r")
@@ -364,13 +354,7 @@ def fill_sparse_pyramid_level(pyramid_handle, level, contact_file, nfrags):
     n_lines = len(all_lines)
     # index start at
     for i in range(1, n_lines):
-        pt = np.float32(i) / n_lines
-        if i % 10 ** 6 == 0:
-            p.render(
-                pt * 100,
-                "step %s\nProcessing...\nDescription:"
-                " loading sparse data into hdf5." % i,
-            )
+
         line = all_lines[i]
         dat = line.split()
         mates = [int(dat[0]), int(dat[1])]
@@ -414,7 +398,6 @@ def fill_sparse_pyramid_level(pyramid_handle, level, contact_file, nfrags):
     data_2_sparse[1, :] = out_c
     data_2_sparse[2, :] = out_d
     data_nfrags[:] = nfrags
-    print("Done.")
 
 
 def init_frag_list(fragment_list, new_frag_list):
@@ -484,12 +467,10 @@ def subsample_data_set(
     old_2_new_file,
 ):
 
-    import numpy as np
-
-    print("fact sub sampling = ", fact_sub_sample)
-    print("minimum bin numer per contig = ", min_bin_per_contig)
+    logger.debug("fact sub sampling = {}".format(fact_sub_sample))
+    logger.debug("minimum bin numer per contig = {}".format(min_bin_per_contig))
     if fact_sub_sample <= 1:
-        print("subsampling : nothing to do")
+        logger.info("subsampling : nothing to do")
         shutil.copy(fragments_list, new_fragments_list_file)
         shutil.copy(contig_info, new_contig_list_file)
         shutil.copy(abs_fragments_contacts, new_abs_fragments_contacts_file)
@@ -502,7 +483,7 @@ def subsample_data_set(
             handle_old_2_new.write("%s\t%s\n" % (curr_id, super_id))
         handle_old_2_new.close()
     else:
-        print("subsampling : start")
+        logger.info("subsampling : start")
         old_2_new_frags = dict()
         spec_new_frags = dict()
         handle_new_contigs_list = open(new_contig_list_file, "w")
@@ -595,9 +576,11 @@ def subsample_data_set(
                 )
             )
             # write new fragments list
-        print("size matrix before sub sampling = ", id_frag_abs)
-        print("size matrix after sub sampling = ", new_abs_id_frag)
-        print("sum length contigs = ", sum_length_contigs)
+        logger.info("size matrix before sub sampling = {}".format(id_frag_abs))
+        logger.info(
+            "size matrix after sub sampling = {}".format(new_abs_id_frag)
+        )
+        logger.info("sum length contigs = {}".format(sum_length_contigs))
 
         # reading fragments list !!!! #######################################
         handle_fragments_list = open(fragments_list, "r")
@@ -639,7 +622,6 @@ def subsample_data_set(
                     "init_frag_end"
                 ] = init_frag_end  # coord level 0
 
-        print(id_abs)
         keys_new_frags = list(spec_new_frags.keys())
         keys_new_frags.sort()
         handle_new_fragments_list = open(new_fragments_list_file, "w")
@@ -661,7 +643,7 @@ def subsample_data_set(
         )
         # print "id problem",spec_new_frags[1]
         nfrags = len(keys_new_frags)
-        print("nfrags = ", nfrags)
+        logger.info("nfrags = {}".format(nfrags))
         for new_frag in keys_new_frags:
             id = str(spec_new_frags[new_frag]["id_rel"])
 
@@ -698,12 +680,11 @@ def subsample_data_set(
             )
 
         handle_new_fragments_list.close()
-        print("new fragments list written...")
-        print("...")
+        logger.info("new fragments list written...")
 
         # be carefull : le dictionnaire est base sur
         if not (abs_fragments_contacts == "SIMU"):
-            print("update sparse contacts file...")  # index 0 based
+            logger.info("update sparse contacts file...")  # index 0 based
             handle_new_abs_fragments_contacts = open(
                 new_abs_fragments_contacts_file, "w"
             )
@@ -751,7 +732,7 @@ def subsample_data_set(
                     )
             handle_new_abs_fragments_contacts.close()
 
-        print("subsampling: done.")
+        logger.info("subsampling: done.")
         handle_old_2_new = open(old_2_new_file, "w")
         handle_old_2_new.write("%s\t%s\n" % ("current_id", "super_id"))
         for ind in list(old_2_new_frags.keys()):
@@ -781,15 +762,12 @@ def remove_problematic_fragments(
 
     import numpy as np
 
-    p = ProgressBar("blue", width=20, block="▣", empty="□")
-
     # full_resolution = pyramid["0"]
-    print(pyramid)
-    print((list(pyramid.keys())))
+
     level = pyramid["0"]
     np_2_scipy_sparse = level["data"]
     nfrags = int(level["nfrags"][0])
-    print("nfrags = ", nfrags)
+    logger.info("nfrags = {}".format(nfrags))
     sparse_mat_csr = sp.csr_matrix(
         (np_2_scipy_sparse[2, :], np_2_scipy_sparse[0:2, :]),
         shape=(nfrags, nfrags),
@@ -802,11 +780,11 @@ def remove_problematic_fragments(
     mean_spars = collect_sparsity.mean()
     std_spars = collect_sparsity.std()
     max_spars = collect_sparsity.max()
-    print("n init frags = ", nfrags)
-    print("mean sparsity = ", mean_spars)
-    print("median sparsity = ", np.median(collect_sparsity))
-    print("std sparsity = ", std_spars)
-    print("max_sparsity = ", max_spars)
+    logger.info("n init frags = {}".format(nfrags))
+    logger.info("mean sparsity = {}".format(mean_spars))
+    logger.info("median sparsity = {}".format(np.median(collect_sparsity)))
+    logger.info("std sparsity = {}".format(std_spars))
+    logger.info("max_sparsity = {}".format(max_spars))
     plt.figure()
     plt.scatter(list(range(len(collect_sparsity))), collect_sparsity)
     plt.savefig("sparsity_plot.pdf")
@@ -831,7 +809,7 @@ def remove_problematic_fragments(
     # thresh = max(mean_spars - 0.9 * std_spars,0) # para g1
     # SENSITIVE PARAMETER ########
     list_fragments_problem = list(np.nonzero(collect_sparsity == 0)[0])
-    print("thresh sparsity = ", thresh)
+    logger.info("thresh sparsity = {}".format(thresh))
     # plt.show()
     list_fragments_problem = list(np.nonzero(collect_sparsity <= thresh)[0])
     list_fragments_problem_too_large = list(
@@ -839,15 +817,8 @@ def remove_problematic_fragments(
     )
     list_fragments_problem.extend(list_fragments_problem_too_large)
     # print(np.array(list_fragments_problem))
-    print(
-        (
-            "I have to remove "
-            + str(len(list_fragments_problem))
-            + " fragments due to insufficient coverage"
-        )
-    )
 
-    print("cleaning : start")
+    logger.info("cleaning : start")
     import numpy as np
 
     handle_new_fragments_list = open(new_fragments_list_file, "w")
@@ -878,9 +849,12 @@ def remove_problematic_fragments(
     list_fragments_problem = list(list_fragments_problem)
     list_fragments_problem.extend(list_short_frags)
     list_fragments_problem = np.unique(list_fragments_problem)
-    print("number of fragments to remove = ", len(list_fragments_problem))
-    # remove fragments which are too small #
-    n_total_frags = len(list(np_id_2_frag.keys()))
+    logger.info(
+        "number of fragments to remove = {}".format(
+            len(list_fragments_problem)
+        )
+    )
+
     # build Contigs.init_contigs dictionary ( need to know the number of frags
     # per contig)
     init_contigs, list_init_contig = get_contig_info_from_file(contig_info)
@@ -927,7 +901,6 @@ def remove_problematic_fragments(
     }
     ######################################
     step = 0
-    p = ProgressBar("blue", width=20, block="▣", empty="□")
     while 1:
         line_fragment = handle_fragments_list.readline()
         if not line_fragment:
@@ -939,8 +912,6 @@ def remove_problematic_fragments(
             handle_new_fragments_list.close()
             break
         step += 1
-        pt = step * 100 / n_total_frags
-
         init_id_frag_abs += 1
 
         data = line_fragment.split("\t")
@@ -988,7 +959,9 @@ def remove_problematic_fragments(
         if not lock:
             for ele in tmp_cumul["list_chrom"]:
                 if not (ele == tmp_cumul["list_chrom"][0]):
-                    print("warning problem hetero fragments!!!!!!!!!!!!!!!")
+                    logger.info(
+                        "warning problem hetero fragments!!!!!!!!!!!!!!!"
+                    )
 
             contig_info_dict[chrom]["n_new_frags"] += 1
             contig_info_dict[chrom]["length_kb"] += tmp_cumul["size"]
@@ -1029,18 +1002,8 @@ def remove_problematic_fragments(
             tmp_cumul["frag_end"] = []
             new_id_frag_rel += 1
             new_id_frag_abs += 1
-        else:
-            p.render(
-                pt,
-                "step %s\nProcessing...\nDescription: removing bad fragments."
-                % step,
-            )
-    p.render(
-        pt,
-        "step %s\nProcessing...\nDescription: removing bad fragments." % step,
-    )
 
-    print("max new id = ", new_id_frag_abs)
+    logger.debug("max new id = {}".format(new_id_frag_abs))
     handle_new_contigs_list = open(new_contig_list_file, "w")
     handle_new_contigs_list.write(
         "%s\t%s\t%s\t%s\n" % ("contig", "length_kb", "n_frags", "cumul_length")
@@ -1068,8 +1031,8 @@ def remove_problematic_fragments(
             )
             cumul_length += n_frags
         else:
-            print(contig + " has been deleted...")
-    print("update contacts files...")
+            logger.info(contig + " has been deleted...")
+    logger.info("update contacts files...")
     # write new contacts file
     # n_total_contacts = file_len(abs_fragments_contacts)
     handle_new_abs_fragments_contacts = open(
@@ -1209,13 +1172,11 @@ def new_remove_problematic_fragments(
 
     import numpy as np
 
-    p = ProgressBar("blue", width=20, block="▣", empty="□")
-
     # full_resolution = pyramid["0"]
     level = pyramid["0"]
     np_2_scipy_sparse = level["data"]
     nfrags = level["nfrags"][0]
-    print("nfrags = ", nfrags)
+    logger.debug("nfrags = {}".format(nfrags))
 
     sparse_mat_csr = sp.csr_matrix(
         (np_2_scipy_sparse[2, :], np_2_scipy_sparse[0:2, :]),
@@ -1228,21 +1189,23 @@ def new_remove_problematic_fragments(
     mean_spars = collect_sparsity.mean()
     std_spars = collect_sparsity.std()
     max_spars = collect_sparsity.max()
-    print("n init frags = ", nfrags)
-    print("mean sparsity = ", mean_spars)
-    print("std sparsity = ", std_spars)
-    print("max_sparsity = ", max_spars)
+    logger.debug("n init frags = {}".format(nfrags))
+    logger.debug("mean sparsity = {}".format(mean_spars))
+    logger.debug("std sparsity = {}".format(std_spars))
+    logger.debug("max_sparsity = {}".format(max_spars))
     thresh = mean_spars - 1.01 * std_spars  # para g1
     thresh = mean_spars * 0.8  # for de novo chr14
     thresh = 0.0009  # for de novo chr14
-    print("thresh sparsity = ", thresh)
+    logger.debug("thresh sparsity = {}".format(thresh))
     plt.hist(collect_sparsity, 500)
     plt.show()
     list_fragments_problem = np.nonzero(collect_sparsity <= thresh)[0]
-    print("cleaning : start")
-    import numpy as np
 
-    print("number of fragments to remove = ", len(list_fragments_problem))
+    logger.info(
+        "number of fragments to remove = {}".format(
+            len(list_fragments_problem)
+        )
+    )
     handle_new_fragments_list = open(new_fragments_list_file, "w")
     handle_new_fragments_list.write(
         "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n"
@@ -1260,7 +1223,7 @@ def new_remove_problematic_fragments(
     )
     # build np_id_2_frag dictionary
     np_id_2_frag = get_frag_info_from_fil(fragments_list)
-    n_total_frags = len(list(np_id_2_frag.keys()))
+
     # build Contigs.init_contigs dictionary ( need to know the number of frags
     # per contig)
     init_contigs, list_init_contig = get_contig_info_from_file(contig_info)
@@ -1306,7 +1269,6 @@ def new_remove_problematic_fragments(
         "list_chrom": [],
     }
     step = 0
-    p = ProgressBar("blue", width=20, block="▣", empty="□")
     while 1:
         line_fragment = handle_fragments_list.readline()
         if not line_fragment:
@@ -1318,7 +1280,6 @@ def new_remove_problematic_fragments(
             handle_new_fragments_list.close()
             break
         step += 1
-        pt = step * 100 / n_total_frags
 
         init_id_frag_abs += 1
 
@@ -1367,7 +1328,9 @@ def new_remove_problematic_fragments(
         if not lock:
             for ele in tmp_cumul["list_chrom"]:
                 if not (ele == tmp_cumul["list_chrom"][0]):
-                    print("warning problem hetero fragments!!!!!!!!!!!!!!!")
+                    logger.info(
+                        "warning problem hetero fragments!!!!!!!!!!!!!!!"
+                    )
 
             contig_info_dict[chrom]["n_new_frags"] += 1
             contig_info_dict[chrom]["length_kb"] += tmp_cumul["size"]
@@ -1408,19 +1371,9 @@ def new_remove_problematic_fragments(
             tmp_cumul["frag_end"] = []
             new_id_frag_rel += 1
             new_id_frag_abs += 1
-        else:
-            p.render(
-                pt,
-                "step %s\nProcessing...\nDescription: removing bad fragments."
-                % step,
-            )
-    p.render(
-        pt,
-        "step %s\nProcessing...\nDescription: removing bad fragments." % step,
-    )
 
     # Update contig info file
-    print("max new id = ", new_id_frag_abs)
+    logger.debug("max new id = {}".format(new_id_frag_abs))
     handle_new_contigs_list = open(new_contig_list_file, "w")
     handle_new_contigs_list.write(
         "%s\t%s\t%s\t%s\n" % ("contig", "length_kb", "n_frags", "cumul_length")
@@ -1448,9 +1401,9 @@ def new_remove_problematic_fragments(
             )
             cumul_length += n_frags
         else:
-            print(contig + " has been deleted...")
+            logger.info(contig + " has been deleted...")
 
-    print("update contacts files...")
+    logger.info("update contacts files...")
     handle_new_abs_fragments_contacts = open(
         new_abs_fragments_contacts_file, "w"
     )
@@ -1504,14 +1457,14 @@ def new_remove_problematic_fragments(
 
 class pyramid:
     def __init__(self, pyramid_folder, n_levels):
-        print("init pyramid")
+        logger.info("init pyramid")
         self.pyramid_folder = pyramid_folder
-        print((self.pyramid_folder))
+
         self.n_levels = n_levels
         pyramid_file = "pyramid.hdf5"
         self.pyramid_file = os.path.join(pyramid_folder, pyramid_file)
         self.data = h5py.File(self.pyramid_file)
-        print((list(self.data.keys())))
+
         self.spec_level = dict()
         # self.default_level = default_level
         self.struct_initiated = False
@@ -1564,8 +1517,6 @@ class pyramid:
                         int(contig_id)
                     except ValueError:
                         self.spec_level[str(i)]["contigs_dict"].pop(contig_id)
-
-        print("object created")
 
     def close(self):
         self.data.close()
@@ -1794,9 +1745,9 @@ class pyramid:
         x = area[0]
         y = area[1]
         level = x[2]
-        print("x = ", x)
-        print("y = ", y)
-        print("level = ", level)
+        logger.debug("x = {}".format(x))
+        logger.debug("y = {}".format(y))
+        logger.debug("level = {}".format(level))
         if level == y[2] and level > 0:
             new_level = level - 1
             high_x = self.zoom_in_pixel(x)
@@ -1814,12 +1765,12 @@ class pyramid:
             new_area = [new_x, new_y]
         else:
             new_area = area
-        print(new_area)
+
         return new_area
 
     def load_reference_sequence(self, genome_fasta):
 
-        print("import reference genome")
+        logger.info("import reference genome")
         f = open(genome_fasta, "r")
         self.dict_sequence_contigs = dict()
         all_lines = f.readlines()
@@ -1913,13 +1864,12 @@ class level:
         """
         import colorsys
 
-        print("loading data from level = ", self.level)
+        logger.info("loading data from level = {}".format(self.level))
         # self.im_init = np.array(pyramid.data[str(self.level)],
         # dtype=np.int32)
         # self.n_frags = self.im_init.shape[0]
 
         # start loading sparse matrix #####
-        print((list(pyramid.data.keys())))
         self.n_frags = int(np.copy(pyramid.data[str(self.level)]["nfrags"][0]))
         self.np_2_scipy_sparse = np.copy(pyramid.data[str(self.level)]["data"])
         self.sparse_mat_csr = sp.csr_matrix(
@@ -2101,7 +2051,7 @@ class level:
             shape_test = sub_sp_mat_tmp_intra.shape
             test = shape_test[0] == shape_test[1]
             if not test:
-                print("MIERDA!!!!")
+                logger.info("MIERDA!!!!")
             n_intra = sub_sp_mat_tmp_intra.sum()
 
             total_trans += n_full_contact
@@ -2127,7 +2077,9 @@ class level:
         self.mean_value_trans = total_trans / np.float32(n_tot)
         if np.isnan(self.mean_value_trans):
             self.mean_value_trans = np.amin(self.sparse_mat_csr.data) / 10.0
-        print("computed mean trans value ... = ", self.mean_value_trans)
+        logger.debug(
+            "computed mean trans value ... = {}".format(self.mean_value_trans)
+        )
 
         self.distri_frag = np.array(self.distri_frag)
 
@@ -2137,7 +2089,7 @@ class level:
         self.n_contigs = len(self.dict_contigs)
 
     def init_data(self,):
-        print("init data ", self.level)
+        logger.info("init data {}".format(self.level))
         if np.__version__ == "1.7.1" or np.__version__ == "1.8.0.dev-1a9aa5a":
             tmp = np.empty_like(self.im_init)
             np.copyto(tmp, self.im_init)
@@ -2151,7 +2103,7 @@ class level:
         """
         self.inter_coord = dict()
         self.all_data = dict()
-        print("define inter chrom coord ...")
+        logger.info("define inter chrom coord ...")
         for id_cont_X in self.dict_contigs:
             if not (id_cont_X == 17):
                 self.inter_coord[id_cont_X] = dict()
@@ -2169,7 +2121,7 @@ class level:
                         self.inter_coord[id_cont_X][id_cont_Y] = np.ix_(
                             coord_intra_X, coord_intra_Y
                         )
-        print("done!")
+        logger.info("done!")
 
     def build_seq_per_bin(self, genome_fasta):
         self.pyramid.load_reference_sequence(genome_fasta)
@@ -2201,14 +2153,13 @@ class level:
                 self.list_seq.append(seq_frag)
 
     def generate_new_fasta(self, vect_frags, new_fasta, info_frags):
-        print("generate new fasta file...")
+        logger.info("generate new fasta file...")
         id_c_frag = vect_frags.id_c
         pos_frag = vect_frags.pos
         ori_frag = vect_frags.ori
         activ_frag = vect_frags.activ
         handle_new_fasta = open(new_fasta, "w")
         handle_info_frags = open(info_frags, "w")
-        import string
 
         list_id_contigs = np.unique(id_c_frag)
         # n_new_contigs = len(list_id_contigs)
@@ -2245,7 +2196,7 @@ class level:
                     if ori == -1:
                         seq = extract_seq[::-1]
                         seq = seq.translate(
-                            string.maketrans("TAGCtagc", "ATCGATCG")
+                            str.maketrans("TAGCtagc", "ATCGATCG")
                         )
                     else:
                         seq = extract_seq
@@ -2281,7 +2232,7 @@ class level:
         handle_info_frags.close()
 
 
-if __name__ == "__main__":
+def main():
     try:
         in_file, out_file = sys.argv[1:]
 
@@ -2290,3 +2241,7 @@ if __name__ == "__main__":
         quit()
 
     abs_contact_2_coo_file(in_file, out_file)
+
+
+if __name__ == "__main__":
+    main()

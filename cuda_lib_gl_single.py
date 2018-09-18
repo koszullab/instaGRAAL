@@ -30,6 +30,11 @@ import init_nuisance as nuis
 # from OpenGL.arrays import vbo
 import scipy as scp
 
+import log
+from log import logger
+
+logger.setLevel(log.CURRENT_LOG_LEVEL)
+
 # from scipy import ndimage as ndi
 # from scipy import stats
 # import Image
@@ -269,20 +274,22 @@ class sampler:
         )
 
         (free, total) = cuda.mem_get_info()
-        print(
+        logger.debug(
             (
                 "Global memory occupancy after init:%f%% free"
                 % (free * 100. / total)
             )
         )
-        print(("Global free memory after init:%i Mo free" % (free / 10 ** 6.)))
+        logger.debug(
+            ("Global free memory after init:%i Mo free" % (free / 10 ** 6.))
+        )
 
-        print("loading kernels ...")
+        logger.info("loading kernels ...")
         if self.active_insert_blocks:
             self.loadProgram("kernel_sparse_adapt.cu")
         else:
             self.loadProgram("kernel_sparse.cu")
-        print("kernels compiled")
+        logger.info("kernels compiled")
 
         self.stride = 200
 
@@ -1031,9 +1038,10 @@ class sampler:
         # total_mem_sparse += self.sub_sampled_sparse_matrix.data.nbytes +
         # self.sub_sampled_sparse_matrix.indptr.nbytes + \
         #                     self.sub_sampled_sparse_matrix.indices.nbytes
-        print(
-            "total mem used by sparse data = ",
-            np.float32(total_mem_sparse) / 10 ** 6.,
+        logger.info(
+            "total mem used by sparse data = {}".format(
+                np.float32(total_mem_sparse) / 10 ** 6.
+            )
         )
 
     def sparse_data_4_gl(self, precision):
@@ -1942,9 +1950,10 @@ class sampler:
         raw_fstr = "".join(f.readlines())
         f.close()
         if self.active_insert_blocks:
-            print(
-                "size array in shared memory = ",
-                str(self.n_tmp_struct * self.size_block_4_sub),
+            logger.info(
+                "size array in shared memory = {}".format(
+                    str(self.n_tmp_struct * self.size_block_4_sub)
+                )
             )
             fstr = (
                 raw_fstr.replace(
@@ -2084,7 +2093,7 @@ class sampler:
             pos = np.nonzero(all_idx == i)[0][0]
             line = list(all_idx)
             line.pop(pos)
-            print("filtering neighbourhood of :", i)
+            logger.info("filtering neighbourhood of : {}".format(i))
             for j in self.list_to_pop_out:
                 line = np.array(line)
                 pos = np.nonzero(line == j)[0][0]
@@ -2718,7 +2727,7 @@ class sampler:
         :param max_dist_kb:
         :param size_bin_kb:
         """
-        print("estimation of the parameters of the model")
+        logger.info("estimation of the parameters of the model")
         self.bins = np.arange(
             size_bin_kb, max_dist_kb + size_bin_kb, size_bin_kb
         )
@@ -2834,22 +2843,22 @@ class sampler:
             self.mean_contacts_upd, self.bins_upd
         )
         ##########################################
-        print("p from estimate parameters  = ", p)
+        logger.info("p from estimate parameters  = {}".format(p))
         # p = list(p[0])
         # p[3] = 2
         # p = tuple(p)
         ##########################################
         fit_param = p
-        print("mean value trans = ", self.mean_value_trans)
+        logger.info("mean value trans = {}".format(self.mean_value_trans))
         ##########################################
-        print("BEWARE!!! : I will lower mean value trans  !!!")
+        logger.info("BEWARE!!! : I will lower mean value trans  !!!")
         self.mean_value_trans = self.mean_value_trans / 10.0
         ##########################################
 
         estim_max_dist = opti.estimate_max_dist_intra(
             fit_param, self.mean_value_trans
         )
-        print("estimate max dist cis trans = ", estim_max_dist)
+        logger.info("estimate max dist cis trans = {}".format(estim_max_dist))
         self.param_simu = self.setup_rippe_parameters(
             fit_param, estim_max_dist
         )
@@ -2889,7 +2898,7 @@ class sampler:
         :param max_dist_kb:
         :param size_bin_kb:
         """
-        print("estimation of the parameters of the model")
+        logger.info("estimation of the parameters of the model")
         self.bins = np.arange(
             size_bin_kb, max_dist_kb + size_bin_kb, size_bin_kb
         )
@@ -2979,12 +2988,12 @@ class sampler:
         ##########################################
         fit_param = p.x
         ##########################################
-        print("mean value trans = ", self.mean_value_trans)
+        logger.info("mean value trans = {}".format(self.mean_value_trans))
         ##########################################
         estim_max_dist = nuis.estimate_max_dist_intra(
             fit_param, self.mean_value_trans
         )
-        print("max distance cis/trans = ", estim_max_dist)
+        logger.info("max distance cis/trans = {}".format(estim_max_dist))
         ##########################################
         self.param_simu = self.setup_model_parameters(
             fit_param, estim_max_dist
@@ -3007,7 +3016,7 @@ class sampler:
             self.gpu_vect_frags.copy_from_gpu()
             max_id = self.gpu_vect_frags.id_c.max()
             if self.gpu_vect_frags.rep[id] == 1:
-                print("id repeats = ", id)
+                logger.info("id repeats = {}".format(id))
                 mode = 7
                 self.test_copy_struct(id, id_f_ins, mode, max_id)
 
@@ -3036,10 +3045,10 @@ class sampler:
                 or np.any(c.__next__ == c.id)
                 or np.any(c.prev == c.id)
             ):
-                print("problem!!!!")
+                logger.info("problem!!!!")
                 input("what shoud I do????")
             if np.any(c.l_cont == 0) or np.any(c.l_cont_bp == 0):
-                print("problem null contig !!!!")
+                logger.info("problem null contig !!!!")
                 input("what shoud I do????")
 
     def explode_genome(self, dt):
@@ -3063,13 +3072,13 @@ class sampler:
                 or np.any(c.__next__ == c.id)
                 or np.any(c.prev == c.id)
             ):
-                print("problem!!!!")
+                logger.info("problem!!!!")
                 input("what shoud I do????")
             if np.any(c.l_cont == 0) or np.any(c.l_cont_bp == 0):
-                print("problem null contig !!!!")
+                logger.info("problem null contig !!!!")
                 input("what shoud I do????")
-        print("genome exploded")
-        print("max id = ", max_id)
+        logger.info("genome exploded")
+        logger.info("max id = {}".format(max_id))
 
     def apply_replay_simu(self, id_fA, id_fB, op_sampled, dt):
 
@@ -3424,14 +3433,18 @@ class sampler:
             self.gpu_sub_sp_no_rep_cols,
         )
         t_end = time.time()
-        print("GPU thrust sort 1: elapsed time  = ", t_end - t_start)
+        logger.info(
+            "GPU thrust sort 1: elapsed time  = {}".format(t_end - t_start)
+        )
         self.thrust_module.sort_by_keys_zip(
             self.gpu_sub_sp_no_rep_rows,
             int(self.n_sub_vals),
             self.gpu_sub_sp_no_rep_data,
         )
         t_end_2 = time.time()
-        print("GPU thrust sort 2: elapsed time  = ", t_end_2 - t_end)
+        logger.info(
+            "GPU thrust sort 2: elapsed time  = {}".format(t_end_2 - t_end)
+        )
 
     def prepare_sparse_call(self):
         size_block = 512
@@ -3467,7 +3480,11 @@ class sampler:
         end.record()
         end.synchronize()
         elapsed_seconds = end.time_since(start) * 1e-3
-        print("GPU prepare sparse call: elapsed time  = ", elapsed_seconds)
+        logger.debug(
+            "GPU prepare sparse call: elapsed time  = {}".format(
+                elapsed_seconds
+            )
+        )
 
     def return_rippe_vals(self, p0):
         y_eval = opti.peval(self.bins, p0)
@@ -3631,11 +3648,15 @@ class sampler:
         # generates random variables for every frags
         # TO DO : prendre en compte la composition initiale pour les probas!!!
 
-        print("setup jumping distribution: start")
+        logger.info("setup jumping distribution: start")
         self.distri_frags = dict()
         fact = 3.0
         # print "N frags = ", self.n_frags
-        print("Shape sub mat = ", self.sym_sub_sampled_sparse_matrix.shape)
+        logger.info(
+            "Shape sub mat = {}".format(
+                self.sym_sub_sampled_sparse_matrix.shape
+            )
+        )
         # print "shape indices = ",
         # self.sub_sampled_sparse_matrix.indices.shape
         # print "shape indptr = ", self.sub_sampled_sparse_matrix.indptr.shape
@@ -3673,7 +3694,7 @@ class sampler:
             else:
                 self.distri_frags[i] = dict()
                 self.distri_frags[i]["distri"] = None
-        print("setup jumping distribution: done")
+        logger.info("setup jumping distribution: done")
 
     def return_neighbours(self, id_fA, delta0):
         # print "id_frag = ", id_fA
@@ -3779,13 +3800,13 @@ class sampler:
         self.gpu_vect_frags.__del__()
         self.rng_states.free()
         (free, total) = cuda.mem_get_info()
-        print(
+        logger.debug(
             (
                 "Global memory occupancy after cleaning processes: %f%% free"
                 % (free * 100 / total)
             )
         )
-        print(("Global free memory  :%i Mo free" % (free / 10 ** 6)))
+        logger.debug(("Global free memory  :%i Mo free" % (free / 10 ** 6)))
         self.ctx.detach()
         del self.module
 

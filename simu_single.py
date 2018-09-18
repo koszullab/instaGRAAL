@@ -14,6 +14,11 @@ from cuda_lib_gl_single import sampler as sampler_lib
 # from cuda_lib_gl import sampler as sampler_lib
 import matplotlib.pyplot as plt
 
+import log
+from log import logger
+
+logger.setLevel(log.CURRENT_LOG_LEVEL)
+
 # cuda.init()
 
 
@@ -31,6 +36,8 @@ class simulation:
     def __init__(
         self,
         name,
+        folder_path,
+        fasta,
         level,
         n_iterations,
         is_simu,
@@ -49,21 +56,17 @@ class simulation:
         self.data_set = name
 
         toolbox_directory = os.path.dirname(os.path.abspath(__file__))
-        self.fasta = os.path.join(
-            toolbox_directory, "fasta", self.data_set + ".fa"
-        )
-        
+
         self.data_set_root = toolbox_directory
         self.dir_home = toolbox_directory
         self.data_set_root = toolbox_directory
 
-        self.fasta = os.path.join(
-            toolbox_directory, "fasta", self.data_set + ".fa"
-        )
+        self.fasta = fasta
         # default_level = size_pyramid - 1
-        self.base_folder = os.path.join(
-            self.data_set_root, self.data_set, "analysis"
-        )
+        # self.base_folder = os.path.join(
+        #     self.data_set_root, self.data_set
+        # )
+        self.base_folder = folder_path
 
         if output_folder is None:
             self.output_folder = os.path.join(self.data_set_root, "results")
@@ -101,7 +104,7 @@ class simulation:
         self.int2 = np.dtype([("x", np.int32), ("y", np.int32)], align=True)
 
         self.level = self.hic_pyr.get_level(level)
-        # DEBUG!!!
+
         self.level.build_seq_per_bin(genome_fasta=self.fasta)
         self.sub_level = self.hic_pyr.get_level(level - 1)
 
@@ -111,7 +114,9 @@ class simulation:
         self.mean_squared_frags_per_bin = np.float32(
             (self.collect_accu_frags.mean()) ** 2
         )
-        print("mean frag area = ", self.mean_squared_frags_per_bin)
+        logger.info(
+            "mean frag area = {}".format(self.mean_squared_frags_per_bin)
+        )
         self.gl_window = gl_window
         # DEFINE REPEATED SEQ ####
         (
@@ -176,15 +181,16 @@ class simulation:
         max_dist_kb = (
             self.sampler.gpu_vect_frags.l_cont_bp[id_start].max() / 1000.
         )
-        print("max dist kb = ", max_dist_kb)
+        logger.info("max dist kb = {}".format(max_dist_kb))
         # size_bin_kb = self.sampler.gpu_vect_frags.len_bp.mean() / 1000.0
         mean_size_bin_kb = self.new_sub_S_o_A_frags["len_bp"].mean() / 1000.0
 
-        print("mean size kb = ", mean_size_bin_kb)
+        logger.info("mean size kb = {}".format(mean_size_bin_kb))
 
-        print(
-            "min fragment length = ",
-            self.new_sub_S_o_A_frags["len_bp"].min() / 1000.0,
+        logger.info(
+            "min fragment length =  {}".format(
+                self.new_sub_S_o_A_frags["len_bp"].min() / 1000.0
+            )
         )
         if is_simu:
             self.sampler.simulate_rippe_contacts(
@@ -203,7 +209,6 @@ class simulation:
         # self.sampler.setup_texture()
 
     def blacklist_contig(self):
-        print("---enter id of blacklisted contigs--")
         # list_blacklist_manual = raw_input("ids (separated by space): ")
         list_blacklist_manual = ""
         if list_blacklist_manual != "":
@@ -243,7 +248,11 @@ class simulation:
         std_coverage = coverage.std()
         mean_coverage_ext = mean_coverage - 0.1 * std_coverage
         candidates_low = np.nonzero(coverage < mean_coverage_ext)[0]
-        print("n discarded frag of low coverage = ", candidates_low.shape[0])
+        logger.info(
+            "n discarded frag of low coverage = {}".format(
+                candidates_low.shape[0]
+            )
+        )
         for init_f in candidates_low:
             dis = self.frag_dispatcher[init_f]
             ids = self.collector_id_repeats[dis["x"] : dis["y"]]
@@ -518,7 +527,7 @@ class simulation:
                 max_id_F += 1
                 max_id_C += 1
 
-        print("MAX ID CONTIG = ", max_id_C)
+        logger.info("MAX ID CONTIG = {}".format(max_id_C))
 
         modified_vect_frags["pos"] = np.array(
             modified_vect_frags["pos"], dtype=np.int32
@@ -718,7 +727,7 @@ class simulation:
                 sub_candidates_output_data.append(
                     (tmp_sub_ids[i], estim_n_dup)
                 )
-        print("N frag duplicated = ", len(candidates_dup))
+        logger.info("N frag duplicated = {}".format(len(candidates_dup)))
         return (
             candidates_dup,
             output_data,
@@ -737,7 +746,7 @@ class simulation:
             factor,
             thresh_factor=self.thresh_factor,
         )
-        print("pyramid loaded")
+        logger.info("pyramid loaded")
 
         if not (os.path.exists(self.output_folder)):
             os.mkdir(self.output_folder)
@@ -786,19 +795,19 @@ class simulation:
             usage=OpenGL.GL.GL_DYNAMIC_DRAW,
             target=OpenGL.GL.GL_ARRAY_BUFFER,
         )
-        print("VBO instance: OK")
+
         # self.pos_vbo = vbo.VBO(data=self.pos_vect_frags_4_GL,
         # usage=GL_DYNAMIC_DRAW, target=GL_ARRAY_BUFFER)
         self.pos_vbo.bind()
-        print("binding vbo: OK")
+
         self.col_vbo = vbo.VBO(
             data=self.col_vect_frags_4_GL,
             usage=OpenGL.GL.GL_DYNAMIC_DRAW,
             target=OpenGL.GL.GL_ARRAY_BUFFER,
         )
-        print("column vbo instance: OK")
+
         self.col_vbo.bind()
-        print("col vbo binding: OK")
+
         self.vel = np.ndarray((self.n_frags, 4), dtype=np.float32)
         self.vel[:, 2] = self.pos[:, 2] * 2.
         self.vel[:, 1] = self.pos[:, 1] * 2.
@@ -811,11 +820,11 @@ class simulation:
         self.pbo_im_buffer = OpenGL.GL.glGenBuffers(
             1
         )  # generate 1 buffer reference
-        print("generating buffer reference: OK")
+
         OpenGL.GL.glBindBuffer(
             OpenGL.GL.GL_PIXEL_UNPACK_BUFFER, self.pbo_im_buffer
         )  # binding to this buffer
-        print("binding buffer: OK")
+
         # self.raw_im_init = np.uint8(np.random.rand(self.gl_size_im,
         # self.gl_size_im))
         self.raw_im_init = np.zeros(
@@ -828,23 +837,23 @@ class simulation:
             self.raw_im_init,
             OpenGL.GL.GL_STREAM_DRAW,
         )  # Allocate the buffer
-        print("allocating buffer: OK")
+
         OpenGL.GL.glGetBufferParameteriv(
             OpenGL.GL.GL_PIXEL_UNPACK_BUFFER, OpenGL.GL.GL_BUFFER_SIZE
         )  # Check allocated buffer size
-        print("checking allocated buffer size: OK")
+
         #        try:
         #            assert(bsize == self.gl_size_im * self.gl_size_im)
         #        except AssertionError as e:
         #            print str(e)
         OpenGL.GL.glBindBuffer(OpenGL.GL.GL_PIXEL_UNPACK_BUFFER, 0)  # Unbind
-        print("unbinding: OK")
+
         OpenGL.GL.glGenTextures(1, self.texid)  # generate 1 texture reference
-        print("generating texture: OK")
+
         OpenGL.GL.glBindTexture(
             OpenGL.GL.GL_TEXTURE_2D, self.texid
         )  # binding to this texture
-        print("binding to textire: OK")
+
         OpenGL.GL.glTexParameteri(
             OpenGL.GL.GL_TEXTURE_2D,
             OpenGL.GL.GL_TEXTURE_MAG_FILTER,
@@ -855,7 +864,7 @@ class simulation:
             OpenGL.GL.GL_TEXTURE_MIN_FILTER,
             OpenGL.GL.GL_LINEAR,
         )
-        print("texture parameters: OK")
+
         # glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, self.gl_size_im,
         # self.gl_size_im,  0, GL_LUMINANCE, GL_FLOAT, self.raw_im_init) #
         # Allocate the texture
@@ -870,16 +879,15 @@ class simulation:
             OpenGL.GL.GL_UNSIGNED_BYTE,
             None,
         )  # Allocate the texture
-        print("allocating texture: OK")
+
         OpenGL.GL.glBindTexture(OpenGL.GL.GL_TEXTURE_2D, 0)  # Unbind
-        print("unbinding texture: OK")
+
         OpenGL.GL.glPixelStorei(
             OpenGL.GL.GL_UNPACK_ALIGNMENT, 1
         )  # 1-byte row alignment
         OpenGL.GL.glPixelStorei(
             OpenGL.GL.GL_PACK_ALIGNMENT, 1
         )  # 1-byte row alignment
-        print("1-byte row alignment: OK")
 
     def create_sub_frags(self):
         self.sub_frags_len_bp = []
