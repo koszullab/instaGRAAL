@@ -130,3 +130,20 @@ it most likely means you attempted to run an instaGRAAL instance remotely (e.g. 
 Note that this will disable the movie (it will play on the remote machine instead).
 
 However, instaGRAAL is based on OpenGL, which means there has to be an X server of some kind running on your target machine no matter what. While this allows for pretty movies and visualizations, it may prove problematic on an environment you don't have total control over, *e.g.* a server cluster. Currently, your best bet is asking the system administrator of the target machine to set up an X instance if they haven't already.
+
+## References
+
+### Principle
+
+* [High-quality genome assembly using chromosomal contact data](https://www.ncbi.nlm.nih.gov/pubmed/25517223), Hervé Marie-Nelly, Martial Marbouty, Axel Cournac, Jean-François Flot, Gianni Liti, Dante Poggi Parodi, Sylvie Syan, Nancy Guillén, Antoine Margeot, Christophe Zimmer and Romain Koszul, Nature Communications, 2014
+* [A probabilistic approach for genome assembly from high-throughput chromosome conformation capture data](https://www.theses.fr/2013PA066714), Hervé Marie-Nelly, 2013, PhD thesis
+
+### Use cases
+
+* [Proximity ligation scaffolding and comparison of two Trichoderma reesei strains genomes](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5469131/), Etienne Jourdier, Lyam Baudry, Dante Poggi-Parodi, Yoan Vicq, Romain Koszul, Antoine Margeot, Martial Marbouty, and Frédérique Bidard, Biotechnology for Biofuels, 2017
+* [Scaffolding bacterial genomes and probing host-virus interactions in gut microbiome by proximity ligation (chromosome capture) assay](https://www.ncbi.nlm.nih.gov/pubmed/28232956), Martial Marbouty, Lyam Baudry, Axel Cournac, and Romain Koszul, Science Advances, 2017
+
+## Contact
+
+* lyam.baudry@pasteur.fr
+* romain.koszul@pasteur.fr
