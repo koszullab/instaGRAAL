@@ -6,7 +6,7 @@ Usage:
     main_single_proc.py <hic_folder> <reference.fa> [<output_folder>]
                         [--level=4] [--cycles=100] [--coverage-std=1]
                         [--neighborhood=5] [--device=0] [--circular]
-                        [--bomb] [--quiet] [--debug]
+                        [--bomb] [--save-matrix] [--quiet] [--debug]
 
 Options:
     -h, --help              Display this help message.
@@ -30,6 +30,8 @@ Options:
     -C, --circular          Indicates genome is circular. [default: False]
     -b, --bomb              Explode the genome prior to scaffolding.
                             [default: False]
+    --save-matrix           Saves a preview of the contact map after each
+                            cycle. [default: False]
     --quiet                 Only display warnings and errors as outputs.
                             [default: False]
     --debug                 Display debug information. For development purposes
@@ -1991,21 +1993,42 @@ class window(object):
             h.close()
             try:
                 self.simulation.export_new_fasta()
-            except OSError:
+                self.save_behaviour_to_txt()
+            except OSError as e:
                 logger.warning(
-                    ("Warning, could not write fasta file at cycle " + str(j))
+                    "Warning, could not write output files at {}: {}".format(
+                        j, e
+                    )
                 )
             try:
                 if save_matrix:
                     my_file_path = os.path.join(
                         self.simulation.output_folder,
-                        "matrix_cycle_" + str(j) + ".dat",
+                        "matrix_cycle_" + str(j) + ".png",
                     )
-                    np.savetxt(
-                        my_file_path, self.simulation.sampler.gpu_im_gl.get()
+                    matrix = self.simulation.sampler.gpu_im_gl.get()
+                    plt.gca().set_axis_off()
+                    plt.subplots_adjust(
+                        top=1, bottom=0, right=1, left=0, hspace=0, wspace=0
                     )
-            except OSError:
-                logger.warning("Could not write matrix at cycle " + str(j))
+                    plt.margins(0, 0)
+                    plt.gca().xaxis.set_major_locator(plt.NullLocator())
+                    plt.gca().yaxis.set_major_locator(plt.NullLocator())
+                    plt.figure()
+                    plt.imshow(matrix, vmax=np.percentile(matrix, 99))
+                    plt.axis("off")
+                    plt.savefig(
+                        my_file_path,
+                        bbox_inches="tight",
+                        pad_inches=0.0,
+                        dpi=300,
+                    )
+                    plt.close()
+            except OSError as e:
+                logger.warning(
+                    "Could not write matrix at cycle {} "
+                    "due to error: {}".format(j, e)
+                )
 
         self.save_behaviour_to_txt()
 
@@ -2026,6 +2049,7 @@ if __name__ == "__main__":
     device = int(arguments["--device"])
     circ = arguments["--circular"]
     bomb = arguments["--bomb"]
+    save_matrix = arguments["--save-matrix"]
     quiet = arguments["--quiet"]
     debug = arguments["--debug"]
 
@@ -2081,6 +2105,7 @@ if __name__ == "__main__":
         n_neighbours=neighborhood,
         bomb=bomb,
         id_start_sample_param=4,
+        save_matrix=save_matrix,
     )
     # sampler.step_sampler(50)
     # sampler.gpu_vect_frags.copy_from_gpu()
