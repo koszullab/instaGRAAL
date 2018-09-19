@@ -86,9 +86,21 @@ Unlike GRAAL, this is meant to be run from the command line.
                             only. Mutually exclusive with --quiet, and will
                             override it. [default: False]
 
+### Input datasets
+
+The above ```<hic_folder>``` passed as an argument to instaGRAAL needs three files:
+
+* A file named ```abs_fragments_contacts_weighted.txt```, containing the (sparse) Hi-C map itself. The first line must be ```id_frag_a    id_frag_b    n_contact```. All subsequent lines must represent the map's contacts in coordinate format (```id_frag_a``` being the row indices, ```id_frag_b``` being the column indices, ```n_contact``` being the number of contacts between each locus or index pair, _e.g._ if 5 contacts are found between fragments #2 and #3, there should be a line reading ```2 3 5``` in the file). ```n_contact``` must be an integer. The list should be sorted according to ```id_frag_a``` first, then ```id_frag_b```. Fragment ids start at 0.
+* A file named ```fragments_list.txt``` containing information related to each fragment of the genome. The first line must be ```id    chrom    start_pos    end_pos    size    gc_content```, and subsequent lines (representing the fragments themselves) should follow that template. The fields should be self-explanatory; notably, ```chrom``` can be any string representing the chromosome's name to which the fragment at a given line belongs, and fragment ids should start over at 1 when the chromosome name changes. Aside from the ```chrom``` field and the ```gc``` field which is currently unused in this version and can be filled with any value, all fields should be integers. Note that ```start_pos``` starts at 0.
+* A file named ```info_contigs.txt``` containing information related to each contig/scaffold/chromosome in the genome. The first line must be ```contig    length_kb    n_frags    cumul_length```. Field names should be again self-explanatory; naturally the contig field must contain names that are consistent with those found in ```fragments_list.txt```. Also ```length_kb``` should be an integer (rounded up or down if need be), and ```n_frags``` and ```cumul_length``` are supposed to be consistent with each other in that the cumulated length (in fragments) of contig N should be equal to the sum of the fields found in ```n_frags``` for the N-1 preceding lines. Note that ```cumul_length``` starts at 0.
+
+All fields (including those in the files' headers) must be separated by tabs.
+
+Minimal working templates are provided in the ```example``` folder.
+
 ## Polishing
 
-Lingering artifacts found in output genomes can be corrected by editing the info_frags.txt file, either by hand or with a script. Look at options by running the following:
+Lingering artifacts found in output genomes can be corrected by editing the ```info_frags.txt``` file, either by hand or with a script. Look at options by running the following:
 
     python parse_info_frags.py -h
 
