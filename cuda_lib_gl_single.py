@@ -30,6 +30,8 @@ import init_nuisance as nuis
 # from OpenGL.arrays import vbo
 import scipy as scp
 
+import os
+import sys
 import log
 from log import logger
 
@@ -286,9 +288,9 @@ class sampler:
 
         logger.info("loading kernels ...")
         if self.active_insert_blocks:
-            self.loadProgram("kernel_sparse_adapt.cu")
+            self.loadProgram(os.path.join(sys.path[0], "kernel_sparse_adapt.cu"))
         else:
-            self.loadProgram("kernel_sparse.cu")
+            self.loadProgram(os.path.join(sys.path[0], "kernel_sparse.cu"))
         logger.info("kernels compiled")
 
         self.stride = 200
@@ -2887,7 +2889,8 @@ class sampler:
                 )
             )
             plt.legend(["obs", "fit"])
-            plt.show()
+            plt.savefig()
+            plt.close()
 
         self.eval_likelihood_init()
 

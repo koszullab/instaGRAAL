@@ -104,6 +104,10 @@ Lingering artifacts found in output genomes can be corrected by editing the ```i
 
     python parse_info_frags.py -h
 
+The most common use case is to run all polishing procedures at once:
+
+    python parse_info_frags.py -m polishing -i info_frags.txt -f reference.fasta -o polished_assembly.fa
+
 ## Troubleshooting
 
 ### Loading CUDA libraries

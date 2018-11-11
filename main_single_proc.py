@@ -5,8 +5,9 @@
 Usage:
     main_single_proc.py <hic_folder> <reference.fa> [<output_folder>]
                         [--level=4] [--cycles=100] [--coverage-std=1]
-                        [--neighborhood=5] [--device=0] [--circular]
-                        [--bomb] [--save-matrix] [--quiet] [--debug]
+                        [--neighborhood=5] [--device=0] [--circular] [--bomb]
+                        [--save-matrix] [--pyramid-only] [--save-pickle]
+                        [--quiet] [--debug]
 
 Options:
     -h, --help              Display this help message.
@@ -29,6 +30,12 @@ Options:
                             a specific device (numbered from 0). [default: 0]
     -C, --circular          Indicates genome is circular. [default: False]
     -b, --bomb              Explode the genome prior to scaffolding.
+                            [default: False]
+    --pyramid-only          Only build multi-resolution contact maps (pyramids)
+                            and don't do any scaffolding. [default: False]
+    --save-pickle           Dump all info from the instaGRAAL run into a
+                            pickle. Primarily for development purposes, but
+                            also for advanced post hoc introspection.
                             [default: False]
     --save-matrix           Saves a preview of the contact map after each
                             cycle. [default: False]
@@ -62,6 +69,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from simu_single import simulation
 
+import pickle
 import logging
 import log
 from log import logger
@@ -2052,6 +2060,8 @@ if __name__ == "__main__":
     save_matrix = arguments["--save-matrix"]
     quiet = arguments["--quiet"]
     debug = arguments["--debug"]
+    pyramid_only = arguments["--pyramid-only"]
+    pickle_name = arguments["--save-pickle"]
 
     log_level = logging.INFO
 
@@ -2100,13 +2110,20 @@ if __name__ == "__main__":
     if circ:
         p2.simulation.level.S_o_A_frags["circ"] += 1
 
-    p2.full_em(
-        n_cycles=number_cycles,
-        n_neighbours=neighborhood,
-        bomb=bomb,
-        id_start_sample_param=4,
-        save_matrix=save_matrix,
-    )
+    if not pyramid_only:
+        p2.full_em(
+            n_cycles=number_cycles,
+            n_neighbours=neighborhood,
+            bomb=bomb,
+            id_start_sample_param=4,
+            save_matrix=save_matrix,
+        )
+
+    if pickle_name:
+        with open('graal.pkl', 'wb') as pickle_handle:
+            pickle.dump(p2, pickle_handle)
+
+    p2.ctx_gl.pop()
     # sampler.step_sampler(50)
     # sampler.gpu_vect_frags.copy_from_gpu()
     # max_id = sampler.gpu_vect_frags.id_c.max()
