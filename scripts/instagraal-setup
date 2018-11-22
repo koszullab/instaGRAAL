@@ -1,0 +1,68 @@
+#!/bin/bash
+
+set -eo pipefail
+
+if [ "$EUID" -ne 0 ]; then
+  echo "Please run this script as root."
+  exit 1
+fi
+
+echo "Check if the NVIDIA CUDA toolkit is installed..."
+command -v nvcc -V >/dev/null 2>&1 || {
+  echo "Error: nvcc not found. Please make sure you have installed the NVIDIA CUDA toolkit."
+  echo "It is available at https://developer.nvidia.com/cuda-downloads"
+  exit 1
+}
+echo "OK."
+
+# Install required libraries:
+#   * OpenGL dependencies
+#   * HDF5
+#   * Boost libraries for Python
+echo "Install the required libraries..."
+sudo apt install libglu1-mesa libxi-dev libxmu-dev libglu1-mesa-dev libhdf5-100 libboost-python1.65 || {
+  echo "Error! Installing libraries failed. Note that this install script currently only supports Ubuntu 17+."
+  echo "If using another OS or distribution, please refer to the README on the repo for instructions on"
+  echo "How to install dependencies by hand."
+}
+echo "OK."
+
+# Install required Python libraries other than pycuda
+echo "Install and upgrade Python packages..."
+sudo pip3 install --upgrade -r requirements.txt
+echo "OK."
+
+echo "Fetching and installing pycuda..."
+# Grab latest pycuda to compile it with specific flags
+git clone --recurse-submodules https://github.com/inducer/pycuda.git || {
+  echo "Error: fetching pycuda failed. This probably means Git is not installed on your system or"
+  echo "you used an outdated version. You should either install Git and launch this script again, or install"
+  echo "pycuda manually (found at https://github.com/inducer/pycuda)"
+}
+
+cd pycuda || {
+  echo "Couldn't access pycuda directory."
+  exit 1
+}
+
+# Enable OpenGL support and disable custom boost linking because it is known
+# to cause bugs
+python3 configure.py --cuda-enable-gl --no-use-shipped-boost
+
+sudo python3 setup.py install || {
+  echo "Error! Installing pycuda failed. You need to install pycuda in order to run instaGRAAL,"
+  echo "please examine the above error message before re-launching the script."
+}
+
+echo "Check if pycuda loads properly..."
+python3 -c "import pycuda" >/dev/null 2>&1 || {
+  echo "Error! Somehow pycuda couldn't be imported despite being installed."
+  echo "This likely means CUDA libraries were not added to your $PATH."
+  echo "Please add them before re-launching this script. This can be done by running something like:"
+  echo "export PATH=/usr/local/cuda-9.2/bin\${PATH:+:\${PATH}}"
+  echo "export LD_LIBRARY_PATH=/usr/local/cuda-9.2/lib64\${LD_LIBRARY_PATH:+:\${LD_LIBRARY_PATH}}"
+  echo "The exact location and version number can be identified by running 'which nvcc'."
+  echo "Optionally, you may want to add the two above lines to your .bashrc in order to avoid encountering this error in the future."
+}
+
+echo "You should be good to go! Run instagraal-test to check if everything is OK."

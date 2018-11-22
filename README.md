@@ -2,13 +2,24 @@
 
 ![instaGRAAL demo](example/example.gif "instaGRAAL demo")
 
+[![PyPI version](https://badge.fury.io/py/instagraal.svg)](https://badge.fury.io/py/instagraal)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/serpentine.svg)
+[![License: GPLv3](https://img.shields.io/badge/License-GPL%203-0298c3.svg)](https://opensource.org/licenses/GPL-3.0)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
+
 Large genome reassembly based on Hi-C data (continuation and partial rewrite of [GRAAL](https://github.com/koszullab/GRAAL)) and post-scaffolding polishing libraries.
 
-This work is under continuous development/improvement - see [GRAAL](https://github.com/koszullab/GRAAL) for information about the basic principles of GRAAL and on how to deploy it.
+This work is under continuous development/improvement - see [GRAAL](https://github.com/koszullab/GRAAL) for information about the basic principles.
+
+## Installation
+
+```sh
+   sudo pip3 install -e git+https://github.com/koszullab/instagraal.git@master#egg=instagraal
+```
 
 ## Requirements
 
-The scaffolder and polishing libraries are written in Python 3.6 and CUDA. The Python 2 version is available at the ```python2``` branch of this repository, but be aware that development will mainly focus on the Python 3 version. The software has been tested for Ubuntu 17.04 and most dependencies can be downloaded with its package manager (or Python's ```pip```).
+The scaffolder and polishing libraries are written in Python 3 and CUDA. The Python 2 version is available at the ```python2``` branch of this repository, but be aware that development will mainly focus on the Python 3 version. The software has been tested for Ubuntu 17.04 and most dependencies can be downloaded with its package manager (or Python's ```pip```).
 
 ### External libraries
 
@@ -46,7 +57,7 @@ These should be handily installed using the supplied requirements file:
 
 You will also need to build  ```pycuda``` with OpenGL support and **disable** its use of custom Boost libraries.
 
-You may run (as root)  ```deploy.sh```, an all-in-one script to handle all the above dependencies on Ubuntu 17+.
+You may run (as root)  ```instagraal-setup```, an all-in-one script to handle all the above dependencies on Ubuntu 17+.
 
 ## How to use
 
@@ -54,10 +65,11 @@ Unlike GRAAL, this is meant to be run from the command line.
 
 ### Usage
 
-    ./main_single_proc.py <hic_folder> <reference.fa> [<output_folder>]
-                        [--level=4] [--cycles=100] [--coverage-std=1]
-                        [--neighborhood=5] [--device=0] [--circular]
-                        [--bomb] [--quiet] [--debug]
+    instagraal <hic_folder> <reference.fa> [<output_folder>]
+               [--level=4] [--cycles=100] [--coverage-std=1]
+               [--neighborhood=5] [--device=0] [--circular] [--bomb]
+               [--save-matrix] [--pyramid-only] [--save-pickle]
+               [--quiet] [--debug]
 
 ### Options
 
@@ -82,6 +94,14 @@ Unlike GRAAL, this is meant to be run from the command line.
     -C, --circular          Indicates genome is circular. [default: False]
     -b, --bomb              Explode the genome prior to scaffolding.
                             [default: False]
+    --pyramid-only          Only build multi-resolution contact maps (pyramids)
+                            and don't do any scaffolding. [default: False]
+    --save-pickle           Dump all info from the instaGRAAL run into a
+                            pickle. Primarily for development purposes, but
+                            also for advanced post hoc introspection.
+                            [default: False]
+    --save-matrix           Saves a preview of the contact map after each
+                            cycle. [default: False]
     --quiet                 Only display warnings and errors as outputs.
                             [default: False]
     --debug                 Display debug information. For development purposes

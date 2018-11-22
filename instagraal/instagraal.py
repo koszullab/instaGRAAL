@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 
-"""The instaGRAAL scaffolder.
+"""Large genome reassembly based on Hi-C data.
 
 Usage:
-    main_single_proc.py <hic_folder> <reference.fa> [<output_folder>]
-                        [--level=4] [--cycles=100] [--coverage-std=1]
-                        [--neighborhood=5] [--device=0] [--circular] [--bomb]
-                        [--save-matrix] [--pyramid-only] [--save-pickle]
-                        [--quiet] [--debug]
+    instagraal <hic_folder> <reference.fa> [<output_folder>]
+               [--level=4] [--cycles=100] [--coverage-std=1]
+               [--neighborhood=5] [--device=0] [--circular] [--bomb]
+               [--save-matrix] [--pyramid-only] [--save-pickle]
+               [--quiet] [--debug]
 
 Options:
     -h, --help              Display this help message.
@@ -1901,7 +1901,7 @@ class window(object):
                     id_f_sampled,
                     mean_len,
                     n_contigs,
-                ) = sampler.step_sampler(id_frag, n_neighbours, p2.dt)
+                ) = sampler.step_sampler(id_frag, n_neighbours, self.dt)
                 self.str_likelihood = "likelihood = " + str(o)
                 self.str_n_contigs = "n contigs = " + str(sampler.n_contigs)
                 self.str_curr_id_frag = "current frag = " + str(id_frag)
@@ -1941,7 +1941,7 @@ class window(object):
                     id_f_sampled,
                     mean_len,
                     n_contigs,
-                ) = sampler.step_sampler(id_frag, n_neighbours, p2.dt)
+                ) = sampler.step_sampler(id_frag, n_neighbours, self.dt)
                 self.collect_likelihood.append(o)
                 self.collect_n_contigs.append(n_contigs)
                 self.collect_mean_len.append(mean_len)
@@ -1965,7 +1965,7 @@ class window(object):
                         self.likelihood_t_nuis,
                         success,
                         y_rippe,
-                    ) = sampler.step_nuisance_parameters(p2.dt, t, n_iter)
+                    ) = sampler.step_nuisance_parameters(self.dt, t, n_iter)
 
                     self.collect_fact.append(fact)
                     self.collect_d.append(d)
@@ -2041,7 +2041,7 @@ class window(object):
         self.save_behaviour_to_txt()
 
 
-if __name__ == "__main__":
+def main():
 
     arguments = docopt.docopt(__doc__, version=VERSION_NUMBER)
     # print(arguments)
@@ -2120,7 +2120,7 @@ if __name__ == "__main__":
         )
 
     if pickle_name:
-        with open('graal.pkl', 'wb') as pickle_handle:
+        with open("graal.pkl", "wb") as pickle_handle:
             pickle.dump(p2, pickle_handle)
 
     p2.ctx_gl.pop()
@@ -2166,3 +2166,7 @@ if __name__ == "__main__":
 
     #
     # sampler.bomb_the_genome()
+
+
+if __name__ == "__main__":
+    main()

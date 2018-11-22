@@ -1,0 +1,3 @@
+include kernels/*
+include scripts/*
+include example/*

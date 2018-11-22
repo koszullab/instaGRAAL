@@ -30,10 +30,10 @@ import init_nuisance as nuis
 # from OpenGL.arrays import vbo
 import scipy as scp
 
-import os
-import sys
 import log
 from log import logger
+
+import pkg_resources
 
 logger.setLevel(log.CURRENT_LOG_LEVEL)
 
@@ -287,10 +287,16 @@ class sampler:
         )
 
         logger.info("loading kernels ...")
+        kernel_adapt_entry_point = pkg_resources.resource_filename(
+            "instagraal", "kernels/kernel_sparse_adapt.cu"
+        )
+        kernel_entry_point = pkg_resources.resource_filename(
+            "instagraal", "kernels/kernel_sparse.cu"
+        )
         if self.active_insert_blocks:
-            self.loadProgram(os.path.join(sys.path[0], "kernel_sparse_adapt.cu"))
+            self.loadProgram(kernel_adapt_entry_point)
         else:
-            self.loadProgram(os.path.join(sys.path[0], "kernel_sparse.cu"))
+            self.loadProgram(kernel_entry_point)
         logger.info("kernels compiled")
 
         self.stride = 200
