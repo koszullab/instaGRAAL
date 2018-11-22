@@ -1,5 +1,7 @@
 # instaGRAAL
 
+![instaGRAAL demo](example/example.gif "instaGRAAL demo")
+
 Large genome reassembly based on Hi-C data (continuation and partial rewrite of [GRAAL](https://github.com/koszullab/GRAAL)) and post-scaffolding polishing libraries.
 
 This work is under continuous development/improvement - see [GRAAL](https://github.com/koszullab/GRAAL) for information about the basic principles of GRAAL and on how to deploy it.
