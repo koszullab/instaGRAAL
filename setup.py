@@ -31,7 +31,7 @@ name = "instagraal"
 
 MAJOR = 0
 MINOR = 1
-MAINTENANCE = 1
+MAINTENANCE = 2
 VERSION = "{}.{}.{}".format(MAJOR, MINOR, MAINTENANCE)
 
 LICENSE = "GPLv3"
@@ -66,6 +66,9 @@ setup(
     long_description_content_type="text/markdown",
     install_requires=REQUIREMENTS,
     entry_points={
-        "console_scripts": ["instagraal=instagraal.instagraal:main"]
+        "console_scripts": [
+            "instagraal=instagraal.instagraal:main",
+            "instagraal-polish=instagraal.parse_info_frags:main",
+        ]
     },
 )

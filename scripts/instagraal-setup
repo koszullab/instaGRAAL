@@ -24,6 +24,7 @@ sudo apt install libglu1-mesa libxi-dev libxmu-dev libglu1-mesa-dev libhdf5-100 
   echo "Error! Installing libraries failed. Note that this install script currently only supports Ubuntu 17+."
   echo "If using another OS or distribution, please refer to the README on the repo for instructions on"
   echo "How to install dependencies by hand."
+  exit 1
 }
 echo "OK."
 
@@ -38,6 +39,7 @@ git clone --recurse-submodules https://github.com/inducer/pycuda.git || {
   echo "Error: fetching pycuda failed. This probably means Git is not installed on your system or"
   echo "you used an outdated version. You should either install Git and launch this script again, or install"
   echo "pycuda manually (found at https://github.com/inducer/pycuda)"
+  exit 1
 }
 
 cd pycuda || {
@@ -52,6 +54,7 @@ python3 configure.py --cuda-enable-gl --no-use-shipped-boost
 sudo python3 setup.py install || {
   echo "Error! Installing pycuda failed. You need to install pycuda in order to run instaGRAAL,"
   echo "please examine the above error message before re-launching the script."
+  exit 1
 }
 
 echo "Check if pycuda loads properly..."
@@ -63,6 +66,7 @@ python3 -c "import pycuda" >/dev/null 2>&1 || {
   echo "export LD_LIBRARY_PATH=/usr/local/cuda-9.2/lib64\${LD_LIBRARY_PATH:+:\${LD_LIBRARY_PATH}}"
   echo "The exact location and version number can be identified by running 'which nvcc'."
   echo "Optionally, you may want to add the two above lines to your .bashrc in order to avoid encountering this error in the future."
+  exit 1
 }
 
 echo "You should be good to go! Run instagraal-test to check if everything is OK."

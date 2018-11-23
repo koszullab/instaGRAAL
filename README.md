@@ -1,6 +1,6 @@
 # instaGRAAL
 
-![instaGRAAL demo](example/example.gif "instaGRAAL demo")
+![ ](example/example.gif "instaGRAAL demo")
 
 [![PyPI version](https://badge.fury.io/py/instagraal.svg)](https://badge.fury.io/py/instagraal)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/serpentine.svg)
@@ -124,11 +124,11 @@ Minimal working templates are provided in the ```example``` folder.
 
 Lingering artifacts found in output genomes can be corrected by editing the ```info_frags.txt``` file, either by hand or with a script. Look at options by running the following:
 
-    python parse_info_frags.py -h
+    instagraal-polish -h
 
 The most common use case is to run all polishing procedures at once:
 
-    python parse_info_frags.py -m polishing -i info_frags.txt -f reference.fasta -o polished_assembly.fa
+    instagraal-polish -m polishing -i info_frags.txt -f reference.fasta -o polished_assembly.fa
 
 ## Troubleshooting
 
