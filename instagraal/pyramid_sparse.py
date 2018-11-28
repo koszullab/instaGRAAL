@@ -4,11 +4,11 @@ import shutil
 import h5py
 import sys
 import numpy as np
-from fragment import basic_fragment as B_frag
+from instagraal.fragment import basic_fragment as B_frag
 from matplotlib import pyplot as plt
 import scipy.sparse as sp
-import log
-from log import logger
+from instagraal import log
+from instagraal.log import logger
 
 logger.setLevel(log.CURRENT_LOG_LEVEL)
 

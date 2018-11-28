@@ -63,18 +63,18 @@ import OpenGL.GLU
 import OpenGL.GLUT
 
 # helper modules
-import glutil
-from vector import Vec
+from instagraal import glutil
+from instagraal.vector import Vec
 import numpy as np
 import matplotlib.pyplot as plt
-from simu_single import simulation
+from instagraal.simu_single import simulation
 
 import pickle
 import logging
-import log
-from log import logger
+from instagraal import log
+from instagraal.log import logger
 
-VERSION_NUMBER = "0.1a"
+VERSION_NUMBER = "0.1.2"
 
 DEFAULT_CYCLES = 100
 DEFAULT_LEVEL = 4

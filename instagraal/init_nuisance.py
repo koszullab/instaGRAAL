@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 from scipy.optimize import minimize
 import numpy as np
 from scipy.optimize import fmin_slsqp
@@ -6,7 +7,7 @@ from scipy.optimize import fsolve
 
 # from scipy.optimize import minimize
 from scipy.optimize import leastsq
-from leastsqbound import *
+from instagraal.leastsqbound import *
 
 d0 = 1.0  # distance bias Hi-C
 d_exp = -10.0
@@ -122,7 +123,8 @@ def estimate_param_hic(y_meas, x_bins):
     bnds = ((0, 3), (-10, -0.2), (-2, -0.2), (0, None))
     alpha_0, alpha_1, A = plsq[0]
     p0 = [d0, alpha_0, alpha_1, A]
-    # cns = ({'type': 'ineq', 'fun': lambda x:  x[0] - x[1]}) # alpha_0 > alpha_1
+    # cns = ({'type': 'ineq', 'fun': lambda x:  x[0] - x[1]})
+    # alpha_0 > alpha_1
     cns = {"type": "ineq", "fun": lambda x: x[1] - x[0]}
 
     res = minimize(

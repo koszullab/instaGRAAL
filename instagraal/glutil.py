@@ -3,7 +3,7 @@
 from OpenGL.GL import *
 from OpenGL.GLU import *
 
-from vector import Vec
+from instagraal.vector import Vec
 
 
 def init(width, height):

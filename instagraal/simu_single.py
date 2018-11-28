@@ -9,7 +9,7 @@ import pyramid_sparse as pyr
 import OpenGL.GL
 from OpenGL.arrays import vbo
 import numpy as np
-from cuda_lib_gl_single import sampler as sampler_lib
+from instagraal.cuda_lib_gl_single import sampler as sampler_lib
 
 # from cuda_lib_gl import sampler as sampler_lib
 import matplotlib.pyplot as plt

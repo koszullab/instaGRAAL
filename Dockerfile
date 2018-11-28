@@ -39,16 +39,24 @@ RUN apt-get -y update && apt-get install -y python3-dev python3-pip \
     libglu1-mesa libxi-dev libxmu-dev libglu1-mesa-dev && \
     rm -rf /var/lib/apt/lists/* 
 
-RUN git clone https://github.com/koszullab/metaTOR.git /root/instagraal && \
-    cd /root/instagraal && \
-    pip3 install . && \
-    rm /root/instagraal -rf
+COPY instagraal /app/instagraal
+COPY scripts /app/scripts
+COPY example /apps/example
+
+COPY *.* /app/
+
+WORKDIR /app
+
+RUN pip3 install -Ur requirements.txt
 
 RUN git clone git://github.com/inducer/pycuda /root/pycuda && \
     cd /root/pycuda && git submodule update --init --recursive && \
     python3 configure.py --cuda-enable-gl --no-use-shipped-boost && \
     pip3 install . && \
     rm /root/pycuda* -rf
+
+RUN cd /app & \
+    pip3 install .
 
 RUN ln -s /usr/local/cuda/lib64/stubs/libcuda.so /usr/local/cuda/lib64/stubs/libcuda.so.1
 ENV LD_LIBRARY_PATH /usr/local/cuda/lib64/stubs/:$LD_LIBRARY_PATH
@@ -58,6 +66,6 @@ ENV LD_LIBRARY_PATH /usr/local/cuda/lib64/stubs/:$LD_LIBRARY_PATH
 
 #RUN ldconfig
 
-WORKDIR /
+
 
 ENTRYPOINT ["instagraal"]
