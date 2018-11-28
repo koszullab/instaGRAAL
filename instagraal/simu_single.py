@@ -2,7 +2,7 @@
 
 # import pp
 import os
-import pyramid_sparse as pyr
+import instagraal.pyramid_sparse as pyr
 
 # import Image
 # from OpenGL.GL import *
@@ -14,8 +14,8 @@ from instagraal.cuda_lib_gl_single import sampler as sampler_lib
 # from cuda_lib_gl import sampler as sampler_lib
 import matplotlib.pyplot as plt
 
-import log
-from log import logger
+from instagraal import log
+from instagraal.log import logger
 
 logger.setLevel(log.CURRENT_LOG_LEVEL)
 

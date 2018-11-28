@@ -34,7 +34,7 @@ OpenGL libraries:
 
 HDF5 serialization library:
 
-* ```libhdf5-100```
+* ```hdf5-tools```
 
 Boost libraries:
 

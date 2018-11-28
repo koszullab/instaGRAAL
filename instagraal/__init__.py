@@ -8,4 +8,3 @@ __license__ = "Artistic"
 __maintainer__ = "Lyam Baudry"
 __email__ = "lyam.baudry@pasteur.fr"
 __status__ = "Pre-Alpha"
-__version__ = version.__version__
