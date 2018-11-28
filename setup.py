@@ -5,6 +5,7 @@
 """
 
 from setuptools import setup, find_packages
+import codecs
 
 CLASSIFIERS = [
     "Development Status :: 3 - Alpha",
@@ -39,7 +40,7 @@ URL = "https://github.com/koszullab/instagraal"
 
 DESCRIPTION = __doc__.strip("\n")
 
-with open("README.md") as f:
+with codecs.open("README.md", encoding="utf-8") as f:
     LONG_DESCRIPTION = f.read()
 
 with open("requirements.txt", "r") as f:

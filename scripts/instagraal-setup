@@ -20,7 +20,7 @@ echo "OK."
 #   * HDF5
 #   * Boost libraries for Python
 echo "Install the required libraries..."
-sudo apt install libglu1-mesa libxi-dev libxmu-dev libglu1-mesa-dev libhdf5-100 libboost-python1.65 || {
+sudo apt install libglu1-mesa libxi-dev libxmu-dev libglu1-mesa-dev hdf5-tools libboost-python1.65 || {
   echo "Error! Installing libraries failed. Note that this install script currently only supports Ubuntu 17+."
   echo "If using another OS or distribution, please refer to the README on the repo for instructions on"
   echo "How to install dependencies by hand."

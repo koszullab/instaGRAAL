@@ -53,7 +53,7 @@ Boost libraries:
 
 These should be handily installed using the supplied requirements file:
 
-    pip install -r requirements.txt
+    pip3 install -r requirements.txt
 
 You will also need to build  ```pycuda``` with OpenGL support and **disable** its use of custom Boost libraries.
 
