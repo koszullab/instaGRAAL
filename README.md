@@ -4,6 +4,7 @@
 
 [![PyPI version](https://badge.fury.io/py/instagraal.svg)](https://badge.fury.io/py/instagraal)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/serpentine.svg)
+[![Docker Automated build](https://img.shields.io/docker/build/koszullab/instagraal.svg)](https://hub.docker.com/r/koszullab/instagraal/)
 [![License: GPLv3](https://img.shields.io/badge/License-GPL%203-0298c3.svg)](https://opensource.org/licenses/GPL-3.0)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 
@@ -13,15 +14,23 @@ This work is under continuous development/improvement - see [GRAAL](https://gith
 
 ## Installation
 
+Install from PyPI:
+
+```sh
+    pip3 install -U instagraal
+```
+
+or, if you want to get the very latest version:
+
 ```sh
    sudo pip3 install -e git+https://github.com/koszullab/instagraal.git@master#egg=instagraal
 ```
 
-## Requirements
+### Requirements
 
 The scaffolder and polishing libraries are written in Python 3 and CUDA. The Python 2 version is available at the ```python2``` branch of this repository, but be aware that development will mainly focus on the Python 3 version. The software has been tested for Ubuntu 17.04 and most dependencies can be downloaded with its package manager (or Python's ```pip```).
 
-### External libraries
+#### External libraries
 
 You will need to download and install the [NVIDIA CUDA toolkit](https://developer.nvidia.com/cuda-downloads?target_os=Linux). Manual installation is recommended - installing ```nvidia-cuda-toolkit``` from Ubuntu's package manager has been known to cause glitches.
 
@@ -40,7 +49,7 @@ Boost libraries:
 
 * ```libboost-all-dev```
 
-### Python libraries
+#### Python libraries
 
 * ```numpy```
 * ```scipy```
@@ -58,6 +67,14 @@ These should be handily installed using the supplied requirements file:
 You will also need to build  ```pycuda``` with OpenGL support and **disable** its use of custom Boost libraries.
 
 You may run (as root)  ```instagraal-setup```, an all-in-one script to handle all the above dependencies on Ubuntu 17+.
+
+### Container
+
+There is experimental Docker support for instaGRAAL. You may fetch the corresponding image by running the following:
+
+```sh
+    docker pull koszullab/instagraal
+```
 
 ## How to use
 
