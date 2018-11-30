@@ -200,7 +200,7 @@ However, instaGRAAL is based on OpenGL, which means there has to be an X server 
 
 ## Documentation
 
-As a Python package, instaGRAAL provides both scaffolding and polishing libraries, as well as a convenient Hi-C matrix handling framework, and we've tried to expose much of the API behind these on [readthedocs](https://instagraal.readthedocs.io). If you wish to know more about how the scaffolder works, see the [references](#References), especially the [supplementary method](https://github.com/koszullab/GRAAL/blob/master/GRAALprinciple.pdf) delving deeper into the details of the model.
+As a Python package, instaGRAAL provides both a scaffolding and polishing library, as well as a convenient Hi-C matrix handling framework, and we've tried to expose much of the API behind these on [readthedocs](https://instagraal.readthedocs.io). If you wish to know more about how the scaffolder works, see the [references](#References), especially the [supplementary method](https://github.com/koszullab/GRAAL/blob/master/GRAALprinciple.pdf) delving deeper into the details of the model.
 
 ## References
 
