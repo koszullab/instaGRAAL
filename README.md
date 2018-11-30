@@ -6,6 +6,7 @@
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/serpentine.svg)
 [![Docker Automated build](https://img.shields.io/docker/build/koszullab/instagraal.svg)](https://hub.docker.com/r/koszullab/instagraal/)
 [![License: GPLv3](https://img.shields.io/badge/License-GPL%203-0298c3.svg)](https://opensource.org/licenses/GPL-3.0)
+[![Read the docs](https://readthedocs.org/projects/instagraal/badge)](https://instagraal.readthedocs.io)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 
 Large genome reassembly based on Hi-C data (continuation and partial rewrite of [GRAAL](https://github.com/koszullab/GRAAL)) and post-scaffolding polishing libraries.
@@ -26,6 +27,8 @@ or, if you want to get the very latest version:
    sudo pip3 install -e git+https://github.com/koszullab/instagraal.git@master#egg=instagraal
 ```
 
+This should automatically handle most dependencies.
+
 ### Requirements
 
 The scaffolder and polishing libraries are written in Python 3 and CUDA. The Python 2 version is available at the ```python2``` branch of this repository, but be aware that development will mainly focus on the Python 3 version. The software has been tested for Ubuntu 17.04 and most dependencies can be downloaded with its package manager (or Python's ```pip```).
@@ -34,22 +37,27 @@ The scaffolder and polishing libraries are written in Python 3 and CUDA. The Pyt
 
 You will need to download and install the [NVIDIA CUDA toolkit](https://developer.nvidia.com/cuda-downloads?target_os=Linux). Manual installation is recommended - installing ```nvidia-cuda-toolkit``` from Ubuntu's package manager has been known to cause glitches.
 
-OpenGL libraries:
+Because some Python dependencies (such as ```pyopengl``` or ```h5py```) require to be built against specific header files, it is recommended that you install the following packages if you encounter errors.
+
+##### OpenGL libraries
 
 * ```libglu1-mesa```
 * ```libxi-dev```
 * ```libxmu-dev```
 * ```libglu1-mesa-dev```
 
-HDF5 serialization library:
+##### HDF5 serialization library
 
 * ```hdf5-tools```
 
-Boost libraries:
+##### Boost libraries
 
 * ```libboost-all-dev```
 
-#### Python libraries
+#### Python dependencies
+
+Python package requirements should be handled automatically by ```pip```, but should you
+wish to install them manually, these are:
 
 * ```numpy```
 * ```scipy```
@@ -60,11 +68,18 @@ Boost libraries:
 * ```docopt```
 * ```biopython```
 
-These should be handily installed using the supplied requirements file:
+They can also be handily installed using the supplied requirements file in the repo:
 
-    pip3 install -r requirements.txt
+    pip3 install -Ur requirements.txt
 
-You will also need to build  ```pycuda``` with OpenGL support and **disable** its use of custom Boost libraries.
+You will also need to build  ```pycuda``` with OpenGL support and **disable** its use of custom Boost libraries. Installing it directly from PyPI will cause errors at runtime. Here is how to do it manually with Git on Ubuntu:
+
+```sh
+    git clone --recurse-submodules https://github.com/inducer/pycuda.git
+    cd pycuda
+    python3 configure.py --cuda-enable-gl --no-use-shipped-boost
+    sudo python3 setup.py install
+```
 
 You may run (as root)  ```instagraal-setup```, an all-in-one script to handle all the above dependencies on Ubuntu 17+.
 
@@ -136,6 +151,15 @@ The above ```<hic_folder>``` passed as an argument to instaGRAAL needs three fil
 All fields (including those in the files' headers) must be separated by tabs.
 
 Minimal working templates are provided in the ```example``` folder.
+
+## Output
+
+After the scaffolder is done running, whatever path you specified as output will contain a ```test_mcmc_X`` directory, where X is the level (resolution) at which scaffolding was performed. This directory, in turn, will contain the following:
+
+* ```genome.fasta```: the scaffolded genome. Scaffolds will be ordered by increasing size *in fragments*, which roughly (but not always) translates into increasing size in bp.
+* ```info_frags.txt```: a file that contains, for each newly formed scaffold, the original coordinates of every single bin in that scaffold, in the format *(chromosome, id, orientation start, end)*. Each bin has a unique ID that provides a convenient way of tracking consecutive stretches. Orientations are relative to one another, and when "-1" is supplied, it is understood that the reverse complement should be taken.
+
+Other files are mostly for developmental purposes and keep track of the evolution of various metrics and model parameters.
 
 ## Polishing
 

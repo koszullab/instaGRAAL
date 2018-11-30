@@ -1,0 +1,7 @@
+name: instagraal
+dependencies:
+  - notebook
+  - sphinx
+  - nbsphinx
+  - recommonmark
+  - instagraal
