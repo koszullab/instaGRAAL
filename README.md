@@ -5,8 +5,8 @@
 [![PyPI version](https://badge.fury.io/py/instagraal.svg)](https://badge.fury.io/py/instagraal)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/serpentine.svg)
 [![Docker Automated build](https://img.shields.io/docker/build/koszullab/instagraal.svg)](https://hub.docker.com/r/koszullab/instagraal/)
-[![License: GPLv3](https://img.shields.io/badge/License-GPL%203-0298c3.svg)](https://opensource.org/licenses/GPL-3.0)
 [![Read the docs](https://readthedocs.org/projects/instagraal/badge)](https://instagraal.readthedocs.io)
+[![License: GPLv3](https://img.shields.io/badge/License-GPL%203-0298c3.svg)](https://opensource.org/licenses/GPL-3.0)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 
 Large genome reassembly based on Hi-C data (continuation and partial rewrite of [GRAAL](https://github.com/koszullab/GRAAL)) and post-scaffolding polishing libraries.
@@ -18,7 +18,7 @@ This work is under continuous development/improvement - see [GRAAL](https://gith
 Install from PyPI:
 
 ```sh
-    pip3 install -U instagraal
+    sudo pip3 install -U instagraal
 ```
 
 or, if you want to get the very latest version:
@@ -197,6 +197,10 @@ it most likely means you attempted to run an instaGRAAL instance remotely (e.g. 
 Note that this will disable the movie (it will play on the remote machine instead).
 
 However, instaGRAAL is based on OpenGL, which means there has to be an X server of some kind running on your target machine no matter what. While this allows for pretty movies and visualizations, it may prove problematic on an environment you don't have total control over, *e.g.* a server cluster. Currently, your best bet is asking the system administrator of the target machine to set up an X instance if they haven't already.
+
+## Documentation
+
+As a Python package, instaGRAAL provides both scaffolding and polishing libraries, as well as a convenient Hi-C matrix handling framework, and we've tried to expose much of the API behind these on [readthedocs](https://instagraal.readthedocs.io). If you wish to know more about how the scaffolder works, see the [references](#References), especially the [supplementary method](https://github.com/koszullab/GRAAL/blob/master/GRAALprinciple.pdf) delving deeper into the details of the model.
 
 ## References
 
