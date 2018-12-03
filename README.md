@@ -154,10 +154,10 @@ Minimal working templates are provided in the ```example``` folder.
 
 ## Output
 
-After the scaffolder is done running, whatever path you specified as output will contain a ```test_mcmc_X`` directory, where X is the level (resolution) at which scaffolding was performed. This directory, in turn, will contain the following:
+After the scaffolder is done running, whatever path you specified as output will contain a ```test_mcmc_X``` directory, where X is the level (resolution) at which scaffolding was performed. This directory, in turn, will contain the following:
 
 * ```genome.fasta```: the scaffolded genome. Scaffolds will be ordered by increasing size *in fragments*, which roughly (but not always) translates into increasing size in bp.
-* ```info_frags.txt```: a file that contains, for each newly formed scaffold, the original coordinates of every single bin in that scaffold, in the format *(chromosome, id, orientation start, end)*. Each bin has a unique ID that provides a convenient way of tracking consecutive stretches. Orientations are relative to one another, and when "-1" is supplied, it is understood that the reverse complement should be taken.
+* ```info_frags.txt```: a file that contains, for each newly formed scaffold, the original coordinates of every single bin in that scaffold, in the format ```chromosome, id, orientation, start, end```. Each bin has a unique ID that provides a convenient way of tracking consecutive stretches. Orientations are relative to one another, and when "-1" is supplied, it is understood that the reverse complement should be taken.
 
 Other files are mostly for developmental purposes and keep track of the evolution of various metrics and model parameters.
 
@@ -188,7 +188,7 @@ it probably means the CUDA-related libraries haven't been properly added to your
 
 If you encounter the following error:
 
-    freeglut (main_single_proc.py): failed to open display ''
+    freeglut (instagraal.py): failed to open display ''
 
 it most likely means you attempted to run an instaGRAAL instance remotely (e.g. over ssh) but didn't configure a proper ```$DISPLAY``` variable. In order to avoid this, simply run the following beforehand:
 
