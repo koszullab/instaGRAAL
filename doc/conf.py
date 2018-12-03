@@ -17,6 +17,20 @@
 # sys.path.insert(0, os.path.abspath('.'))
 
 
+import sys
+from unittest.mock import MagicMock
+
+
+class Mock(MagicMock):
+    @classmethod
+    def __getattr__(cls, name):
+        return MagicMock()
+
+
+MOCK_MODULES = ["pycuda"]
+sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
+
+
 # -- Project information -----------------------------------------------------
 
 project = "instagraal"
@@ -198,3 +212,5 @@ epub_exclude_files = ["search.html"]
 intersphinx_mapping = {"https://docs.python.org/": None}
 
 source_parsers = {".md": "recommonmark.parser.CommonMarkParser"}
+
+autodoc_mock_imports = ["pycuda"]
