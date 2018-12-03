@@ -24,9 +24,9 @@ copyright = "2018, Lyam Baudry, Hervé Marie-Nelly"
 author = "Lyam Baudry, Hervé Marie-Nelly"
 
 # The short X.Y version
-version = ""
+version = "0.1"
 # The full version, including alpha/beta/rc tags
-release = "0.1"
+release = "0.1.4"
 
 
 # -- General configuration ---------------------------------------------------
@@ -76,7 +76,7 @@ language = None
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = None
+pygments_style = "sphinx"
 
 
 # -- Options for HTML output -------------------------------------------------
