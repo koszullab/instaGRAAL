@@ -89,7 +89,52 @@ DEFAULT_CIRCULAR = False
 DEFAULT_GL_SIZE_IM = 1000
 
 
-class window(object):
+class window:
+
+    """A window displaying the live movie of the calculations performed by
+    the scaffolder.
+    
+    [description]
+    
+    Parameters
+    ----------
+    name : str
+        The name of the project. Will determine the window title.
+    folder_path : str or pathlib.Path
+        The directory containing the Hi-C conact map.
+    fasta : str or pathlib.Path
+        The path to the reference genome in FASTA format.
+    device : int
+        The identifier of the graphic card to be used, numbered from 0. If only
+        one is available, it should be 0.
+    level : int
+        The level (resolution) at which to perform scaffolding.
+    n_iterations_em : int
+        The number of EM (expectation maximization) iterations.
+    n_iterations_mcmc : int
+        The number of MCMC (Markov chain Monte-Carlo) iterations.
+    is_simu : bool
+        Whether the parameters should be simulated. Mutually exclusive with
+        use_rippe and will override it.
+    scrambled : bool
+        Whether to scramble the genome.
+    perform_em : bool
+        Whether to perform EM (expectation maximization).
+    use_rippe : bool
+        Whether to explicitly use the model from Rippe et al., 2001.
+    gl_size_im : int
+        The size of the window to be displayed.
+    sample_param : bool
+        Whether to sample the parameters.
+    thresh_factor : float
+        The sparsity (coverage) threshold below which fragments are discarded,
+        as a number of standard deviations below the mean.
+    output_folder : str or pathlib.Path
+        The path to the output folder where the scaffolded genome and other
+        relevant information will be saved.
+    """
+
+
     def __init__(
         self,
         name,
@@ -108,6 +153,9 @@ class window(object):
         thresh_factor,
         output_folder,
     ):
+        """Initialize parameters
+        """
+
         self.device = device
         # mouse handling for transforming scene
         self.mouse_down = False
