@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+"""Pyramid library
+
+Create and handle so-called 'pyramid' objects, i.e. a series of
+decreasing-resolution contact maps in hdf5 format.
+"""
+
 import os
 import shutil
 import h5py
@@ -15,14 +21,33 @@ logger.setLevel(log.CURRENT_LOG_LEVEL)
 
 def file_len(fname):
     with open(fname) as f:
-        for i, l in enumerate(f, 1):
+        for i, _ in enumerate(f, 1):
             pass
     return i
 
 
 def build_and_filter(base_folder, size_pyramid, factor, thresh_factor=1):
-    """ build fragments pyramids for multi scale analysis and
-    remove high sparsity fragments
+    """Build a filtered pyramid of contact maps
+ 
+    Build a fragment pyramid for multi-scale analysis and remove high sparsity
+    (i.e. low-coverage) and short fragments.
+
+    Parameters
+    ----------
+    base_folder : str or pathlib.Path
+        Where to create the hdf5 files containing the matrices.
+    size_pyramid : int
+        How many levels (contact maps of decreasing resolution) to generate.
+    factor : int
+        Subsampling factor (binning) from one level to the next.
+    thresh_factor : float, optional
+        Number of standard deviations below the mean coverage beyond which
+        lesser covered fragments will be discarded. Default is 1.
+
+    Returns
+    -------
+    obj_pyramid : Pyramid
+        The pyramid object containing all the levels.
     """
 
     min_bin_per_contig = 1
@@ -47,11 +72,8 @@ def build_and_filter(base_folder, size_pyramid, factor, thresh_factor=1):
     init_abs_fragments_contacts = os.path.join(
         init_pyramid_folder_level_0, "0_abs_frag_contacts.txt"
     )
-    ###########################################
 
     init_pyramid_file = os.path.join(init_pyramid_folder, "pyramid.hdf5")
-
-    ###########################################
 
     pyramid_folder = os.path.join(
         all_pyramid_folder, "pyramid_" + str(size_pyramid) + "_thresh_auto"
@@ -77,9 +99,6 @@ def build_and_filter(base_folder, size_pyramid, factor, thresh_factor=1):
         and os.path.exists(current_frag_list)
         and os.path.exists(current_abs_fragments_contacts)
     ):
-        # if not(os.path.exists(current_contig_info) and
-        # os.path.exists(current_frag_list)) :
-        #
         logger.info("start filtering")
         pyramid_0 = h5py.File(init_pyramid_file)
 
@@ -131,9 +150,6 @@ def build_and_filter(base_folder, size_pyramid, factor, thresh_factor=1):
                 and os.path.exists(new_abs_fragments_contacts_file)
                 and os.path.exists((sub_2_super_frag_index_file))
             ):
-                # if os.path.exists(new_contig_list_file) and
-                # os.path.exists(new_fragments_list_file) and
-                # os.path.exists((sub_2_super_frag_index_file)):
                 logger.info("level already built")
                 nfrags = file_len(new_fragments_list_file) - 1
             else:  # this should never append !!!
@@ -155,8 +171,6 @@ def build_and_filter(base_folder, size_pyramid, factor, thresh_factor=1):
                 and os.path.exists(new_fragments_list_file)
                 and os.path.exists(new_abs_fragments_contacts_file)
             ):
-                # if os.path.exists(new_contig_list_file) and
-                # os.path.exists(new_fragments_list_file) :
                 logger.info("level already built...")
                 nfrags = file_len(new_fragments_list_file) - 1
 
@@ -175,7 +189,7 @@ def build_and_filter(base_folder, size_pyramid, factor, thresh_factor=1):
                 pyramid_handle, level, new_abs_fragments_contacts_file, nfrags
             )
             pyramid_handle.attrs[str(level)] = "done"
-            ################################################
+
         current_frag_list = new_fragments_list_file
         current_contig_info = new_contig_list_file
         current_abs_fragments_contacts = new_abs_fragments_contacts_file
@@ -183,14 +197,30 @@ def build_and_filter(base_folder, size_pyramid, factor, thresh_factor=1):
             pyramid_level_folder, level_pyramid + "sub_2_super_index_frag.txt"
         )
     logger.info("pyramid built.")
-    ###############################################
+
     obj_pyramid = pyramid(pyramid_folder, size_pyramid)
     pyramid_handle.close()
     return obj_pyramid
 
 
 def build(base_folder, size_pyramid, factor, min_bin_per_contig):
-    """ build fragments pyramids for multi scale analysis """
+    """Build a pyramid of contact maps
+
+    Build a fragment pyramid for multi-scale analysis
+    
+    Parameters
+    ----------
+    base_folder : str or pathlib.Path
+        Where to create the hdf5 files containing the matrices.
+    size_pyramid : int
+        How many levels (contact maps of decreasing resolution) to generate.
+    factor : int
+        Subsampling factor (binning) from one level to the next.
+    min_bin_per_contig : int
+        The minimum number of bins per contig below which binning shall not be
+        performed.
+    """
+
     fact_sub_sampling = factor
     contig_info = os.path.join(base_folder, "info_contigs.txt")
     fragments_list = os.path.join(base_folder, "fragments_list.txt")
@@ -277,7 +307,6 @@ def build(base_folder, size_pyramid, factor, min_bin_per_contig):
                     new_fragments_list_file,
                     sub_2_super_frag_index_file,
                 )
-        ################################################
 
         try:
             status = pyramid_handle.attrs[str(level)] == "done"
@@ -290,7 +319,6 @@ def build(base_folder, size_pyramid, factor, min_bin_per_contig):
                 pyramid_handle, level, new_abs_fragments_contacts_file, nfrags
             )
             pyramid_handle.attrs[str(level)] = "done"
-        ################################################
         current_frag_list = new_fragments_list_file
         current_contig_info = new_contig_list_file
         current_abs_fragments_contacts = new_abs_fragments_contacts_file
@@ -299,20 +327,27 @@ def build(base_folder, size_pyramid, factor, min_bin_per_contig):
         )
     logger.info("pyramid built.")
     pyramid_handle.close()
-    ###############################################
-    # obj_pyramid =
-    # pyramid(pyramid_folder,size_pyramid,use_gpu,default_level,use_gpu)
-    #
-    # return obj_pyramid
 
 
 def abs_contact_2_coo_file(abs_contact_file, coo_file):
+    """Convert contact maps between old-style and new-style formats.
+
+    A legacy function that converts contact maps from the older GRAAL format to
+    the simpler instaGRAAL format. This is useful with datasets generated by
+    Hi-C box.
+
+    Parameters
+    ----------
+    abs_contact_file : str, file or pathlib.Path
+        The input old-style contact map.
+    coo_file : str, file, or pathlib.Path
+        The output path to the generated contact map; must be writable.
+    """
 
     sparse_dict = dict()
     h = open(abs_contact_file, "r")
     all_lines = h.readlines()
     n_lines = len(all_lines)
-    # index start at
     for i in range(1, n_lines):
 
         line = all_lines[i]
@@ -347,12 +382,27 @@ def abs_contact_2_coo_file(abs_contact_file, coo_file):
 
 
 def fill_sparse_pyramid_level(pyramid_handle, level, contact_file, nfrags):
+    """Fill a level with sparse contact map data
+
+    Fill values from the simple text matrix file to the hdf5-based pyramid
+    level with contact data.
+    
+    Parameters
+    ----------
+    pyramid_handle : h5py.File
+        The hdf5 file handle containing the whole dataset.
+    level : int
+        The level (resolution) to be filled with contact data.
+    contact_file : str, file or pathlib.Path
+        The binned contact map file to be converted to hdf5 data.
+    nfrags : int
+        The number of fragments/bins in that specific level.
+    """
 
     sparse_dict = dict()
     h = open(contact_file, "r")
     all_lines = h.readlines()
     n_lines = len(all_lines)
-    # index start at
     for i in range(1, n_lines):
 
         line = all_lines[i]
@@ -401,7 +451,21 @@ def fill_sparse_pyramid_level(pyramid_handle, level, contact_file, nfrags):
 
 
 def init_frag_list(fragment_list, new_frag_list):
-    """ adapt the original frag list to fit the build function requirements """
+    """Adapt the original fragment list to fit the build function requirements
+
+    Parameters
+    ----------
+    fragment_list : str, file or pathlib.Path
+        The input fragment list.
+    new_frag_list : str, file or pathlib.Path
+        The output fragment list to be written.
+    
+    Returns
+    -------
+    i : int
+        The number of records processed this way.
+    """
+
     handle_frag_list = open(fragment_list, "r")
     handle_new_frag_list = open(new_frag_list, "w")
     handle_new_frag_list.write(
@@ -468,7 +532,9 @@ def subsample_data_set(
 ):
 
     logger.debug("fact sub sampling = {}".format(fact_sub_sample))
-    logger.debug("minimum bin numer per contig = {}".format(min_bin_per_contig))
+    logger.debug(
+        "minimum bin numer per contig = {}".format(min_bin_per_contig)
+    )
     if fact_sub_sample <= 1:
         logger.info("subsampling : nothing to do")
         shutil.copy(fragments_list, new_fragments_list_file)
@@ -2234,7 +2300,7 @@ class level:
 
 def main():
     try:
-        in_file, out_file = sys.argv[1:]
+        (in_file, out_file) = sys.argv[1:]
 
     except IndexError:
         print("Usage: ./pyramid_sparse.py in_file out_file")

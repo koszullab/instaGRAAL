@@ -13,7 +13,7 @@ TEST_DATASETS = ("demo_name", ["trichoderma"])
 
 @pytest.mark.parametrize(*TEST_DATASETS)
 def test_single_run(demo_name):
-    """Test run on Trichoderma dataset.
+    """Test run on the Trichoderma dataset.
     """
     dataset_path = pathlib.Path("/media/rsg/DATA/instaGRAAL/demos") / demo_name
     p2 = instagraal.window(
