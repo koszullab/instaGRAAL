@@ -6,7 +6,7 @@ Usage:
     instagraal <hic_folder> <reference.fa> [<output_folder>]
                [--level=4] [--cycles=100] [--coverage-std=1]
                [--neighborhood=5] [--device=0] [--circular] [--bomb]
-               [--save-matrix] [--pyramid-only] [--save-pickle]
+               [--save-matrix] [--pyramid-only] [--save-pickle] [--simple]
                [--quiet] [--debug]
 
 Options:
@@ -39,6 +39,8 @@ Options:
                             [default: False]
     --save-matrix           Saves a preview of the contact map after each
                             cycle. [default: False]
+    --simple                Only perform operations at the edge of the contigs.
+                            [default: False]
     --quiet                 Only display warnings and errors as outputs.
                             [default: False]
     --debug                 Display debug information. For development purposes
@@ -134,7 +136,6 @@ class window:
         relevant information will be saved.
     """
 
-
     def __init__(
         self,
         name,
@@ -160,10 +161,10 @@ class window:
         # mouse handling for transforming scene
         self.mouse_down = False
         self.size_points = 6
-        self.mouse_old = Vec([0., 0.])
-        self.rotate = Vec([0., 0., 0.])
-        self.translate = Vec([0., 0., 0.])
-        self.initrans = Vec([0., 0., -2.])
+        self.mouse_old = Vec([0.0, 0.0])
+        self.rotate = Vec([0.0, 0.0, 0.0])
+        self.translate = Vec([0.0, 0.0, 0.0])
+        self.initrans = Vec([0.0, 0.0, -2.0])
         self.scrambled = scrambled
         self.width = 400
         self.height = 400
@@ -406,14 +407,14 @@ class window:
         delta = 15
         logger.info(self.simulation.n_iterations)
         delta = np.int32(
-            np.floor(np.linspace(3, 5, np.floor(self.n_iterations_em / 3.)))
+            np.floor(np.linspace(3, 5, np.floor(self.n_iterations_em / 3.0)))
         )  # param ok simu
         # delta = np.int32(np.floor(np.linspace(3, 4,
         # np.floor(self.n_iterations_em / 2.))))
         delta = list(delta)
         d_ext = list(
             np.floor(
-                np.linspace(10, 15, np.floor(self.n_iterations_em / 3.) + 1)
+                np.linspace(10, 15, np.floor(self.n_iterations_em / 3.0) + 1)
             )
         )  # param ok simu
         delta.extend(d_ext)
@@ -559,14 +560,14 @@ class window:
         delta = 15
         logger.info((self.simulation.n_iterations))
         delta = np.int32(
-            np.floor(np.linspace(3, 4, np.floor(self.n_iterations_em / 2.)))
+            np.floor(np.linspace(3, 4, np.floor(self.n_iterations_em / 2.0)))
         )  # param ok simu
         # delta = np.int32(np.floor(np.linspace(3, 4,
         # np.floor(self.n_iterations_em / 2.))))
         delta = list(delta)
         d_ext = list(
             np.floor(
-                np.linspace(5, 10, np.floor(self.n_iterations_em / 2.) + 1)
+                np.linspace(5, 10, np.floor(self.n_iterations_em / 2.0) + 1)
             )
         )  # param ok simu
         # d_ext = list(np.floor(np.linspace(10, 15,
@@ -734,14 +735,14 @@ class window:
         delta = 15
         logger.info((self.simulation.n_iterations))
         delta = np.int32(
-            np.floor(np.linspace(3, 4, np.floor(self.n_iterations_em / 2.)))
+            np.floor(np.linspace(3, 4, np.floor(self.n_iterations_em / 2.0)))
         )  # param ok simu
         # delta = np.int32(np.floor(np.linspace(3, 4,
         # np.floor(self.n_iterations_em / 2.))))
         delta = list(delta)
         d_ext = list(
             np.floor(
-                np.linspace(5, 10, np.floor(self.n_iterations_em / 2.) + 1)
+                np.linspace(5, 10, np.floor(self.n_iterations_em / 2.0) + 1)
             )
         )  # param ok simu
         # d_ext = list(np.floor(np.linspace(10, 15,
@@ -857,14 +858,14 @@ class window:
         # delta = np.int32(np.floor(np.linspace(3, 4,
         # np.floor(self.n_iterations_em / 2.)))) # param ok simu
         delta = np.int32(
-            np.floor(np.linspace(3, 4, np.floor(self.n_iterations_em / 2.)))
+            np.floor(np.linspace(3, 4, np.floor(self.n_iterations_em / 2.0)))
         )
         delta = list(delta)
         # d_ext = list(np.floor(np.linspace(5, 10,
         # np.floor(self.n_iterations_em / 2.) + 1))) # param ok simu
         d_ext = list(
             np.floor(
-                np.linspace(10, 15, np.floor(self.n_iterations_em / 2.) + 1)
+                np.linspace(10, 15, np.floor(self.n_iterations_em / 2.0) + 1)
             )
         )
         delta.extend(d_ext)
@@ -1476,7 +1477,7 @@ class window:
         OpenGL.GL.glMatrixMode(OpenGL.GL.GL_PROJECTION)
         OpenGL.GL.glLoadIdentity()
         OpenGL.GLU.gluPerspective(
-            60., self.width / float(self.height), .1, 1000.
+            60.0, self.width / float(self.height), 0.1, 1000.0
         )
         OpenGL.GL.glMatrixMode(OpenGL.GL.GL_MODELVIEW)
 
@@ -1546,10 +1547,10 @@ class window:
         dx = x - self.mouse_old.x
         dy = y - self.mouse_old.y
         if self.mouse_down and self.button == 0:  # left button
-            self.rotate.x += dy * .2
-            self.rotate.y += dx * .2
+            self.rotate.x += dy * 0.2
+            self.rotate.y += dx * 0.2
         elif self.mouse_down and self.button == 2:  # right button
-            self.translate.z -= dy * .01
+            self.translate.z -= dy * 0.01
         self.mouse_old.x = x
         self.mouse_old.y = y
 
@@ -2106,6 +2107,7 @@ def main():
     circ = arguments["--circular"]
     bomb = arguments["--bomb"]
     save_matrix = arguments["--save-matrix"]
+    simple = arguments["--simple"]
     quiet = arguments["--quiet"]
     debug = arguments["--debug"]
     pyramid_only = arguments["--pyramid-only"]
@@ -2159,13 +2161,18 @@ def main():
         p2.simulation.level.S_o_A_frags["circ"] += 1
 
     if not pyramid_only:
-        p2.full_em(
-            n_cycles=number_cycles,
-            n_neighbours=neighborhood,
-            bomb=bomb,
-            id_start_sample_param=4,
-            save_matrix=save_matrix,
-        )
+        if not simple:
+            p2.full_em(
+                n_cycles=number_cycles,
+                n_neighbours=neighborhood,
+                bomb=bomb,
+                id_start_sample_param=4,
+                save_matrix=save_matrix,
+            )
+        else:
+            p2.simple_start(
+                n_cycles=number_cycles, n_neighbours=neighborhood, bomb=bomb
+            )
 
     if pickle_name:
         with open("graal.pkl", "wb") as pickle_handle:

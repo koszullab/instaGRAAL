@@ -1,4 +1,4 @@
-from .instagraal import *
+from instagraal import *
 
 __author__ = "Lyam Baudry, \
               Hervé Marie-Nelly"
