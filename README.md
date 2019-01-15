@@ -100,7 +100,7 @@ Unlike GRAAL, this is meant to be run from the command line.
     instagraal <hic_folder> <reference.fa> [<output_folder>]
                [--level=4] [--cycles=100] [--coverage-std=1]
                [--neighborhood=5] [--device=0] [--circular] [--bomb]
-               [--save-matrix] [--pyramid-only] [--save-pickle]
+               [--save-matrix] [--pyramid-only] [--save-pickle] [--simple]
                [--quiet] [--debug]
 
 ### Options
@@ -133,7 +133,9 @@ Unlike GRAAL, this is meant to be run from the command line.
                             also for advanced post hoc introspection.
                             [default: False]
     --save-matrix           Saves a preview of the contact map after each
-                            cycle. [default: False]
+                            cycle, in csv format. [default: False]
+    --simple                Only perform operations at the edge of the contigs.
+                            [default: False]
     --quiet                 Only display warnings and errors as outputs.
                             [default: False]
     --debug                 Display debug information. For development purposes
@@ -141,6 +143,8 @@ Unlike GRAAL, this is meant to be run from the command line.
                             override it. [default: False]
 
 ### Input datasets
+
+#### Format specification
 
 The above ```<hic_folder>``` passed as an argument to instaGRAAL needs three files:
 
@@ -151,6 +155,10 @@ The above ```<hic_folder>``` passed as an argument to instaGRAAL needs three fil
 All fields (including those in the files' headers) must be separated by tabs.
 
 Minimal working templates are provided in the ```example``` folder.
+
+#### Matrix generation
+
+If you want to generate instaGRAAL-compatible matrices from scratch (i.e. from reads and a reference genome, as opposed to existing Hi-C data in one of the numerous existing formats), you may do so with [hicstuff](https://github.com/koszullab/hicstuff), which acts as both a Python library and a pipeline. A [graphical interface](https://github.com/koszullab/HiC-Box) is also available. Instructions, parameters and optional arguments are detailed in the repo's readme.
 
 ## Output
 
