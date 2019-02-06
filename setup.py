@@ -60,7 +60,7 @@ setup(
     classifiers=CLASSIFIERS,
     url=URL,
     packages=find_packages(),
-    package_data={"instagraal": ("kernels/*")},
+    package_data={"instagraal": ("kernels/*.cu")},
     scripts=["scripts/instagraal-setup"],
     python_requires=">=3.4",
     include_package_data=True,
