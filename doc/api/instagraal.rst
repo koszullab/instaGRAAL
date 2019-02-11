@@ -60,6 +60,14 @@ instagraal.leastsqbound module
     :undoc-members:
     :show-inheritance:
 
+instagraal.linkage module
+-------------------------
+
+.. automodule:: instagraal.linkage
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 instagraal.log module
 ---------------------
 

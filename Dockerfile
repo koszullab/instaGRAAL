@@ -1,3 +1,5 @@
+#Inspired from VMD's Dockerfile (https://github.com/kratan/docker-vmd)
+
 FROM nvidia/cudagl:10.0-devel-ubuntu18.04
 
 ENV DEBIAN_FRONTEND=noninteractive
