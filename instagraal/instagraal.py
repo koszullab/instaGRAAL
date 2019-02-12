@@ -2068,11 +2068,14 @@ class window:
                     plt.subplots_adjust(
                         top=1, bottom=0, right=1, left=0, hspace=0, wspace=0
                     )
+                    matrix = matrix + matrix.T - np.diag(np.diag(matrix))
                     plt.margins(0, 0)
                     plt.gca().xaxis.set_major_locator(plt.NullLocator())
                     plt.gca().yaxis.set_major_locator(plt.NullLocator())
                     plt.figure()
-                    plt.imshow(matrix, vmax=np.percentile(matrix, 99))
+                    plt.imshow(
+                        matrix, vmax=np.percentile(matrix, 99), cmap="Reds"
+                    )
                     plt.axis("off")
                     plt.savefig(
                         my_file_path,
