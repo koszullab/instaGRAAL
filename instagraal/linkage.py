@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-"""Aggregate genetic linkage data with an existing assembly for correction and
+"""Genetic map based validation
+
+Aggregate genetic linkage data with an existing assembly for correction and
 polishing purposes.
 
 Usage:
@@ -24,7 +26,7 @@ import collections
 import copy
 import docopt
 import numpy as np
-import parse_info_frags
+from instagraal import parse_info_frags
 
 VERSION_NUMBER = "0.1a"
 
@@ -288,18 +290,23 @@ def compare_orderings(info_frags_records, linkage_orderings):
 
 
 def get_missing_blocks(info_frags_records, matching_pairs, linkage_orderings):
-    """[summary]
+    """Get missing blocks in a scaffold based on the genetic map order.
 
-    [description]
+    Given matching scaffold blocks/genetic map blocks (based on restriction 
+    sites and SNP markers, respectively), move around the scaffold blocks
+    such that they map the genetic map order.
 
     Parameters
     ----------
     info_frags_records : dict
-        [description]
-    linkage_orderings : dict
-        [description]
+        A dictionary representing the scaffolds and their block order as
+        described in an info_frags.txt file
     matching_pairs : dict
-        [description]
+        A list of best matching pairs in the form 
+        (scaffold_block, linkage group)
+    linkage_orderings : dict
+        A dictionary representing the genetic map and the linkage groups
+        as described in csv file.        
 
     Example
     -------
