@@ -30,11 +30,11 @@ This should automatically handle most dependencies.
 
 ### Requirements
 
-The scaffolder and polishing libraries are written in Python 3 and CUDA. As such, an NVIDIA graphic card is required for the scaffolder to run. The Python 2 version is available at the ```python2``` branch of this repository, but be aware that development will mainly focus on the Python 3 version. The software has been tested for Ubuntu 17.04 and later, and most dependencies can be downloaded with its package manager (or Python's ```pip```).
+The scaffolder and polishing libraries are written in Python 3 and CUDA. As such, an NVIDIA graphics card is required for the scaffolder to run. The Python 2 version is available at the ```python2``` branch of this repository, but be aware that development will mainly focus on the Python 3 version. The software has been tested for Ubuntu 17.04 and later, and most dependencies can be downloaded with its package manager (or Python's ```pip```).
 
 #### External libraries
 
-You will need to download and install the [NVIDIA CUDA toolkit](https://developer.nvidia.com/cuda-downloads?target_os=Linux). Manual installation is recommended - installing ```nvidia-cuda-toolkit``` from Ubuntu's package manager has been known to cause glitches. Here is how to quickly do it on Ubuntu 18.04:
+You will need to download and install the [NVIDIA CUDA toolkit](https://developer.nvidia.com/cuda-downloads). Manual installation is recommended - installing ```nvidia-cuda-toolkit``` from Ubuntu's package manager has been known to cause glitches. It is fairly straightforward on OS X thanks to the installation wizard. Here is how to quickly do it on Ubuntu 18.04:
 
 ```sh
     wget https://developer.nvidia.com/compute/cuda/10.0/Prod/local_installers/cuda_10.0.130_410.48_linux
@@ -42,13 +42,17 @@ You will need to download and install the [NVIDIA CUDA toolkit](https://develope
     sudo ./cuda_10.0.130_410.48_linux
 ```
 
-Be aware that the installation script will fail if it isn't run as root, or if a graphical instance (e.g. X) is running as well. You may need to temporarily shut it down, for instance by switching to tty1 and running the following (prior to the installation script):
+**Note to Ubuntu users**: Be aware that the installation script will fail if it isn't run as root, or if a graphical instance (e.g. X) is running as well. You may need to temporarily shut it down, for instance by switching to tty1 and running the following (prior to the installation script):
 
 ```sh
     sudo service lightdm stop
 ```
 
-(Replace ```lightdm``` with ```mdm```, ```gdm``` or whichever login manager is appropriate on your machine if that fails; if all else fails as well, you may have to run something like ```sudo pkill Xorg``` instead.)
+(Replace ```lightdm``` with ```mdm```, ```gdm``` or whichever login manager is present on your machine if that fails; if all else fails as well, you may have to run something like ```sudo pkill Xorg``` instead.)
+
+**Note to OS X users**: There is currently [no CUDA support](https://devtalk.nvidia.com/default/topic/1042279/cuda-10-and-macos-10-14/) on Mojave (10.14) and it is unclear when it is going to be added, if it is to be added at all. This means instaGRAAL (or indeed any CUDA-based application) will *not* work on Mojave. If you wish to run it on OS X, the only solution for now is to downgrade to High Sierra (10.13).
+
+#### Recommended libraries
 
 Because some Python dependencies (such as ```pyopengl``` or ```h5py```) require to be built against specific files, it is recommended that you install the following packages if you encounter errors.
 
@@ -61,11 +65,11 @@ Because some Python dependencies (such as ```pyopengl``` or ```h5py```) require 
 
 ##### HDF5 serialization library
 
-* ```hdf5-tools```
+* ```hdf5-tools``` (```hdf5``` for OS X in brew)
 
 ##### Boost libraries
 
-* ```libboost-all-dev```
+* ```libboost-all-dev``` (```boost``` and ```boost-python``` for OS X in brew)
 
 #### Python dependencies
 
@@ -85,7 +89,7 @@ They can also be handily installed using the supplied requirements file in the r
 
     pip3 install -Ur requirements.txt
 
-You will also need to build  ```pycuda``` with OpenGL support and **disable** its use of custom Boost libraries. Installing it directly from PyPI will cause errors at runtime. Here is how to do it manually with Git on Ubuntu:
+You will also need to build  ```pycuda``` with OpenGL support and **disable** its use of custom Boost libraries. Installing it directly from PyPI will cause errors at runtime. Here is how to do it manually with Git on Ubuntu or OS X:
 
 ```sh
     git clone --recurse-submodules https://github.com/inducer/pycuda.git
