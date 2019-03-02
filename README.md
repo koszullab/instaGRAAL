@@ -223,6 +223,25 @@ Note that this will disable the movie (it will play on the remote machine instea
 
 However, instaGRAAL is based on OpenGL, which means there has to be an X server of some kind running on your target machine no matter what. While this allows for pretty movies and visualizations, it may prove problematic on an environment you don't have total control over, *e.g.* a server cluster. Currently, your best bet is asking the system administrator of the target machine to set up an X instance if they haven't already.
 
+### Codepy toolchain
+
+If you encounter an error like the following :
+
+      File "/usr/local/lib/python3.6/dist-packages/codepy/toolchain.py", line 382, in _guess_toolchain_kwargs_from_python_config
+    object_suffix = '.' + make_vars['MODOBJS'].split()[0].split('.')[1]
+    IndexError: list index out of range
+
+You need to install codepy directly from the git repository to have a more recent version than the one on PyPI. Run the following commands :
+
+```sh
+    sudo pip3 uninstall codepy
+    git clone https://github.com/inducer/codepy.git
+    cd codepy
+    sudo python3 setup.py install
+```
+
+Make sure that you have gcc/g++ 8.
+
 ## Documentation
 
 As a Python package, instaGRAAL provides both a scaffolding and polishing library, as well as a convenient Hi-C matrix handling framework, and we've tried to expose much of the API behind these on [readthedocs](https://instagraal.readthedocs.io). If you wish to know more about how the scaffolder works, see the [references](#References), especially the [supplementary method](https://github.com/koszullab/GRAAL/blob/master/GRAALprinciple.pdf) delving deeper into the details of the model.
