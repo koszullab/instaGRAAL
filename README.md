@@ -253,28 +253,7 @@ It should work directly afterwards.
 
 * If there is a mismatch between the version of CUDA you installed and the one instaGRAAL seems to rely on (*e.g.* you installed CUDA 10 but instaGRAAL complains that it can't find ```libcurand.so.9.1```), try reinstalling ```pycuda``` and ```instagraal``` with the ```--no-cache-dir``` option.
 
-* You may experience issues if you handle dependencies with conda, such as ```pycuda``` failing to build because some header files that would be present when you installed ```libboost-all-dev``` aren't automatically recognized. If you don't want to manually mess with your ```$PATH```, it's probably best to just deactivate conda altogether and install everything with your OS's normal package manger (and ```pip```).import sys
-import math
-import numpy
-
-import OpenGL
-from OpenGL.GL import *
-from OpenGL.GLUT import *
-
-import Image
-
-import linkage
-
-# ... a whole load of definitions etc ...
-
-glutInit(sys.argv)
-glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB)
-glutInitWindowSize(600, 600)
-glutCreateWindow('linkage')
-init()
-initWindow()
-glutIdleFunc(idle)
-glutMainLoop()
+* You may experience issues if you handle dependencies with conda, such as ```pycuda``` failing to build because some header files that would be present when you installed ```libboost-all-dev``` aren't automatically recognized. If you don't want to manually mess with your ```$PATH```, it's probably best to just deactivate conda altogether and install everything with your OS's normal package manger (and ```pip```).
 
 ## Documentation
 
