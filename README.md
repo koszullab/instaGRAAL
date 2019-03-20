@@ -62,6 +62,7 @@ Because some Python dependencies (such as ```pyopengl``` or ```h5py```) require 
 * ```libxi-dev```
 * ```libxmu-dev```
 * ```libglu1-mesa-dev```
+* ```freeglut3-dev```
 
 ##### HDF5 serialization library
 
@@ -231,7 +232,7 @@ If you encounter an error like the following :
     object_suffix = '.' + make_vars['MODOBJS'].split()[0].split('.')[1]
     IndexError: list index out of range
 
-You need to install codepy directly from the git repository to have a more recent version than the one on PyPI. Run the following commands :
+You need to install codepy directly from the git repository to have a more recent version than the one on PyPI. Run the following commands:
 
 ```sh
     sudo pip3 uninstall codepy
@@ -239,8 +240,41 @@ You need to install codepy directly from the git repository to have a more recen
     cd codepy
     sudo python3 setup.py install
 ```
+You will also need to update to gcc/g++ 8:
 
-Make sure that you have gcc/g++ 8.
+```sh
+    sudo apt install gcc-8 g++-8
+```
+It should work directly afterwards.
+
+### General tips
+
+* instaGRAAL will attempt to detect already-built pyramids in hdf5 format, but if building was interrupted for some reason, and you re-run the pyramid building step, the hdf5 files will still be there, but corrupted. You will need to manually delete the ```pyramids``` folder and try again.
+
+* If there is a mismatch between the version of CUDA you installed and the one instaGRAAL seems to rely on (*e.g.* you installed CUDA 10 but instaGRAAL complains that it can't find ```libcurand.so.9.1```), try reinstalling ```pycuda``` and ```instagraal``` with the ```--no-cache-dir``` option.
+
+* You may experience issues if you handle dependencies with conda, such as ```pycuda``` failing to build because some header files that would be present when you installed ```libboost-all-dev``` aren't automatically recognized. If you don't want to manually mess with your ```$PATH```, it's probably best to just deactivate conda altogether and install everything with your OS's normal package manger (and ```pip```).import sys
+import math
+import numpy
+
+import OpenGL
+from OpenGL.GL import *
+from OpenGL.GLUT import *
+
+import Image
+
+import linkage
+
+# ... a whole load of definitions etc ...
+
+glutInit(sys.argv)
+glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB)
+glutInitWindowSize(600, 600)
+glutCreateWindow('linkage')
+init()
+initWindow()
+glutIdleFunc(idle)
+glutMainLoop()
 
 ## Documentation
 
