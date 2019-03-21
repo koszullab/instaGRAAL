@@ -222,7 +222,15 @@ it most likely means you attempted to run an instaGRAAL instance remotely (e.g. 
 
 Note that this will disable the movie (it will play on the remote machine instead).
 
-However, instaGRAAL is based on OpenGL, which means there has to be an X server of some kind running on your target machine no matter what. While this allows for pretty movies and visualizations, it may prove problematic on an environment you don't have total control over, *e.g.* a server cluster. Currently, your best bet is asking the system administrator of the target machine to set up an X instance if they haven't already.
+However, instaGRAAL is based on OpenGL, which means there has to be an X server of some kind running on your target machine no matter what. While this allows for pretty movies and visualizations, it may prove problematic on an environment you don't have total control over, *e.g.* a server cluster. Currently, your best bet is asking the system administrator of the target machine to set up an X instance (possibly virtual, such as Xvfb or ```xserver-xorg-video-dummy```) if they haven't already.
+
+### PyOpenGL/GLUT error
+
+If you encounter the following:
+
+    NullFunctionError: Attempt to call an undefined function glutInit, check for bool(glutInit) before calling
+
+check whether you have installed ```freeglut3-dev```. It seems that the ```pyopengl``` library [does not include a GLUT implementation](https://stackoverflow.com/questions/26700719/pyopengl-glutinit-nullfunctionerror) when installed from PyPI. Alternatively, just installing ```pyopengl``` with your package manager (*e.g.* ```python3-pyopengl``` on Ubuntu) seems to work as well.
 
 ### Codepy toolchain
 
@@ -232,20 +240,29 @@ If you encounter an error like the following :
     object_suffix = '.' + make_vars['MODOBJS'].split()[0].split('.')[1]
     IndexError: list index out of range
 
-You need to install codepy directly from the git repository to have a more recent version than the one on PyPI. Run the following commands:
+You may need to upgrade to a more recent version of ```codepy```.
 
 ```sh
-    sudo pip3 uninstall codepy
-    git clone https://github.com/inducer/codepy.git
-    cd codepy
-    sudo python3 setup.py install
+    sudo pip3 install --upgrade --no-cache-dir -e git+https://github.com/inducer/codepy.git@master#egg=codepy
 ```
-You will also need to update to gcc/g++ 8:
+
+No such error has been found as of commit [10a014f](https://github.com/inducer/codepy/tree/10a014f), so if you encounter regressions after this, you should stick to that version.
+
+Depending on your system, you may also need to upgrade to gcc/g++ 8:
 
 ```sh
     sudo apt install gcc-8 g++-8
 ```
-It should work directly afterwards.
+
+If for some reason your system does not automatically switch to gcc/g++-8, you should manually configure your system to do so, *e.g.* on Ubuntu:
+
+```sh
+    sudo update-alternatives --remove-all gcc 
+    sudo update-alternatives --remove-all g++
+
+    sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 10
+    sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-8 10
+```
 
 ### General tips
 

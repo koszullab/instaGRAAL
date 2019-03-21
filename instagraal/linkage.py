@@ -28,8 +28,6 @@ import docopt
 import numpy as np
 from instagraal import parse_info_frags
 
-VERSION_NUMBER = "0.1a"
-
 parse_linkage_csv = functools.partial(
     np.genfromtxt, dtype=None, skip_header=1, encoding="utf-8"
 )
