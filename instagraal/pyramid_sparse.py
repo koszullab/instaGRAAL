@@ -2007,7 +2007,7 @@ class level:
                 self.distri_frag.append(lkb)
                 start = f.start_pos
                 end = f.end_pos
-                pos_kb = start + lkb / 2.
+                pos_kb = start + lkb / 2.0
                 tick_kb.append(pos_kb)
                 end_frags_kb.append(end)
                 id_f_curr = f.np_id_abs - 1
@@ -2034,13 +2034,13 @@ class level:
                     np.int32(n_accu_frags),
                 )
                 self.pos_vect_frags_4_GL[id_f_curr, 0] = (
-                    np.float32(f.curr_id - 1) / 100.
+                    np.float32(f.curr_id - 1) / 100.0
                 )
                 self.pos_vect_frags_4_GL[id_f_curr, 1] = (
-                    np.float32(f.contig_id) / 100.
+                    np.float32(f.contig_id) / 100.0
                 )
                 # self.pos_vect_frags_4_GL[id_f_curr, 2] = np.float32(0.0)
-                self.pos_vect_frags_4_GL[id_f_curr, 2] = 0.
+                self.pos_vect_frags_4_GL[id_f_curr, 2] = 0.0
                 self.pos_vect_frags_4_GL[id_f_curr, 3] = np.float32(1.0)
                 # GL_pos_frag = (np.float32(f.curr_id - 1),
                 #            np.float32(f.contig_id),
@@ -2278,9 +2278,15 @@ class level:
                         )
                     )
                     list_seq_new_contigs[id_cont] += seq
-        for id_cont in list_contigs_ok:
+
+        def contig_length(c):
+            return len(list_seq_new_contigs[c])
+
+        for id_cont in sorted(
+            list_contigs_ok, key=contig_length, reverse=True
+        ):
             cont_seq = list_seq_new_contigs[id_cont]
-            header = ">3C-assembly|contig_" + str(id_cont)
+            header = ">3C-assembly-contig_" + str(id_cont)
             # print header
             handle_new_fasta.write("%s\n" % (header))
             len_line = 61
