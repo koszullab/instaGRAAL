@@ -72,14 +72,11 @@ class sampler:
         mean_value_trans,
         n_iterations,
         is_simu,
-        gl_window,
-        pos_vbo,
-        col_vbo,
+        # pos_vbo,
+        # col_vbo,
         vel,
         pos,
-        raw_im_init,
-        pbo_im_buffer,
-        gl_size_im,
+
     ):
         self.o = 0
 
@@ -102,10 +99,10 @@ class sampler:
         self.init_n_sub_frags = np.int32(init_n_sub_frags)
         self.sparse_data_2_gpu()
         self.use_rippe = use_rippe
-        self.gl_window = gl_window
-        self.ctx = gl_window.ctx_gl
-        self.pos_vbo = pos_vbo
-        self.col_vbo = col_vbo
+
+        self.ctx = cuda.Context
+        # self.pos_vbo = pos_vbo
+        # self.col_vbo = col_vbo
         self.pos = pos
         self.vel = vel
         self.load_gl_cuda_vbo()
@@ -317,12 +314,10 @@ class sampler:
         self.setup_thrust_modules()
 
         # self.texref = self.module.get_texref("tex")
-        self.raw_im_init = raw_im_init
-        self.pbo_im_buffer = pbo_im_buffer
-        self.gl_size_im = gl_size_im
+
         precision = 1
         self.sparse_data_4_gl(precision)
-        self.load_gl_cuda_tex_buffer(self.raw_im_init)
+
         self.im_thresh = 50
 
     def setup_all_gpu_struct(self,):
@@ -1845,7 +1840,7 @@ class sampler:
         max_id = self.modify_gl_cuda_buffer(id_frag, dt)
         flip_eject = 1
         for (id_cand, i) in zip(self.candidates, list(range(0, n))):
-            self.gl_window.remote_update()
+             # self.gl_window.remote_update()
             self.extract_uniq_mutations(id_frag, id_cand, flip_eject)
             self.perform_mutations(id_frag, id_cand, max_id, 1 == 0)
             id_ctg_b = self.gpu_vect_frags.id_c[id_cand]
@@ -1882,7 +1877,7 @@ class sampler:
         # print 'id operation =', op_sampled
 
         self.test_copy_struct(id_frag, id_f_sampled, op_sampled, max_id)
-        self.modify_gl_cuda_buffer(id_frag, self.gl_window.dt)
+        self.modify_gl_cuda_buffer(id_frag, dt)
         o = self.all_scores[global_id]
         self.o = o
         dist = self.dist_inter_genome(self.gpu_vect_frags)
@@ -1915,7 +1910,7 @@ class sampler:
         max_id = self.modify_gl_cuda_buffer(id_frag, self.gl_window.dt)
         flip_eject = 1
         for (id_cand, i) in zip(self.candidates, list(range(0, n))):
-            self.gl_window.remote_update()
+             # self.gl_window.remote_update()
             self.extract_uniq_mutations(id_frag, id_cand, flip_eject)
             self.perform_mutations(id_frag, id_cand, max_id, 1 == 0)
             id_ctg_b = self.gpu_vect_frags.id_c[id_cand]
@@ -3069,7 +3064,7 @@ class sampler:
             self.test_copy_struct(i, 0, 0, max_id)
             self.gpu_vect_frags.copy_from_gpu()
             c = self.gpu_vect_frags
-            self.gl_window.remote_update()
+             # self.gl_window.remote_update()
             if (
                 np.any(c.pos < 0)
                 or np.any(c.l_cont < 0)
@@ -3099,7 +3094,7 @@ class sampler:
         #     self.test_copy_struct(id_fA[i], id_fB[i], op_sampled[i], max_id)
         #     self.gpu_vect_frags.copy_from_gpu()
         #     c = self.gpu_vect_frags
-        #     self.gl_window.remote_update()
+        #      # self.gl_window.remote_update()
 
         self.modify_gl_cuda_buffer(id_fA, dt)
         self.gpu_vect_frags.copy_from_gpu()
@@ -3107,7 +3102,7 @@ class sampler:
         self.test_copy_struct(id_fA, id_fB, op_sampled, max_id)
         self.gpu_vect_frags.copy_from_gpu()
         # c = self.gpu_vect_frags
-        self.gl_window.remote_update()
+         # self.gl_window.remote_update()
 
     def display_current_matrix(self, filename):
         self.gpu_vect_frags.copy_from_gpu()
@@ -3203,25 +3198,27 @@ class sampler:
         return full_order, dict_contig
 
     def load_gl_cuda_vbo(self,):
-        # CUDA Ressorces
-        self.pos_vbo.bind()
+        # # CUDA Ressorces
+        # self.pos_vbo.bind()
 
-        # Depends on whether pyopengl_accelerate is disabled
-        try:
-            self.gpu_pos = cudagl.RegisteredBuffer(
-                int(self.pos_vbo.buffers[0]), cudagl.graphics_map_flags.NONE
-            )
-            self.gpu_col = cudagl.RegisteredBuffer(
-                int(self.col_vbo.buffers[0]), cudagl.graphics_map_flags.NONE
-            )
-        except AttributeError:
-            self.gpu_pos = cudagl.RegisteredBuffer(
-                int(self.pos_vbo.buffer), cudagl.graphics_map_flags.NONE
-            )
-            self.gpu_col = cudagl.RegisteredBuffer(
-                int(self.col_vbo.buffer), cudagl.graphics_map_flags.NONE
-            )
-        self.col_vbo.bind()
+        # # Depends on whether pyopengl_accelerate is disabled
+        # try:
+        #     self.gpu_pos = cuda.RegisteredBuffer(
+        #         int(self.pos_vbo.buffers[0]), cuda.graphics_map_flags.NONE
+        #     )
+        #     self.gpu_col = cuda.RegisteredBuffer(
+        #         int(self.col_vbo.buffers[0]), cuda.graphics_map_flags.NONE
+        #     )
+        # except AttributeError:
+        #     self.gpu_pos = cuda.RegisteredBuffer(
+        #         int(self.pos_vbo.buffer), cuda.graphics_map_flags.NONE
+        #     )
+        #     self.gpu_col = cuda.RegisteredBuffer(
+        #         int(self.col_vbo.buffer), cuda.graphics_map_flags.NONE
+        #     )
+        # self.col_vbo.bind()
+
+        self.gpu_pos = ga.to_gpu(ary=self.pos)
         self.gpu_vel = ga.to_gpu(ary=self.vel)
 
         self.pos_gen_cuda = cuda.mem_alloc(self.pos.nbytes)
@@ -3232,7 +3229,7 @@ class sampler:
         self.ctx.synchronize()
 
     def load_gl_cuda_tex_buffer(self, im_init):
-        self.cuda_pbo_resource = cudagl.BufferObject(
+        self.cuda_pbo_resource = cuda.BufferObject(
             int(self.pbo_im_buffer)
         )  # Mapping GLBuffer to cuda_resource
         self.gpu_im_gl = ga.zeros(
@@ -3321,10 +3318,9 @@ class sampler:
         size_block = 1024
         block_ = (size_block, 1, 1)
         grid_ = (int(self.n_new_frags // size_block) + 1, 1)
-        map_pos = self.gpu_pos.map()
-        (pos_ptr, pos_siz) = map_pos.device_ptr_and_size()
-        map_col = self.gpu_col.map()
-        (col_ptr, col_siz) = map_col.device_ptr_and_size()
+        # (pos_ptr, pos_siz) = map_pos.device_ptr_and_size()
+        # map_col = self.gpu_col.map()
+        # (col_ptr, col_siz) = map_col.device_ptr_and_size()
 
         max_id = np.float32(self.n_contigs - 1)
 
@@ -3338,8 +3334,8 @@ class sampler:
         # update pos particles #####
         self.gl_update_pos(
             self.gpu_uniq_len,
-            np.intp(pos_ptr),
-            np.intp(col_ptr),
+            self.gpu_pos,
+            # np.intp(col_ptr),
             self.gpu_vel,
             self.pos_gen_cuda,
             self.vel_gen_cuda,
@@ -3357,8 +3353,8 @@ class sampler:
             grid=grid_,
         )
         self.ctx.synchronize()
-        map_pos.unmap()
-        map_col.unmap()
+        
+       
 
         # update image #####
         # compute cumulated length thrust...
@@ -3366,72 +3362,72 @@ class sampler:
         # self.d = self.gpu_uniq_len.get()
         # print "prefix sum done!"
         max_id = np.int32(max_id)
-        self.kern_frags_2_gl_pxl(
-            self.gpu_vect_frags.get_ptr(),
-            self.gpu_vect_gl_pxl_frag,
-            self.gpu_uniq_len,
-            np.int32(max_id),
-            np.float32(self.gl_size_im),
-            self.n_new_frags,
-            block=block_,
-            grid=grid_,
-        )
-        self.ctx.synchronize()
-        # print "frags to pixels!"
-        # self.e = self.gpu_vect_gl_pxl_frag.get()
-        mapping_obj = self.cuda_pbo_resource.map()
-        im_2_update = mapping_obj.device_ptr()
+        # self.kern_frags_2_gl_pxl(
+        #     self.gpu_vect_frags.get_ptr(),
+        #     self.gpu_vect_gl_pxl_frag,
+        #     self.gpu_uniq_len,
+        #     np.int32(max_id),
+        #     np.float32(self.gl_size_im),
+        #     self.n_new_frags,
+        #     block=block_,
+        #     grid=grid_,
+        # )
+        # self.ctx.synchronize()
+        # # print "frags to pixels!"
+        # # self.e = self.gpu_vect_gl_pxl_frag.get()
+        # mapping_obj = self.cuda_pbo_resource.map()
+        # im_2_update = mapping_obj.device_ptr()
 
-        size_block_4_gl = 1024
-        block_ = (int(size_block_4_gl), 1, 1)
-        grid_ = (int(self.n_data_4_gl / size_block_4_gl + 1), 1)
-        # print "grid = ", grid_
-        self.gpu_counter_select_4_gl.fill(0)
-        self.ctx.synchronize()
-        self.kern_prepare_sparse_call_4_gl(
-            self.gpu_rows_4_gl,
-            self.gpu_cols_4_gl,
-            self.gpu_ptr_4_gl,
-            self.gpu_vect_gl_pxl_frag,
-            self.gpu_info_blocks,
-            self.gpu_counter_select_4_gl,
-            np.int32(self.gl_size_im),
-            np.int32(self.n_data_4_gl),
-            block=block_,
-            grid=grid_,
-        )
-        self.ctx.synchronize()
-        self.gpu_im_gl.fill(0)
-        self.ctx.synchronize()
-        self.kern_update_matrix(
-            self.gpu_rows_4_gl,
-            self.gpu_cols_4_gl,
-            self.gpu_data_4_gl,
-            self.gpu_ptr_4_gl,
-            self.gpu_info_blocks,
-            self.gpu_vect_gl_pxl_frag,
-            self.gpu_im_gl,
-            np.int32(self.gl_size_im),
-            np.int32(self.n_data_4_gl),
-            block=block_,
-            grid=grid_,
-        )
-        self.ctx.synchronize()
+        # size_block_4_gl = 1024
+        # block_ = (int(size_block_4_gl), 1, 1)
+        # grid_ = (int(self.n_data_4_gl / size_block_4_gl + 1), 1)
+        # # print "grid = ", grid_
+        # self.gpu_counter_select_4_gl.fill(0)
+        # self.ctx.synchronize()
+        # self.kern_prepare_sparse_call_4_gl(
+        #     self.gpu_rows_4_gl,
+        #     self.gpu_cols_4_gl,
+        #     self.gpu_ptr_4_gl,
+        #     self.gpu_vect_gl_pxl_frag,
+        #     self.gpu_info_blocks,
+        #     self.gpu_counter_select_4_gl,
+        #     np.int32(self.gl_size_im),
+        #     np.int32(self.n_data_4_gl),
+        #     block=block_,
+        #     grid=grid_,
+        # )
+        # self.ctx.synchronize()
+        # self.gpu_im_gl.fill(0)
+        # self.ctx.synchronize()
+        # self.kern_update_matrix(
+        #     self.gpu_rows_4_gl,
+        #     self.gpu_cols_4_gl,
+        #     self.gpu_data_4_gl,
+        #     self.gpu_ptr_4_gl,
+        #     self.gpu_info_blocks,
+        #     self.gpu_vect_gl_pxl_frag,
+        #     self.gpu_im_gl,
+        #     np.int32(self.gl_size_im),
+        #     np.int32(self.n_data_4_gl),
+        #     block=block_,
+        #     grid=grid_,
+        # )
+        # self.ctx.synchronize()
 
-        self.im_thresh = max(1, self.im_thresh)
-        all_pix_gl = self.gl_size_im ** 2
-        grid_all = (int(all_pix_gl / 1024 + 1), 1)
-        self.kern_update_gl_buffer(
-            np.intp(im_2_update),
-            self.gpu_im_gl,
-            np.int32(self.im_thresh),
-            np.int32(all_pix_gl),
-            block=(1024, 1, 1),
-            grid=grid_all,
-        )
-        self.ctx.synchronize()
-        mapping_obj.unmap()  # Unmap the GlBuffer
-        # print "time to update gl image = ", t1 - t0
+        # self.im_thresh = max(1, self.im_thresh)
+        # all_pix_gl = self.gl_size_im ** 2
+        # grid_all = (int(all_pix_gl / 1024 + 1), 1)
+        # self.kern_update_gl_buffer(
+        #     np.intp(im_2_update),
+        #     self.gpu_im_gl,
+        #     np.int32(self.im_thresh),
+        #     np.int32(all_pix_gl),
+        #     block=(1024, 1, 1),
+        #     grid=grid_all,
+        # )
+        # self.ctx.synchronize()
+        # mapping_obj.unmap()  # Unmap the GlBuffer
+        # # print "time to update gl image = ", t1 - t0
         return max_id
 
     def test_thrust(self):
@@ -3531,7 +3527,7 @@ class sampler:
 
         self.gpu_vect_frags.copy_from_gpu()
         # max_id = self.modify_gl_cuda_buffer(0, dt)
-        self.gl_window.remote_update()
+         # self.gl_window.remote_update()
 
         curr_param = np.copy(self.param_simu)
         kuhn, lm, c1, slope, d, d_max, fact, d_nuc = curr_param[0]

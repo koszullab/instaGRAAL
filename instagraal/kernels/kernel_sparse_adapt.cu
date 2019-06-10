@@ -4653,7 +4653,6 @@ extern "C"
 
     __global__ void gl_update_pos(int* list_len,
                                   float4* pos,
-                                  float4* color,
                                   float4* vel,
                                   float4* pos_gen,
                                   float4* vel_gen,
@@ -4713,7 +4712,7 @@ extern "C"
                     pos[id_frag].z = 0;
 
                 }
-                color[id_frag].w = 1.5;
+
             }
             else {
                 float4 p = pos[id_frag];
@@ -4736,9 +4735,6 @@ extern "C"
                 pos[id_frag] = p;
                 vel[id_frag] = v;
 
-                //you can manipulate the color based on properties of the system
-                //here we adjust the alpha
-                color[id_frag].w = life;
             }
         }
     }
