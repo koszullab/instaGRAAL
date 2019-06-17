@@ -2059,9 +2059,12 @@ class window:
                 )
             try:
                 if save_matrix:
+                    padding = len(str(n_cycles))
+                    zeros_padding = padding - len(str(j))
+                    j_padding = ("0" * zeros_padding) + str(j)
                     my_file_path = os.path.join(
                         self.simulation.output_folder,
-                        "matrix_cycle_" + str(j) + ".png",
+                        "matrix_cycle_" + j_padding + ".png",
                     )
                     matrix = self.simulation.sampler.gpu_im_gl.get()
                     plt.gca().set_axis_off()
