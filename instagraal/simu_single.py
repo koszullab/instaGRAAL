@@ -41,9 +41,7 @@ class simulation:
         level,
         n_iterations,
         is_simu,
-        gl_window,
         use_rippe,
-        gl_size_im,
         thresh_factor=1,
         output_folder=None,
     ):
@@ -75,7 +73,7 @@ class simulation:
 
         self.select_data_set(name)
         self.n_iterations = n_iterations
-        self.gl_size_im = gl_size_im
+
         self.int4 = np.dtype(
             [
                 ("x", np.int32),
@@ -117,7 +115,7 @@ class simulation:
         logger.info(
             "mean frag area = {}".format(self.mean_squared_frags_per_bin)
         )
-        self.gl_window = gl_window
+        # self.gl_window = gl_window
         # DEFINE REPEATED SEQ ####
         (
             self.candidate_dup,
@@ -133,8 +131,7 @@ class simulation:
         self.create_new_sub_frags()
         self.modify_sub_vect_frags()
 
-        self.gl_size_im = min(gl_size_im, self.n_frags)
-        self.init_gl_image()
+
 
         self.sampler = sampler_lib(
             use_rippe,
@@ -164,14 +161,13 @@ class simulation:
             self.sub_level.mean_value_trans,
             n_iterations,
             is_simu,
-            self.gl_window,
-            self.pos_vbo,
-            self.col_vbo,
+  
+            # self.pos_vbo,
+            # self.col_vbo,
             self.vel,
             self.pos,
-            self.raw_im_init,
-            self.pbo_im_buffer,
-            self.gl_size_im,
+
+            # self.gl_size_im,
         )
 
         # display_graph = False
@@ -790,23 +786,23 @@ class simulation:
         # pos[:,0] = 0. # z pos
         # pos[:,3] = 1. # velocity
         self.pos = pos
-        self.pos_vbo = vbo.VBO(
-            data=self.pos,
-            usage=OpenGL.GL.GL_DYNAMIC_DRAW,
-            target=OpenGL.GL.GL_ARRAY_BUFFER,
-        )
+        # self.pos_vbo = vbo.VBO(
+        #     data=self.pos,
+        #     usage=OpenGL.GL.GL_DYNAMIC_DRAW,
+        #     target=OpenGL.GL.GL_ARRAY_BUFFER,
+        # )
 
         # self.pos_vbo = vbo.VBO(data=self.pos_vect_frags_4_GL,
         # usage=GL_DYNAMIC_DRAW, target=GL_ARRAY_BUFFER)
-        self.pos_vbo.bind()
+        # self.pos_vbo.bind()
 
-        self.col_vbo = vbo.VBO(
-            data=self.col_vect_frags_4_GL,
-            usage=OpenGL.GL.GL_DYNAMIC_DRAW,
-            target=OpenGL.GL.GL_ARRAY_BUFFER,
-        )
+        # self.col_vbo = vbo.VBO(
+        #     data=self.col_vect_frags_4_GL,
+        #     usage=OpenGL.GL.GL_DYNAMIC_DRAW,
+        #     target=OpenGL.GL.GL_ARRAY_BUFFER,
+        # )
 
-        self.col_vbo.bind()
+        # self.col_vbo.bind()
 
         self.vel = np.ndarray((self.n_frags, 4), dtype=np.float32)
         self.vel[:, 2] = self.pos[:, 2] * 2.
