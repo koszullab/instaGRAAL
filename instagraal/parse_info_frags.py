@@ -10,7 +10,6 @@ https://github.com/koszullab/GRAAL, https://github.com/koszullab/instaGRAAL).
 It has greatly evolved since, and provides a range of functions to polish
 assemblies and correct potential missassemblies.
 
-
 """
 
 import argparse
@@ -613,6 +612,7 @@ def write_fasta(
     init_genome = {
         record.id: record.seq for record in SeqIO.parse(init_fasta, "fasta")
     }
+    init_contig = None
     my_new_records = []
     with open(info_frags, "r") as info_frags_handle:
         current_seq = ""
@@ -641,14 +641,7 @@ def write_fasta(
 
                 assert start < end
                 assert ori in {-1, 1}
-
-                seq_to_add = init_genome[init_contig][start:end]
-                if ori == 1:
-                    current_seq += seq_to_add
-                elif ori == -1:
-                    current_seq += seq_to_add.reverse_complement()
-
-                if junction and previous_contig not in {init_contig, None}:
+                if junction and previous_contig not in {None, init_contig}:
                     error_was_raised = False
                     try:
                         extra_seq = Seq(junction, IUPAC.ambiguous_dna)
@@ -657,6 +650,15 @@ def write_fasta(
                         if not error_was_raised:
                             print("Invalid junction sequence")
                             error_was_raised = True
+
+                seq_to_add = init_genome[init_contig][start:end]
+                if ori == 1:
+                    current_seq += seq_to_add
+                elif ori == -1:
+                    current_seq += seq_to_add.reverse_complement()
+                else:
+                    raise ValueError("Invalid data in orientation field {}".format(ori))
+
                 previous_contig = init_contig
 
         new_record = SeqRecord(current_seq, id=current_id, description="")
@@ -947,6 +949,7 @@ def main():
             init_fasta=init_fasta,
             info_frags=DEFAULT_NEW_INFO_FRAGS_NAME,
             output=output_file,
+            junction=junction,
         )
 
     elif args.mode == "plot":
