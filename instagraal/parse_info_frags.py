@@ -934,6 +934,7 @@ def main():
     elif "polishing" in args.mode:
         init_fasta = args.fasta
         output_file = args.output
+        junction = args.junction
 
         arranged_scaffolds = rearrange_intra_scaffolds(scaffolds=scaffolds)
         reoriented_scaffolds = reorient_consecutive_blocks(arranged_scaffolds)
