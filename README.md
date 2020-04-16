@@ -6,6 +6,7 @@
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/serpentine.svg)
 [![Docker Automated build](https://img.shields.io/docker/build/koszullab/instagraal.svg)](https://hub.docker.com/r/koszullab/instagraal/)
 [![Read the docs](https://readthedocs.org/projects/instagraal/badge)](https://instagraal.readthedocs.io)
+[![DOI](https://zenodo.org/badge/131966807.svg)](https://zenodo.org/badge/latestdoi/131966807)
 [![License: GPLv3](https://img.shields.io/badge/License-GPL%203-0298c3.svg)](https://opensource.org/licenses/GPL-3.0)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 
