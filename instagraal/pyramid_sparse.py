@@ -100,7 +100,7 @@ def build_and_filter(base_folder, size_pyramid, factor, thresh_factor=1):
         and os.path.exists(current_abs_fragments_contacts)
     ):
         logger.info("start filtering")
-        pyramid_0 = h5py.File(init_pyramid_file)
+        pyramid_0 = h5py.File(init_pyramid_file, "a")
 
         remove_problematic_fragments(
             contig_info,
@@ -119,7 +119,7 @@ def build_and_filter(base_folder, size_pyramid, factor, thresh_factor=1):
 
     hdf5_pyramid_file = os.path.join(pyramid_folder, "pyramid.hdf5")
 
-    pyramid_handle = h5py.File(hdf5_pyramid_file)
+    pyramid_handle = h5py.File(hdf5_pyramid_file, "a")
 
     pyramid_level_folder = os.path.join(pyramid_folder, "level_" + str(level))
     level_pyramid = str(level) + "_"
@@ -239,7 +239,7 @@ def build(base_folder, size_pyramid, factor, min_bin_per_contig):
         os.mkdir(pyramid_folder)
 
     hdf5_pyramid_file = os.path.join(pyramid_folder, "pyramid.hdf5")
-    pyramid_handle = h5py.File(hdf5_pyramid_file)
+    pyramid_handle = h5py.File(hdf5_pyramid_file, "a")
     level = 0
     pyramid_level_folder = os.path.join(pyramid_folder, "level_" + str(level))
     if not (os.path.exists(pyramid_level_folder)):
@@ -1529,7 +1529,7 @@ class pyramid:
         self.n_levels = n_levels
         pyramid_file = "pyramid.hdf5"
         self.pyramid_file = os.path.join(pyramid_folder, pyramid_file)
-        self.data = h5py.File(self.pyramid_file)
+        self.data = h5py.File(self.pyramid_file, "a")
 
         self.spec_level = dict()
         # self.default_level = default_level
