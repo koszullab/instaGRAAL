@@ -110,6 +110,12 @@ There is experimental Docker support for instaGRAAL. You may fetch the correspon
 ```sh
     docker pull koszullab/instagraal
 ```
+And run it with
+```sh
+docker run --gpus all koszullab/instagraal
+```
+
+> Note: Running the container requires the dependency nvidia-docker2 \[[installation](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html#docker)\]
 
 ## How to use
 
