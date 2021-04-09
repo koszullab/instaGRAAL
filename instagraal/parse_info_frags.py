@@ -645,7 +645,7 @@ def write_fasta(
                     error_was_raised = False
                     try:
                         extra_seq = Seq(junction, IUPAC.ambiguous_dna)
-                        current_seq = extra_seq + current_seq
+                        current_seq = current_seq + extra_seq
                     except TypeError:
                         if not error_was_raised:
                             print("Invalid junction sequence")
