@@ -5,4 +5,4 @@ codepy
 h5py
 pyopengl
 docopt
-biopython
+biopython==1.75
