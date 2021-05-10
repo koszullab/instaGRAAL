@@ -29,11 +29,10 @@ RUN apt-get update \
     h5py==2.10.0 \
     pyopengl \
     docopt \
-    biopython
+    biopython==1.75
 
 RUN git clone --recurse-submodules https://github.com/inducer/pycuda.git && cd pycuda && python3 configure.py --cuda-enable-gl --no-use-shipped-boost && python3 setup.py install 
 
 RUN pip3 install -e "git+https://github.com/koszullab/instagraal.git@no_opengl#egg=instagraal"
 
-ENTRYPOINT ["instagraal"]
 
