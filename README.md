@@ -10,7 +10,7 @@
 [![License: GPLv3](https://img.shields.io/badge/License-GPL%203-0298c3.svg)](https://opensource.org/licenses/GPL-3.0)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 
-Large genome reassembly based on Hi-C data (continuation and partial rewrite of [GRAAL](https://github.com/koszullab/GRAAL)) and post-scaffolding polishing libraries.
+Large genome reassembly based on Hi-C data (continuation and partial rewrite of [GRAAL](https://github.com/koszullab/GRAAL); Marie-Nelly et al., [2013](http://www.theses.fr/2013PA066714); [2014](https://www.nature.com/articles/ncomms6695)) and post-scaffolding polishing libraries.
 
 This work is under continuous development/improvement - see [GRAAL](https://github.com/koszullab/GRAAL) for information about the basic principles.
 
