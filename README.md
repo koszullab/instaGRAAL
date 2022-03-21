@@ -18,7 +18,7 @@ You can now easily install instaGRAAL using a docker container available below.
 
 ## Table of contents
 * [Installation](#Installation)
-* [How to use](#How to use)
+* [Usage](#Usage)
 * [Troubleshooting](#Troubleshooting)
 * [Documentation](#Documentation)
 * [References](#References)
@@ -126,11 +126,9 @@ docker run --gpus all koszullab/instagraal
 
 > Note: Running the container requires the dependency nvidia-docker2 \[[installation](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html#docker)\]
 
-## How to use
+## Usage
 
 Unlike GRAAL, this is meant to be run from the command line.
-
-### Usage
 
     instagraal <hic_folder> <reference.fa> [<output_folder>]
                [--level=4] [--cycles=100] [--coverage-std=1]
