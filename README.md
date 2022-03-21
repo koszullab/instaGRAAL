@@ -19,6 +19,8 @@ You can now easily install instaGRAAL using a docker container available below.
 ## Table of contents
 * [Installation](#Installation)
 * [Usage](#Usage)
+* [Output](#Output)
+* [Curation](#Curation)
 * [Troubleshooting](#Troubleshooting)
 * [Documentation](#Documentation)
 * [References](#References)
@@ -202,17 +204,36 @@ After the scaffolder is done running, whatever path you specified as output will
 
 Other files are mostly for developmental purposes and keep track of the evolution of various metrics and model parameters.
 
-## Polishing
+## Curation
 
 Lingering artifacts found in output genomes can be corrected by editing the ```info_frags.txt``` file, either by hand or with a script. Look at options by running the following:
 
     instagraal-polish -h
 
-The most common use case is to run all polishing procedures at once:
+The most common use case is to run all curation procedures at once:
 
     instagraal-polish -m polishing -i info_frags.txt -f reference.fasta -o polished_assembly.fa
 
 ## Troubleshooting
+
+### "I am not happy with the scaffolds"
+
+If the output is not as you would expect:
+* check the Hi-C mapping rate; if the mapping rate is low, this may be due to:
+    * a poor contig completeness (check BUSCO and _k_-mer completeness)  
+    * not using the parameter iterative or cutsite when running hicstuff
+* make sure that there are few artefactual duplications
+* if the assembly was obtained with low-accuracy Nanopore reads, polish the assembly with highly accurate reads prior to scaffolding
+* check that there are _trans_ contacts between contigs in the contact map prior to scaffolding, as insufficient contacts will lead to poor Hi-C scaffolding
+* try switching aligner from bwa to bowtie2 or vice versa, as we have noticed sometimes different scaffolding outputs depending on the aligner used by hicstuff
+
+### Scaffolding is too slow
+
+By default, the parameter --level is set to 4. For genomes larger than 500 Mb, increasing it to 5 is often more adapted to improve runtime, and 6 for genomes larger than 3 Gb.
+
+### KeyError on contig names
+
+This is due to spaces and special characters in contig names. Check that the contig names match the ones in the outputs from hicstuff, and rename your contigs if necessary.
 
 ### Loading CUDA libraries
 
