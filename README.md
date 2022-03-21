@@ -14,7 +14,13 @@ Large genome reassembly based on Hi-C data (continuation and partial rewrite of 
 
 This work is under continuous development/improvement - see [GRAAL](https://github.com/koszullab/GRAAL) for information about the basic principles.
 
-You can now easily install InstaGRAAL using a docker container available below. 
+You can now easily install instaGRAAL using a docker container available below. 
+
+## Table of contents
+* [Installation](#Installation)
+* [Troubleshooting](#Troubleshooting)
+* [Documentation](#Documentation)
+* [References](#References)
 
 ## Installation
 
@@ -186,7 +192,7 @@ Minimal working templates are provided in the ```example``` folder.
 
 #### Matrix generation
 
-If you want to generate instaGRAAL-compatible matrices from scratch (i.e. from reads and a reference genome, as opposed to existing Hi-C data in one of the numerous existing formats), you may do so with [hicstuff](https://github.com/koszullab/hicstuff), which acts as both a Python library and a pipeline. A [graphical interface](https://github.com/koszullab/HiC-Box) is also available. Instructions, parameters and optional arguments are detailed in the repo's readme.
+If you want to generate instaGRAAL-compatible matrices from scratch (i.e. from reads and a reference genome, as opposed to existing Hi-C data in one of the numerous existing formats), you may do so with [hicstuff](https://github.com/koszullab/hicstuff), which acts as both a Python library and a pipeline. Instructions, parameters and optional arguments are detailed in the repo's readme. We strongly recommend using hicstuff with the parameter -m iterative or -m cutsite to improve mapping.
 
 ## Output
 
@@ -300,5 +306,4 @@ As a Python package, instaGRAAL provides both a scaffolding and polishing librar
 
 ## Contact
 
-* lyam.baudry@pasteur.fr
 * romain.koszul@pasteur.fr
