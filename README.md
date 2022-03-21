@@ -18,6 +18,7 @@ You can now easily install instaGRAAL using a docker container available below.
 
 ## Table of contents
 * [Installation](#Installation)
+* [How to use](#How to use)
 * [Troubleshooting](#Troubleshooting)
 * [Documentation](#Documentation)
 * [References](#References)
