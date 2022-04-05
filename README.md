@@ -206,13 +206,17 @@ Other files are mostly for developmental purposes and keep track of the evolutio
 
 ## Curation
 
-Lingering artifacts found in output genomes can be corrected by editing the ```info_frags.txt``` file, either by hand or with a script. Look at options by running the following:
+This step is strongly recommended to improve the quality of your scaffolds, unless your input contigs have many misassemblies. Lingering artifacts found in output genomes can be corrected by editing the ```info_frags.txt``` file, either by hand or with a script. Look at options by running the following:
 
     instagraal-polish -h
 
 The most common use case is to run all curation procedures at once:
 
     instagraal-polish -m polishing -i info_frags.txt -f reference.fasta -o polished_assembly.fa
+
+You can add gaps with the parameter -j (necessary for subsequent gap filling), for instance gaps with 10 Ns in this example:
+
+    instagraal-polish -m polishing -i info_frags.txt -f reference.fasta -o polished_assembly.fa -j NNNNNNNNNN
 
 ## Troubleshooting
 
