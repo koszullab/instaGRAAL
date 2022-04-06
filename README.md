@@ -212,11 +212,11 @@ __This step is strongly recommended to improve the quality of your scaffolds__, 
 
 The most common use case is to run all curation procedures at once:
 
-    instagraal-polish -m polishing -i info_frags.txt -f reference.fasta -o curated_assembly.fa
+    instagraal-polish -m polishing -i info_frags.txt -f contigs.fasta -o curated_assembly.fa
 
 You can add gaps with the parameter -j (necessary for subsequent gap filling), for instance gaps with 10 Ns in this example:
 
-    instagraal-polish -m polishing -i info_frags.txt -f reference.fasta -o curated_assembly.fa -j NNNNNNNNNN
+    instagraal-polish -m polishing -i info_frags.txt -f contigs.fasta -o curated_assembly.fa -j NNNNNNNNNN
 
 ## Troubleshooting
 
