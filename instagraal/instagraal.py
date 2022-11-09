@@ -1198,7 +1198,7 @@ def main():
         with open("graal.pkl", "wb") as pickle_handle:
             pickle.dump(p2, pickle_handle)
 
-    p2.ctx_gl.pop()
+    # p2.ctx_gl.pop()
     # sampler.step_sampler(50)
     # sampler.gpu_vect_frags.copy_from_gpu()
     # max_id = sampler.gpu_vect_frags.id_c.max()
