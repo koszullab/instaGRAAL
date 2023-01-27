@@ -14,7 +14,7 @@ Large genome reassembly based on Hi-C data (continuation and partial rewrite of 
 
 This work is under continuous development/improvement - see [GRAAL](https://github.com/koszullab/GRAAL) for information about the basic principles.
 
-You can now easily install instaGRAAL using a docker container available below. 
+You can now easily install instaGRAAL using a docker container available below or you can try it on [Galaxy Europe](https://usegalaxy.eu/).
 
 ## Table of contents
 * [Installation](#Installation)
