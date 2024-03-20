@@ -2944,16 +2944,16 @@ extern "C"
     }
 
 
-    __device__ inline double __shfl_down(double var, unsigned int srcLane, int width=32) {
+    __device__ inline double __shfl_down_sync(double var, unsigned int srcLane, int width=32) {
         int2 a = *reinterpret_cast<int2*>(&var);
-        a.x = __shfl_down(a.x, srcLane, width);
-        a.y = __shfl_down(a.y, srcLane, width);
+        a.x = __shfl_down_sync(a.x, srcLane, width);
+        a.y = __shfl_down_sync(a.y, srcLane, width);
         return *reinterpret_cast<double*>(&a);
     }
 
     __inline__ __device__ double warpReduceSum(double val) {
         for (int offset = warpSize/2; offset > 0; offset /= 2)
-            val += __shfl_down(val, offset);
+            val += __shfl_down_sync(val, offset);
         return val;
     }
 
