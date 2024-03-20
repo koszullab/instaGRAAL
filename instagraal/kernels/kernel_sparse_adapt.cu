@@ -2,12 +2,18 @@
 #define BLOCK_SIZE 512
 #define EL_PER_THREAD 1
 #if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 300
+__device__ inline double __shfl_down(double var, unsigned int srcLane, int width=32) {
+   int2 a = *reinterpret_cast<int2*>(&var);
+   a.x = __shfl_down_sync(a.x, srcLane, width);
+   a.y = __shfl_down_sync(a.y, srcLane, width);
+   return *reinterpret_cast<double*>(&a);
+}
 #else
 __device__ inline double __shfl_down(double var, unsigned int srcLane, int width=32) {
-    int2 a = *reinterpret_cast<int2*>(&var);
-    a.x = __shfl_down_sync(a.x, srcLane, width);
-    a.y = __shfl_down_sync(a.y, srcLane, width);
-    return *reinterpret_cast<double*>(&a);
+   int2 a = *reinterpret_cast<int2*>(&var);
+   a.x = __shfl_down(a.x, srcLane, width);
+   a.y = __shfl_down(a.y, srcLane, width);
+   return *reinterpret_cast<double*>(&a);
 }
 #endif
 #if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 600
