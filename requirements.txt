@@ -1,8 +1,0 @@
-numpy
-scipy
-matplotlib
-codepy
-h5py
-pyopengl
-docopt
-biopython==1.75

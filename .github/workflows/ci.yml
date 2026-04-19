@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [master, js2264/*]
+  pull_request:
+    branches: [master, js2264/*]
+
+permissions:
+  contents: read
+
+jobs:
+  docker-build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t instagraal .
+
+      - name: Check for NVIDIA GPU availability
+        id: gpu
+        run: |
+          if command -v nvidia-smi >/dev/null 2>&1; then
+            echo "has_gpu=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_gpu=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check that instagraal is available in the container
+        run: |
+          docker run instagraal bash -c \
+            "ls /usr/local/lib/python3.10/dist-packages/ | grep -i instagraal"
+
+
+      - name: Run example command (GPU)
+        if: steps.gpu.outputs.has_gpu == 'true'
+        run: |
+          docker run --gpus all \
+            -v ${{ github.workspace }}/example:/work/example \
+            instagraal \
+            instagraal example/data/ example/hifi_bin_0.fa out/ --cycles 3
+
+      - name: Skip GPU test message
+        if: steps.gpu.outputs.has_gpu != 'true'
+        run: echo "No GPU available on this runner; skipping GPU-dependent test."
+
