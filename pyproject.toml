@@ -36,6 +36,9 @@ dependencies = [
     "docopt",
     "biopython",
     "pycuda",
+    "click",
+    "cooler",
+    "pyfaidx",
 ]
 [project.optional-dependencies]
 test = [
@@ -84,6 +87,7 @@ Repository = "https://github.com/koszullab/instagraal"
 [project.scripts]
 instagraal = "instagraal.instagraal:main"
 instagraal-polish = "instagraal.parse_info_frags:main"
+instagraal-pre = "instagraal.pre:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/instagraal"]
