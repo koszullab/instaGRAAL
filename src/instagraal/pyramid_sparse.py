@@ -1673,7 +1673,7 @@ class pyramid:
         f = open(genome_fasta, "r")
         self.dict_sequence_contigs = dict()
         all_lines = f.readlines()
-        id_chrom = all_lines[0][1:-1].replace("\n", "").replace("\r", "")
+        id_chrom = all_lines[0][1:].split()[0].strip()
         self.dict_sequence_contigs[id_chrom] = ""
         start = 1
         chrom_list = []
@@ -1683,7 +1683,7 @@ class pyramid:
                 chrom_list.append(id_chrom)
                 self.dict_sequence_contigs[id_chrom] = "".join(all_lines[start:i])
                 start = i + 1
-                id_chrom = all_lines[i][1:-1].replace("\n", "").replace("\r", "")
+                id_chrom = all_lines[i][1:].split()[0].strip()
                 self.dict_sequence_contigs[id_chrom] = ""
 
         chrom_list.append(id_chrom)
