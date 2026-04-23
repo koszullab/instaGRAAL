@@ -20,10 +20,10 @@ from instagraal.cli.pre import main as pre_main
 matplotlib.use("Agg")
 
 REPO_ROOT = pathlib.Path(__file__).parent.parent
-EXAMPLE_DATA = REPO_ROOT / "example" / "data"
+TEST_DATA = REPO_ROOT / "tests" / "data"
 
-REF_FASTA = EXAMPLE_DATA / "pre" / "metator_00056_00034.fa.gz"
-REF_PAIRS = EXAMPLE_DATA / "pre" / "valid_idx_pcrfree.pairs.gz"
+REF_FASTA = TEST_DATA / "yeast.contigs.fa.gz"
+REF_PAIRS = TEST_DATA / "yeast.pairs.gz"
 ENZYMES = "DpnII,HinfI"
 
 

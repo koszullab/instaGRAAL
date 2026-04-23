@@ -88,14 +88,17 @@ instagraal = "instagraal.cli.main:main"
 instagraal-polish = "instagraal.cli.polish:main"
 instagraal-pre = "instagraal.cli.pre:main"
 instagraal-stats = "instagraal.cli.stats:main"
+instagraal-test = "instagraal.cli.test:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/instagraal"]
+# tests/data/ is intentionally omitted – test data is not shipped in the wheel.
 
 [tool.hatch.build.targets.sdist]
 include = [
     "src/instagraal/",
     "scripts/",
+    "tests/data/",
     "example/",
     "README.md",
     "LICENSE",

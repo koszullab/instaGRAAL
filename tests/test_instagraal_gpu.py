@@ -46,16 +46,19 @@ pytestmark = pytest.mark.skipif(
 # ---------------------------------------------------------------------------
 
 REPO_ROOT = pathlib.Path(__file__).parent.parent
-EXAMPLE_DATA = REPO_ROOT / "example" / "data"
-REF_FASTA = EXAMPLE_DATA / "pre" / "metator_00056_00034.fa.gz"
+TEST_DATA = REPO_ROOT / "tests" / "data"
+REF_FASTA = TEST_DATA / "yeast.contigs.fa.gz"
 
 MCMC_LEVEL = 4
 MCMC_CYCLES = 3
-MCMC_FRAGS = 825  # n_new_frags at level 4 (deterministic from inputs)
-MCMC_N_ITERS = MCMC_CYCLES * MCMC_FRAGS
+# n_new_frags at pyramid level 4 for yeast data (shape sub mat = 727x727)
+MCMC_FRAGS = 727
+MCMC_N_ITERS = MCMC_CYCLES * MCMC_FRAGS if MCMC_FRAGS is not None else None
 
-EXPECTED_LARGE_CONTIGS = 15  # contigs > 100 kb expected after scaffolding
-LARGE_CONTIG_TOLERANCE = 3  # allowed deviation either side
+# Expected number of large (>100 kb) contigs after scaffolding.
+# Yeast genome: expect roughly 15–45 depending on Hi-C library quality.
+EXPECTED_LARGE_CONTIGS = 30  # midpoint of expected range
+LARGE_CONTIG_TOLERANCE = 15  # ± 15 → accepts 15–45
 
 
 # ---------------------------------------------------------------------------

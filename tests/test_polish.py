@@ -1,8 +1,8 @@
 """Tests for the instagraal-polish CLI and the parse_info_frags module.
 
 Unit tests use small synthetic scaffolds so they run without any on-disk files.
-Integration tests use the committed example data under example/data/out/ and
-the reference FASTA under example/data/pre/.
+Integration tests use synthetic fixtures built on-the-fly from the shared
+reference FASTA in tests/data/.
 """
 
 import gzip
@@ -32,8 +32,8 @@ from instagraal.parse_info_frags import (
 # ---------------------------------------------------------------------------
 
 REPO_ROOT = pathlib.Path(__file__).parent.parent
-EXAMPLE_DATA = REPO_ROOT / "example" / "data"
-REF_FASTA_GZ = EXAMPLE_DATA / "pre" / "metator_00056_00034.fa.gz"
+TEST_DATA = REPO_ROOT / "tests" / "data"
+REF_FASTA_GZ = TEST_DATA / "yeast.contigs.fa.gz"
 
 
 # ---------------------------------------------------------------------------
