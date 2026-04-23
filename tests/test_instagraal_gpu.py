@@ -48,7 +48,6 @@ pytestmark = pytest.mark.skipif(
 REPO_ROOT = pathlib.Path(__file__).parent.parent
 EXAMPLE_DATA = REPO_ROOT / "example" / "data"
 REF_FASTA = EXAMPLE_DATA / "pre" / "metator_00056_00034.fa.gz"
-OUTPUT_DIR = EXAMPLE_DATA / "out"
 
 MCMC_LEVEL = 4
 MCMC_CYCLES = 3
@@ -65,7 +64,7 @@ LARGE_CONTIG_TOLERANCE = 3  # allowed deviation either side
 
 
 @pytest.fixture(scope="session")
-def instagraal_run(pre_output_dir):
+def instagraal_run(pre_output_dir, tmp_path_factory):
     """Run ``instagraal`` on the ``instagraal-pre`` output in-process so
     pytest-cov can instrument the GPU modules.
 
@@ -74,16 +73,13 @@ def instagraal_run(pre_output_dir):
         instagraal-pre  →  instagraal
 
     Replicates:
-        instagraal <pre_output_dir> <reference.fa> <output_dir>
+        instagraal <pre_output_dir> <reference.fa> --output-dir <output_dir>
                    --cycles 3 --bomb --save-matrix
 
     Returns the MCMC output directory
-    ``example/data/out/<hic_folder_name>/test_mcmc_<level>/``.
+    ``<output_dir>/<hic_folder_name>/test_mcmc_<level>/``.
     """
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-
-    # pre_output_dir is a tmp directory; use its name as the project name so
-    # simu_single.py constructs a predictable sub-folder inside OUTPUT_DIR.
+    output_dir = tmp_path_factory.mktemp("instagraal_out")
     hic_folder_name = pre_output_dir.name
 
     from click.testing import CliRunner  # noqa: PLC0415
@@ -95,7 +91,8 @@ def instagraal_run(pre_output_dir):
         [
             str(pre_output_dir),
             str(REF_FASTA),
-            str(OUTPUT_DIR),
+            "--output-dir",
+            str(output_dir),
             "--cycles",
             str(MCMC_CYCLES),
             "--level",
@@ -107,8 +104,8 @@ def instagraal_run(pre_output_dir):
     )
     assert result.exit_code == 0, f"instagraal failed (exit {result.exit_code}):\n{result.output}"
 
-    # Output follows simu_single.py naming: {output}/{hic_name}/test_mcmc_{lvl}
-    return OUTPUT_DIR / hic_folder_name / f"test_mcmc_{MCMC_LEVEL}"
+    # Output follows simu_single.py naming: {output_dir}/{hic_name}/test_mcmc_{lvl}
+    return output_dir / hic_folder_name / f"test_mcmc_{MCMC_LEVEL}"
 
 
 @pytest.fixture(scope="session")
@@ -345,9 +342,13 @@ def test_gpu_matrix_pngs_valid(mcmc_out):
 
 
 @pytest.fixture(scope="session")
-def pyramid_dir(instagraal_run):
-    """Return the pyramids directory created during the GPU run."""
-    d = OUTPUT_DIR / "pyramids"
+def pyramid_dir(mcmc_out):
+    """Return the pyramids directory built in the base output dir during the GPU run.
+
+    Pyramids are written at <output_dir>/pyramids/, where <output_dir> is two
+    levels above mcmc_out (<output_dir>/<hic_name>/test_mcmc_<level>/).
+    """
+    d = mcmc_out.parent.parent / "pyramids"
     if not d.exists():
         pytest.skip(f"Pyramid dir not found: {d}")
     return d
@@ -649,3 +650,80 @@ def test_basic_fragment_initiate():
     assert frag.n_accu_frags == 4
     assert frag.orientation == "w"
     assert frag.init_name == "42-ctg001"
+
+
+# ===========================================================================
+# instagraal-polish integration tests (run on real main-command output)
+# ===========================================================================
+
+
+@pytest.fixture(scope="session")
+def polish_out(mcmc_out, tmp_path_factory):
+    """Run ``instagraal-polish --mode polishing`` on the GPU-scaffolded output.
+
+    Uses the real ``info_frags.txt`` produced by ``instagraal`` together with
+    the original reference FASTA so the full polishing pipeline is exercised
+    against realistic data.
+    """
+    out = tmp_path_factory.mktemp("polish_out")
+    from click.testing import CliRunner  # noqa: PLC0415
+    from instagraal.cli.polish import main as polish_main  # noqa: PLC0415
+
+    runner = CliRunner()
+    result = runner.invoke(
+        polish_main,
+        [
+            "--mode",
+            "polishing",
+            "--input",
+            str(mcmc_out / "info_frags.txt"),
+            "--fasta",
+            str(REF_FASTA),
+            "--output-dir",
+            str(out),
+        ],
+        catch_exceptions=False,
+    )
+    assert result.exit_code == 0, f"instagraal-polish failed (exit {result.exit_code}):\n{result.output}"
+    return out
+
+
+def test_gpu_polish_polished_genome_exists(polish_out):
+    """polished_genome.fa is created by the polishing step."""
+    assert (polish_out / "polished_genome.fa").exists()
+
+
+def test_gpu_polish_polished_genome_non_empty(polish_out):
+    """polished_genome.fa is non-empty."""
+    assert (polish_out / "polished_genome.fa").stat().st_size > 0
+
+
+def test_gpu_polish_polished_genome_valid_fasta(polish_out):
+    """polished_genome.fa is a valid FASTA with at least one sequence."""
+    from Bio import SeqIO  # noqa: PLC0415
+
+    records = list(SeqIO.parse(str(polish_out / "polished_genome.fa"), "fasta"))
+    assert len(records) > 0, "No sequences in polished_genome.fa"
+    for r in records:
+        assert len(r.seq) > 0, f"Empty sequence for {r.id}"
+
+
+def test_gpu_polish_polished_genome_valid_bases(polish_out):
+    """Polished FASTA contains only valid IUPAC bases."""
+    valid = set("ACGTNacgtn")
+    for line in (polish_out / "polished_genome.fa").read_text().splitlines():
+        if not line.startswith(">"):
+            assert set(line) <= valid, f"Invalid chars in: {line[:60]!r}"
+
+
+def test_gpu_polish_new_info_frags_exists(polish_out):
+    """new_info_frags.txt is created alongside the polished FASTA."""
+    assert (polish_out / "new_info_frags.txt").exists()
+
+
+def test_gpu_polish_new_info_frags_non_empty(polish_out):
+    """new_info_frags.txt has at least one scaffold block."""
+    from instagraal.parse_info_frags import parse_info_frags  # noqa: PLC0415
+
+    scaffolds = parse_info_frags(str(polish_out / "new_info_frags.txt"))
+    assert len(scaffolds) > 0

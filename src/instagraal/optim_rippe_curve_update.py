@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 
+import warnings
+
 import numpy as np
-from scipy.optimize import leastsq
-from scipy.optimize import fsolve
+from scipy.optimize import fsolve, leastsq
 
 d = 2
 
@@ -13,10 +14,7 @@ def residuals(p, y, x):
     # d = 1.5
     # d = 5.0
     rippe = A * (
-        0.53
-        * (kuhn ** -3.)
-        * np.power((lm * x / kuhn), slope)
-        * np.exp((d - 2) / ((np.power((lm * x / kuhn), 2) + d)))
+        0.53 * (kuhn**-3.0) * np.power((lm * x / kuhn), slope) * np.exp((d - 2) / ((np.power((lm * x / kuhn), 2) + d)))
     )
     error = y - rippe
     return error
@@ -28,7 +26,7 @@ def peval(x, param):
     # d = 5.0
     rippe = param[3] * (
         0.53
-        * (param[0] ** -3.)
+        * (param[0] ** -3.0)
         * np.power((param[1] * x / param[0]), (param[2]))
         * np.exp((d - 2) / ((np.power((param[1] * x / param[0]), 2) + d)))
     )
@@ -39,13 +37,14 @@ def log_residuals(p, y, x):
     kuhn, lm, slope, A = p
     # d = 1.5
     # d = 5.0
-    rippe = (
-        np.log(A)
-        + np.log(0.53)
-        - 3 * np.log(kuhn)
-        + slope * (np.log(lm * x / kuhn))
-        + (d - 2) / ((np.power((lm * x / kuhn), 2) + d))
-    )
+    with np.errstate(invalid="ignore", divide="ignore"):
+        rippe = (
+            np.log(A)
+            + np.log(0.53)
+            - 3 * np.log(kuhn)
+            + slope * (np.log(lm * x / kuhn))
+            + (d - 2) / ((np.power((lm * x / kuhn), 2) + d))
+        )
     error = y - rippe
 
     return error
@@ -79,10 +78,8 @@ def estimate_param_rippe(y_meas, x_bins):
     # A = np.max(y_meas) * 0.05
     A = np.max(y_meas)
     p0 = [kuhn, lm, slope, A]
-    lower_fact = 7.
-    plsq = leastsq(
-        log_residuals, p0, args=(np.log(y_meas / lower_fact), x_bins)
-    )
+    lower_fact = 7.0
+    plsq = leastsq(log_residuals, p0, args=(np.log(y_meas / lower_fact), x_bins))
     # bounds = []
     # bounds.append((0., 500.))
     # bounds.append((9.0, 9.6))
@@ -118,10 +115,7 @@ def residual_4_max_dist(x, p):
     x = np.abs(x)
 
     rippe = A * (
-        0.53
-        * (kuhn ** -3.)
-        * np.power((lm * x / kuhn), slope)
-        * np.exp((d - 2) / ((np.power((lm * x / kuhn), 2) + d)))
+        0.53 * (kuhn**-3.0) * np.power((lm * x / kuhn), slope) * np.exp((d - 2) / ((np.power((lm * x / kuhn), 2) + d)))
     )
     error = y - rippe
     return np.abs(error)
@@ -132,7 +126,9 @@ def estimate_max_dist_intra(p, val_inter):
     # print "estimate max distance trans = ",p
     kuhn, lm, slope, d, A = p
     p0 = [kuhn, lm, slope, d, A, val_inter]
-    x = fsolve(residual_4_max_dist, s0, args=(p0))
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)
+        x = fsolve(residual_4_max_dist, s0, args=(p0))
     # print "limit inter/intra distance = ", x
     # print "val trans = ", peval(x, p)
     # raw_input("alors?")
@@ -147,7 +143,9 @@ def estimate_max_dist_intra_nuis(p, val_inter, old_s):
     # print "estimate max distance trans = ",p
     kuhn, lm, slope, d, A = p
     p0 = [kuhn, lm, slope, d, A, val_inter]
-    x = fsolve(residual_4_max_dist, s0, args=(p0))
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)
+        x = fsolve(residual_4_max_dist, s0, args=(p0))
     # print "limit inter/intra distance = ", x
     # print "val trans = ", peval(x, p)
     # raw_input("alors?")

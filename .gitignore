@@ -92,3 +92,8 @@ sparsity_*pdf
 pyramids/
 pre_out/
 pre_out0/
+
+# Generated example pipeline outputs (regenerate with `make`)
+example/data/main/
+example/data/out/
+example/data/polish/

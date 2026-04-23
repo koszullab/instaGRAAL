@@ -72,9 +72,9 @@ POLISHED_GENOME_NAME = "polished_genome.fa"
 )
 @click.option(
     "-o",
-    "--output",
+    "--output-dir",
     "output_dir",
-    default=".",
+    default="out",
     show_default=True,
     type=click.Path(file_okay=False, path_type=pathlib.Path),
     help="Output directory (created if missing). All output files are written here.",

@@ -34,8 +34,6 @@ from instagraal.parse_info_frags import (
 REPO_ROOT = pathlib.Path(__file__).parent.parent
 EXAMPLE_DATA = REPO_ROOT / "example" / "data"
 REF_FASTA_GZ = EXAMPLE_DATA / "pre" / "metator_00056_00034.fa.gz"
-INSTAGRAAL_OUT = EXAMPLE_DATA / "out" / "main" / "test_mcmc_4"
-INFO_FRAGS_FILE = INSTAGRAAL_OUT / "info_frags.txt"
 
 
 # ---------------------------------------------------------------------------
@@ -400,13 +398,19 @@ def cli_runner():
 
 
 @pytest.fixture(scope="module")
-def example_info_frags():
-    return str(INFO_FRAGS_FILE)
+def example_info_frags(tmp_path_factory):
+    """Synthetic info_frags.txt consistent with example_ref_fasta."""
+    p = tmp_path_factory.mktemp("polish_int")
+    info_p = p / "info_frags.txt"
+    write_info_frags(SCAFFOLDS_SIMPLE, output=str(info_p))
+    return str(info_p)
 
 
 @pytest.fixture(scope="module")
-def example_ref_fasta():
-    return str(REF_FASTA_GZ)
+def example_ref_fasta(tmp_path_factory):
+    """Synthetic reference FASTA whose contigs match example_info_frags."""
+    p = tmp_path_factory.mktemp("polish_fasta")
+    return str(_make_fasta_file(p, {"ctgA": "A" * 300, "ctgB": "C" * 300}))
 
 
 def test_cli_fasta_mode(cli_runner, example_info_frags, example_ref_fasta, tmp_path):

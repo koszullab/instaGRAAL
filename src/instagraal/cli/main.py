@@ -19,11 +19,14 @@ from ..version import __version__ as VERSION_NUMBER
     type=click.Path(exists=True, dir_okay=False, path_type=pathlib.Path),
     metavar="REFERENCE.FA",
 )
-@click.argument(
+@click.option(
+    "-o",
+    "--output-dir",
     "output_folder",
+    default="out",
+    show_default=True,
     type=click.Path(file_okay=False, path_type=pathlib.Path),
-    required=False,
-    default=None,
+    help="Directory where output files will be written.",
 )
 @click.option(
     "-l",
@@ -150,9 +153,6 @@ def main(
     instagraal-pre.
 
     REFERENCE.FA  Reference genome in FASTA format.
-
-    OUTPUT_FOLDER  Optional output directory (defaults to the current working
-    directory).
     """
     from .. import log
     from ..instagraal import run_instagraal

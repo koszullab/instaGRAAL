@@ -351,8 +351,8 @@ def fill_sparse_pyramid_level(pyramid_handle, level, contact_file, nfrags):
     """
 
     sparse_dict = dict()
-    h = open(contact_file, "r")
-    all_lines = h.readlines()
+    with open(contact_file, "r") as h:
+        all_lines = h.readlines()
     n_lines = len(all_lines)
     for i in range(1, n_lines):
 
@@ -682,10 +682,10 @@ def subsample_data_set(
         if not (abs_fragments_contacts == "SIMU"):
             logger.info("update sparse contacts file...")  # index 0 based
             handle_new_abs_fragments_contacts = open(new_abs_fragments_contacts_file, "w")
-            handle_abs_fragments_contacts = open(abs_fragments_contacts, "r")
             handle_new_abs_fragments_contacts.write("%s\t%s\t%s\n" % ("id_frag_a", "id_frag_b", "n_contact"))
-            handle_abs_fragments_contacts.readline()
-            all_lines = handle_abs_fragments_contacts.readlines()
+            with open(abs_fragments_contacts, "r") as handle_abs_fragments_contacts:
+                handle_abs_fragments_contacts.readline()
+                all_lines = handle_abs_fragments_contacts.readlines()
             sparse_dict = dict()
             for id_line in range(1, len(all_lines)):
                 line = all_lines[id_line]
@@ -1009,10 +1009,9 @@ def remove_problematic_fragments(
     # write new contacts file
     # n_total_contacts = file_len(abs_fragments_contacts)
     handle_new_abs_fragments_contacts = open(new_abs_fragments_contacts_file, "w")
-    handle_abs_fragments_contacts = open(abs_fragments_contacts, "r")
-
     handle_new_abs_fragments_contacts.write("%s\t%s\t%s\n" % ("id_frag_a", "id_frag_b", "n_contact"))
-    all_lines = handle_abs_fragments_contacts.readlines()
+    with open(abs_fragments_contacts, "r") as handle_abs_fragments_contacts:
+        all_lines = handle_abs_fragments_contacts.readlines()
 
     #     for id_line_contacts in xrange(1, len(all_lines_contact)):
     #         line_contacts = all_lines_contact[id_line_contacts]
@@ -2090,7 +2089,7 @@ class level:
 
 def main():
     try:
-        (in_file, out_file) = sys.argv[1:]
+        in_file, out_file = sys.argv[1:]
 
     except IndexError:
         print("Usage: ./pyramid_sparse.py in_file out_file")
