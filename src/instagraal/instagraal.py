@@ -51,7 +51,6 @@ Options:
 
 import sys
 import os
-import docopt
 
 import pycuda.autoinit
 import pycuda.driver as cuda
@@ -517,60 +516,61 @@ class instagraal_class:
         plt.show()
 
 
-def main():
+def run_instagraal(
+    hic_folder,
+    reference_fa,
+    output_folder=None,
+    level=DEFAULT_LEVEL,
+    cycles=DEFAULT_CYCLES,
+    coverage_std=DEFAULT_COVERAGE_STDS,
+    neighborhood=DEFAULT_NEIGHBOURS,
+    device=0,
+    circular=DEFAULT_CIRCULAR,
+    bomb=False,
+    pyramid_only=False,
+    save_pickle=False,
+    save_matrix=False,
+    simple=False,
+):
+    """Run the instaGRAAL scaffolding pipeline.
 
-    arguments = docopt.docopt(__doc__, version=VERSION_NUMBER)
-    # print(arguments)
-
-    project_folder = arguments["<hic_folder>"]
-    output_folder = arguments["<output_folder>"]
-    reference_fasta = arguments["<reference.fa>"]
-
-    number_cycles = int(arguments["--cycles"])
-    level = int(arguments["--level"])
-    thresh_factor = float(arguments["--coverage-std"])
-    neighborhood = int(arguments["--neighborhood"])
-    device = int(arguments["--device"])
-    circ = arguments["--circular"]
-    bomb = arguments["--bomb"]
-    save_matrix = arguments["--save-matrix"]
-    simple = arguments["--simple"]
-    quiet = arguments["--quiet"]
-    debug = arguments["--debug"]
-    pyramid_only = arguments["--pyramid-only"]
-    pickle_name = arguments["--save-pickle"]
-
-    log_level = logging.INFO
-
-    if quiet:
-        log_level = logging.WARNING
-
-    if debug:
-        log_level = logging.DEBUG
-
-    logger.setLevel(log_level)
-
-    log.CURRENT_LOG_LEVEL = log_level
-
-    name = os.path.basename(os.path.normpath(project_folder))
-
-    is_simu = False
-    scrambled = False
-
-    n_iterations_em = 100
-    n_iterations_mcmc = 30
-    perform_em = False
-    use_rippe = True
-    gl_size_im = 1000
-    sample_param = True
-
-    if not output_folder:
-        output_folder = None
+    Parameters
+    ----------
+    hic_folder:
+        Directory containing the Hi-C contact map files.
+    reference_fa:
+        Path to the reference genome in FASTA format.
+    output_folder:
+        Optional output directory. Defaults to the current directory.
+    level:
+        Resolution level of the contact map.
+    cycles:
+        Number of MCMC iterations per bin.
+    coverage_std:
+        Coverage standard-deviation threshold for fragment filtering.
+    neighborhood:
+        Number of neighbours sampled for each mutation.
+    device:
+        GPU device index (0-based).
+    circular:
+        Whether the genome is circular.
+    bomb:
+        Explode the genome prior to scaffolding.
+    pyramid_only:
+        Only build multi-resolution pyramids, skip scaffolding.
+    save_pickle:
+        Dump run state to a pickle file.
+    save_matrix:
+        Save a contact-map preview after each cycle.
+    simple:
+        Only perform operations at contig edges.
+    """
+    name = os.path.basename(os.path.normpath(str(hic_folder)))
 
     p2 = instagraal_class(
         name=name,
-        folder_path=project_folder,
-        fasta=reference_fasta,
+        folder_path=str(hic_folder),
+        fasta=str(reference_fa),
         device=device,
         level=level,
         n_iterations_em=DEFAULT_ITERATIONS_EM,
@@ -580,25 +580,25 @@ def main():
         perform_em=False,
         use_rippe=True,
         sample_param=True,
-        thresh_factor=thresh_factor,
-        output_folder=output_folder,
+        thresh_factor=coverage_std,
+        output_folder=str(output_folder) if output_folder is not None else None,
     )
-    if circ:
+    if circular:
         p2.simulation.level.S_o_A_frags["circ"] += 1
 
     if not pyramid_only:
         if not simple:
             p2.full_em(
-                n_cycles=number_cycles,
+                n_cycles=cycles,
                 n_neighbours=neighborhood,
                 bomb=bomb,
                 id_start_sample_param=4,
                 save_matrix=save_matrix,
             )
         else:
-            p2.simple_start(n_cycles=number_cycles, n_neighbours=neighborhood, bomb=bomb)
+            p2.simple_start(n_cycles=cycles, n_neighbours=neighborhood, bomb=bomb)
 
-    if pickle_name:
+    if save_pickle:
         try:
             with open("graal.pkl", "wb") as pickle_handle:
                 pickle.dump(p2, pickle_handle)
@@ -651,4 +651,6 @@ def main():
 
 
 if __name__ == "__main__":
+    from .cli.main import main
+
     main()

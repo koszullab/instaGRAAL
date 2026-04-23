@@ -584,11 +584,15 @@ class simulation:
         size_pyramid = 9
         factor = 3
 
+        if not (os.path.exists(self.output_folder)):
+            os.mkdir(self.output_folder)
+
         self.hic_pyr = pyr.build_and_filter(
             self.base_folder,
             size_pyramid,
             factor,
             thresh_factor=self.thresh_factor,
+            output_folder=self.output_folder,
         )
         logger.info("pyramid loaded")
 

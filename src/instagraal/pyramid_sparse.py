@@ -5,6 +5,7 @@ Create and handle so-called 'pyramid' objects, i.e. a series of
 decreasing-resolution contact maps in hdf5 format.
 """
 
+import gzip
 import os
 import shutil
 import h5py
@@ -26,7 +27,7 @@ def file_len(fname):
     return i
 
 
-def build_and_filter(base_folder, size_pyramid, factor, thresh_factor=1):
+def build_and_filter(base_folder, size_pyramid, factor, thresh_factor=1, output_folder=None):
     """Build a filtered pyramid of contact maps
 
     Build a fragment pyramid for multi-scale analysis and remove high sparsity
@@ -52,14 +53,15 @@ def build_and_filter(base_folder, size_pyramid, factor, thresh_factor=1):
 
     min_bin_per_contig = 1
     fact_sub_sampling = factor
+    pyramid_root = output_folder if output_folder is not None else base_folder
 
-    all_pyramid_folder = os.path.join(base_folder, "pyramids")
+    all_pyramid_folder = os.path.join(pyramid_root, "pyramids")
     if not (os.path.exists(all_pyramid_folder)):
         os.mkdir(all_pyramid_folder)
     init_pyramid_folder = os.path.join(all_pyramid_folder, "pyramid_" + str(1) + "_no_thresh")
     if not (os.path.exists(init_pyramid_folder)):
         init_size_pyramid = 1
-        build(base_folder, init_size_pyramid, factor, min_bin_per_contig)
+        build(base_folder, init_size_pyramid, factor, min_bin_per_contig, output_folder=pyramid_root)
     init_pyramid_folder_level_0 = os.path.join(init_pyramid_folder, "level_0")
     contig_info = os.path.join(init_pyramid_folder_level_0, "0_contig_info.txt")
     fragments_list = os.path.join(init_pyramid_folder_level_0, "0_fragments_list.txt")
@@ -173,7 +175,7 @@ def build_and_filter(base_folder, size_pyramid, factor, thresh_factor=1):
     return obj_pyramid
 
 
-def build(base_folder, size_pyramid, factor, min_bin_per_contig):
+def build(base_folder, size_pyramid, factor, min_bin_per_contig, output_folder=None):
     """Build a pyramid of contact maps
 
     Build a fragment pyramid for multi-scale analysis
@@ -192,10 +194,11 @@ def build(base_folder, size_pyramid, factor, min_bin_per_contig):
     """
 
     fact_sub_sampling = factor
+    pyramid_root = output_folder if output_folder is not None else base_folder
     contig_info = os.path.join(base_folder, "info_contigs.txt")
     fragments_list = os.path.join(base_folder, "fragments_list.txt")
     init_abs_fragments_contacts = os.path.join(base_folder, "abs_fragments_contacts_weighted.txt")
-    all_pyramid_folder = os.path.join(base_folder, "pyramids")
+    all_pyramid_folder = os.path.join(pyramid_root, "pyramids")
     pyramid_folder = os.path.join(all_pyramid_folder, "pyramid_" + str(size_pyramid) + "_no_thresh")
 
     if not (os.path.exists(all_pyramid_folder)):
@@ -1670,7 +1673,8 @@ class pyramid:
     def load_reference_sequence(self, genome_fasta):
 
         logger.info("import reference genome")
-        f = open(genome_fasta, "r")
+        opener = gzip.open if str(genome_fasta).endswith(".gz") else open
+        f = opener(genome_fasta, "rt")
         self.dict_sequence_contigs = dict()
         all_lines = f.readlines()
         id_chrom = all_lines[0][1:].split()[0].strip()

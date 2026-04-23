@@ -33,16 +33,39 @@ jobs:
           docker run instagraal bash -c \
             "ls /usr/local/lib/python3.10/dist-packages/ | grep -i instagraal"
 
-
-      - name: Run example command (GPU)
-        if: steps.gpu.outputs.has_gpu == 'true'
+      - name: Run pytest (GPU tests auto-skipped when no GPU)
+        # Mount the workspace so pytest can find pyproject.toml, tests/, and
+        # example/ data.  GPU tests carry their own skip guard and are skipped
+        # automatically on CPU-only runners.
+        # --gpus all is added only when a GPU is present so the flag is never
+        # passed to a runtime that doesn't support it.
         run: |
-          docker run --gpus all \
-            -v ${{ github.workspace }}/example:/work/example \
+          GPU_FLAG=""
+          if [ "${{ steps.gpu.outputs.has_gpu }}" = "true" ]; then
+            GPU_FLAG="--gpus all"
+          fi
+          docker run $GPU_FLAG \
+            -v ${{ github.workspace }}:/workspace \
+            --workdir /workspace \
             instagraal \
-            instagraal example/data/ example/hifi_bin_0.fa out/ --cycles 3
+            bash -c "
+              uv pip install --system '/workspace[test]' && \
+              pytest --junitxml=test-results.xml
+            "
 
-      - name: Skip GPU test message
-        if: steps.gpu.outputs.has_gpu != 'true'
-        run: echo "No GPU available on this runner; skipping GPU-dependent test."
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-results.xml
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: |
+            coverage.xml
+            htmlcov/
 

@@ -23,12 +23,10 @@ import pathlib
 
 import Bio.Restriction as biorst
 import Bio.Seq as bioseq
-import click
 import cooler
 import numpy as np
 import pandas as pd
 from Bio import SeqIO
-
 
 # ---------------------------------------------------------------------------
 # Core helpers
@@ -72,7 +70,7 @@ def _multi_enzyme_digest(fasta_records: dict[str, str], enzymes: list[str]) -> p
         try:
             cut_finders.append(getattr(biorst, name).search)
         except AttributeError:
-            raise click.BadParameter(f"Unknown restriction enzyme: {name!r}")
+            raise ValueError(f"Unknown restriction enzyme: {name!r}")
 
     frames = []
     for chrom, chrom_seq in fasta_records.items():
@@ -322,20 +320,20 @@ def run_pre(
     """
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    click.echo(f"[1/5] Opening genome: {fasta}")
+    print(f"[1/5] Opening genome: {fasta}")
     fasta_records = _parse_fasta(fasta)
 
-    click.echo(f"[2/5] Digesting genome with enzyme(s): {', '.join(enzymes)}")
+    print(f"[2/5] Digesting genome with enzyme(s): {', '.join(enzymes)}")
     bins = _multi_enzyme_digest(fasta_records, enzymes)
     n_frags = len(bins)
-    click.echo(f"      → {n_frags:,} restriction fragments")
+    print(f"      → {n_frags:,} restriction fragments")
 
-    click.echo("[3/5] Computing GC content per fragment")
+    print("[3/5] Computing GC content per fragment")
     bins = _build_bins_with_gc(bins, fasta_records)
 
-    click.echo(f"[4/5] Binning pairs into fragment contact matrix: {pairs}")
+    print(f"[4/5] Binning pairs into fragment contact matrix: {pairs}")
     pixels, total_contacts = _pairs_to_pixels(pairs, bins)
-    click.echo(f"      → {total_contacts:,} valid pairs, {len(pixels):,} non-zero pixels")
+    print(f"      → {total_contacts:,} valid pairs, {len(pixels):,} non-zero pixels")
 
     # Write .cool
     if cool_name is None:
@@ -347,8 +345,8 @@ def run_pre(
                 break
         cool_name = stem
     cool_path = output_dir / f"{cool_name}.cool"
-    click.echo(f"[5/5] Writing outputs to {output_dir}")
-    click.echo(f"      → {cool_path.name}")
+    print(f"[5/5] Writing outputs to {output_dir}")
+    print(f"      → {cool_path.name}")
 
     # Build chromsizes Series in contig order
     bins_for_cooler = bins[["chrom", "start", "end"]].copy()
@@ -363,75 +361,21 @@ def run_pre(
     )
 
     frags_path = output_dir / "fragments_list.txt"
-    click.echo(f"      → {frags_path.name}")
+    print(f"      → {frags_path.name}")
     _write_fragments_list(bins, frags_path)
 
     contigs_path = output_dir / "info_contigs.txt"
-    click.echo(f"      → {contigs_path.name}")
+    print(f"      → {contigs_path.name}")
     _write_info_contigs(bins, fasta_records, contigs_path)
 
     contacts_path = output_dir / "abs_fragments_contacts_weighted.txt"
-    click.echo(f"      → {contacts_path.name}")
+    print(f"      → {contacts_path.name}")
     _write_abs_contacts(pixels, n_frags, contacts_path)
 
-    click.echo("Done.")
-
-
-# ---------------------------------------------------------------------------
-# CLI
-# ---------------------------------------------------------------------------
-
-
-@click.command()
-@click.argument("fasta", type=click.Path(exists=True, dir_okay=False, path_type=pathlib.Path))
-@click.argument("pairs", type=click.Path(exists=True, dir_okay=False, path_type=pathlib.Path))
-@click.option(
-    "--enzyme",
-    "-e",
-    required=True,
-    help="Restriction enzyme name(s), comma-separated (e.g. DpnII or DpnII,HinfI).",
-)
-@click.option(
-    "--output-dir",
-    "-o",
-    default=".",
-    show_default=True,
-    type=click.Path(file_okay=False, path_type=pathlib.Path),
-    help="Directory where output files will be written.",
-)
-@click.option(
-    "--cool-name",
-    default=None,
-    help="Base name for the output .cool file (default: pairs file stem).",
-)
-def main(
-    fasta: pathlib.Path,
-    pairs: pathlib.Path,
-    enzyme: str,
-    output_dir: pathlib.Path,
-    cool_name: str | None,
-) -> None:
-    """Pre-process Hi-C data for instaGRAAL.
-
-    Digests FASTA with the given restriction enzyme(s), bins the read pairs
-    from PAIRS into restriction fragments, and writes:
-
-    \b
-      fragments_list.txt
-      info_contigs.txt
-      abs_fragments_contacts_weighted.txt
-      <name>.cool
-
-    to OUTPUT_DIR (which is also a valid instaGRAAL input folder).
-
-    FASTA   Genome assembly FASTA file (plain or .gz).
-
-    PAIRS   Hi-C pairs file in 4DN pairs format (plain or .gz).
-            Required columns: readID chr1 pos1 chr2 pos2 strand1 strand2.
-    """
-    enzymes = [e.strip() for e in enzyme.split(",") if e.strip()]
-    run_pre(fasta, pairs, enzymes, output_dir, cool_name)
+    print("Done.")
 
 
 if __name__ == "__main__":
+    from .cli.pre import main
+
     main()

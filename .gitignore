@@ -89,7 +89,6 @@ __pypackages__/
 
 # User-specific files
 sparsity_*pdf
-out/
 pyramids/
-metator_*
 pre_out/
+pre_out0/

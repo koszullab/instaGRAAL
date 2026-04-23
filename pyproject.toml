@@ -33,8 +33,7 @@ dependencies = [
     "matplotlib",
     "codepy",
     "h5py",
-    "docopt",
-    "biopython",
+    "biopython>=1.78",
     "pycuda",
     "click",
     "cooler",
@@ -85,9 +84,9 @@ Homepage = "https://github.com/koszullab/instagraal"
 Repository = "https://github.com/koszullab/instagraal"
 
 [project.scripts]
-instagraal = "instagraal.instagraal:main"
-instagraal-polish = "instagraal.parse_info_frags:main"
-instagraal-pre = "instagraal.pre:main"
+instagraal = "instagraal.cli.main:main"
+instagraal-polish = "instagraal.cli.polish:main"
+instagraal-pre = "instagraal.cli.pre:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/instagraal"]
