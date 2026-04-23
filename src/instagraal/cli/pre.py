@@ -4,6 +4,7 @@ import pathlib
 
 import click
 
+from ..assembly_stats import print_assembly_stats
 from ..pre import run_pre
 
 
@@ -61,4 +62,5 @@ def main(
             Required columns: readID chr1 pos1 chr2 pos2 strand1 strand2.
     """
     enzymes = [e.strip() for e in enzyme.split(",") if e.strip()]
+    print_assembly_stats(str(fasta), label="Input assembly")
     run_pre(fasta, pairs, enzymes, output_dir, cool_name)

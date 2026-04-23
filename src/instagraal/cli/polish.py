@@ -4,6 +4,7 @@ import pathlib
 
 import click
 
+from ..assembly_stats import print_assembly_stats
 from ..parse_info_frags import (
     DEFAULT_CRITERION,
     DEFAULT_CRITERION_2,
@@ -119,12 +120,14 @@ def main(
     if mode == "fasta":
         if init_fasta is None:
             raise click.UsageError("A reference FASTA file must be provided (--fasta) for 'fasta' mode.")
+        genome_file = str(output_dir / POLISHED_GENOME_NAME)
         write_fasta(
             init_fasta=str(init_fasta),
             info_frags=str(info_frags),
             junction=junction,
-            output=str(output_dir / POLISHED_GENOME_NAME),
+            output=genome_file,
         )
+        print_assembly_stats(genome_file, label="Assembly (fasta mode)")
 
     elif "singleton" in mode:
         new_scaffolds = remove_spurious_insertions(scaffolds)
@@ -167,6 +170,7 @@ def main(
             output=genome_file,
             junction=junction,
         )
+        print_assembly_stats(genome_file, label="Assembly (polishing mode)")
 
     elif mode == "plot":
         plot_info_frags(scaffolds)

@@ -552,3 +552,48 @@ def test_cli_polishing_mode_requires_fasta(cli_runner, example_info_frags, tmp_p
         ["-m", "polishing", "-i", example_info_frags, "-o", str(tmp_path / "out")],
     )
     assert result.exit_code != 0
+
+
+# ===========================================================================
+# Integration tests: assembly stats are printed in FASTA-producing modes
+# ===========================================================================
+
+
+def test_cli_fasta_mode_prints_assembly_stats(cli_runner, example_info_frags, example_ref_fasta, tmp_path):
+    """'fasta' mode calls print_assembly_stats on the produced FASTA."""
+    from unittest.mock import patch
+
+    out_dir = tmp_path / "out"
+    with patch("instagraal.cli.polish.print_assembly_stats") as mock_stats:
+        result = cli_runner.invoke(
+            polish_main,
+            ["-m", "fasta", "-i", example_info_frags, "-f", example_ref_fasta, "-o", str(out_dir)],
+            catch_exceptions=False,
+        )
+    assert result.exit_code == 0, f"CLI failed:\n{result.output}"
+    mock_stats.assert_called_once()
+    args, kwargs = mock_stats.call_args
+    called_path = args[0]
+    called_label = kwargs.get("label", args[1] if len(args) > 1 else "")
+    assert "polished_genome.fa" in called_path
+    assert "fasta" in called_label.lower()
+
+
+def test_cli_polishing_mode_prints_assembly_stats(cli_runner, example_info_frags, example_ref_fasta, tmp_path):
+    """'polishing' mode calls print_assembly_stats on the produced FASTA."""
+    from unittest.mock import patch
+
+    out_dir = tmp_path / "out"
+    with patch("instagraal.cli.polish.print_assembly_stats") as mock_stats:
+        result = cli_runner.invoke(
+            polish_main,
+            ["-m", "polishing", "-i", example_info_frags, "-f", example_ref_fasta, "-o", str(out_dir)],
+            catch_exceptions=False,
+        )
+    assert result.exit_code == 0, f"CLI failed:\n{result.output}"
+    mock_stats.assert_called_once()
+    args, kwargs = mock_stats.call_args
+    called_path = args[0]
+    called_label = kwargs.get("label", args[1] if len(args) > 1 else "")
+    assert "polished_genome.fa" in called_path
+    assert "polishing" in called_label.lower()

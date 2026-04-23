@@ -87,6 +87,7 @@ Repository = "https://github.com/koszullab/instagraal"
 instagraal = "instagraal.cli.main:main"
 instagraal-polish = "instagraal.cli.polish:main"
 instagraal-pre = "instagraal.cli.pre:main"
+instagraal-stats = "instagraal.cli.stats:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/instagraal"]
