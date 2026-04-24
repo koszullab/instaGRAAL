@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import urllib.request
 
 import click
@@ -451,9 +452,12 @@ def main(
     if workdir is None:
         _tmp_dir = tempfile.mkdtemp(prefix="instagraal_test_")
         workdir = pathlib.Path(_tmp_dir)
+    else:
+        workdir.mkdir(parents=True, exist_ok=True)
 
     click.echo(f"Working directory: {workdir}")
 
+    _start = time.monotonic()
     try:
         ran_cmds = _run_test(
             workdir=workdir,
@@ -463,7 +467,8 @@ def main(
             fasta_path_override=fasta,
             pairs_path_override=pairs,
         )
-        click.echo("\n[instagraal-test] ALL STEPS PASSED.")
+        _elapsed = time.monotonic() - _start
+        click.echo(f"\n[instagraal-test] ALL STEPS PASSED  (total time: {_elapsed:.1f}s).")
         click.echo("\nCommands executed (for reproducibility):")
         for c in ran_cmds:
             click.echo(f"  $ {c}")
