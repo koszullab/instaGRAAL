@@ -39,7 +39,7 @@ def _write_fasta(tmp_path: pathlib.Path, records: dict, gz: bool = False) -> pat
 
 
 # ---------------------------------------------------------------------------
-# compute_assembly_stats – basic counts
+# compute_assembly_stats - basic counts
 # ---------------------------------------------------------------------------
 
 
@@ -104,7 +104,7 @@ class TestComputeAssemblyStats:
 
 
 # ---------------------------------------------------------------------------
-# compute_assembly_stats – N50 / L50 / N90 / L90
+# compute_assembly_stats - N50 / L50 / N90 / L90
 # ---------------------------------------------------------------------------
 
 
@@ -223,7 +223,7 @@ class TestFormatAssemblyStats:
 
 
 # ---------------------------------------------------------------------------
-# log_assembly_stats – smoke tests (does not crash)
+# log_assembly_stats - smoke tests (does not crash)
 # ---------------------------------------------------------------------------
 
 
@@ -247,7 +247,7 @@ class TestLogAssemblyStats:
 
 
 # ---------------------------------------------------------------------------
-# print_assembly_stats – always writes to stdout
+# print_assembly_stats - always writes to stdout
 # ---------------------------------------------------------------------------
 
 

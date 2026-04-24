@@ -7,7 +7,6 @@ reference FASTA in tests/data/.
 
 import gzip
 import pathlib
-import textwrap
 
 import pytest
 from click.testing import CliRunner
@@ -80,7 +79,7 @@ SCAFFOLDS_REARRANGE = {
         ["ctgA", 1, 100, 200, 1],
         ["ctgB", 5, 500, 600, -1],
         ["ctgB", 6, 600, 700, -1],
-        ["ctgA", 2, 200, 300, 1],  # second block of ctgA – should be moved
+        ["ctgA", 2, 200, 300, 1],  # second block of ctgA - should be moved
     ],
 }
 
@@ -363,7 +362,7 @@ def test_find_lost_dna_detects_gap(tmp_path):
     """find_lost_dna identifies bases not covered by any scaffold bin."""
     ref = {"ctgA": "A" * 200}
     fasta_file = _make_fasta_file(tmp_path, ref)
-    # Only covers [0, 100) – the range [100, 200) is uncovered
+    # Only covers [0, 100) - the range [100, 200) is uncovered
     sc = {"s1": [["ctgA", 0, 0, 100, 1]]}
     lost = find_lost_dna(str(fasta_file), sc)
     assert "ctgA" in lost

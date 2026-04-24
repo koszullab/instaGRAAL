@@ -27,18 +27,19 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
 # ---------------------------------------------------------------------------
-# Default parameters – tune these to change assembly characteristics
+# Default parameters - tune these to change assembly characteristics
 # ---------------------------------------------------------------------------
 
 RANDOM_SEED = 42
-BREAK_RATE = 1.5    # expected breaks per Mb  →  realistic long-read assembly
-                    # S. cerevisiae ~12.5 Mb × 1.5 ≈ 19 breaks → ~30 contigs
-MIN_CONTIG_LEN = 1_000   # discard fragments shorter than this (bp)
+BREAK_RATE = 1.5  # expected breaks per Mb -> realistic long-read assembly
+# S. cerevisiae ~12.5 Mb x 1.5 ~= 19 breaks -> ~30 contigs
+MIN_CONTIG_LEN = 1_000  # discard fragments shorter than this (bp)
 
 
 # ---------------------------------------------------------------------------
 # Core
 # ---------------------------------------------------------------------------
+
 
 def fragment_genome(
     fasta_path: str,
@@ -63,7 +64,7 @@ def fragment_genome(
                 boundaries = [(0, chrom_len)]
             else:
                 positions = sorted(rng.integers(1, chrom_len, n_breaks).tolist())
-                boundaries = list(zip([0] + positions, positions + [chrom_len]))
+                boundaries = list(zip([0, *positions], [*positions, chrom_len]))
 
             for start, end in boundaries:
                 if end - start < min_len:
@@ -106,6 +107,7 @@ def print_stats(contigs: list[SeqRecord]) -> None:
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(

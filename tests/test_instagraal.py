@@ -28,8 +28,8 @@ REF_PAIRS = TEST_DATA / "yeast.pairs.gz"
 
 # TODO: calibrate EXPECTED_N_FRAGS and EXPECTED_N_PIXELS after first run with yeast data.
 # Exact counts are dataset-dependent and must be updated once the pipeline has been run.
-EXPECTED_N_FRAGS = None  # placeholder – test below uses a sanity check instead
-EXPECTED_N_PIXELS = None  # placeholder – test below uses a sanity check instead
+EXPECTED_N_FRAGS = None  # placeholder - test below uses a sanity check instead
+EXPECTED_N_PIXELS = None  # placeholder - test below uses a sanity check instead
 
 # pre_output_dir is a session-scoped fixture defined in conftest.py and shared
 # with the GPU test suite.

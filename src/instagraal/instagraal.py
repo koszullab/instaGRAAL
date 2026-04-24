@@ -49,11 +49,9 @@ Options:
 
 """
 
-import sys
 import os
 
-import pycuda.autoinit
-import pycuda.driver as cuda
+import pycuda.autoinit  # noqa: F401
 
 # helper modules
 import numpy as np
@@ -61,10 +59,7 @@ import matplotlib.pyplot as plt
 from .simu_single import simulation
 
 import pickle
-import logging
-from . import log
 from .log import logger
-from .version import __version__ as VERSION_NUMBER
 
 DEFAULT_CYCLES = 100
 DEFAULT_LEVEL = 4
@@ -355,9 +350,9 @@ class instagraal_class:
                 (
                     o,
                     n_contigs,
-                    min_len,
+                    _min_len,
                     mean_len,
-                    max_len,
+                    _max_len,
                     temp,
                     dist,
                 ) = self.simulation.sampler.step_metropolis_hastings_s_a(i, np.float32(j), n_iter, self.dt)
@@ -371,7 +366,7 @@ class instagraal_class:
                 self.collect_dist_from_init_genome.append(dist)
 
         self.simulation.export_new_fasta()
-        o, d, d_high = self.simulation.sampler.display_current_matrix(self.simulation.output_matrix_mcmc)
+        o, _d, _d_high = self.simulation.sampler.display_current_matrix(self.simulation.output_matrix_mcmc)
 
         self.simulation.plot_info_simu(
             self.collect_likelihood,
@@ -445,9 +440,9 @@ class instagraal_class:
                 (
                     o,
                     n_contigs,
-                    min_len,
+                    _min_len,
                     mean_len,
-                    max_len,
+                    _max_len,
                     temp,
                     dist,
                 ) = self.simulation.sampler.step_mtm(i, np.float32(j), n_iter, self.dt)
@@ -461,7 +456,7 @@ class instagraal_class:
                 self.collect_dist_from_init_genome.append(dist)
 
         self.simulation.export_new_fasta()
-        o, d, d_high = self.simulation.sampler.display_current_matrix(self.simulation.output_matrix_mcmc)
+        o, _d, _d_high = self.simulation.sampler.display_current_matrix(self.simulation.output_matrix_mcmc)
 
         self.simulation.plot_info_simu(
             self.collect_likelihood,

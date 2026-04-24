@@ -222,7 +222,7 @@ def format_comparison_table(results: dict) -> str:
 def print_assembly_stats(fasta_path: str, label: str | None = None) -> None:
     """Compute and print assembly statistics for *fasta_path* to stdout.
 
-    Always prints regardless of logging configuration – intended for use in
+    Always prints regardless of logging configuration - intended for use in
     CLI commands that should unconditionally display stats to the user.
 
     Parameters

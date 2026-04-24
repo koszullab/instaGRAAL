@@ -268,7 +268,7 @@ class simulation:
         for data_dup in self.data_candidate_dup:
             n_dup = int(data_dup[1])
             id_f = data_dup[0]
-            for k in range(0, n_dup):
+            for _k in range(0, n_dup):
                 modified_vect_frags["pos"].append(0)
                 modified_vect_frags["sub_pos"].append(0)
                 modified_vect_frags["id_c"].append(max_id_C)
@@ -396,7 +396,7 @@ class simulation:
         for data_dup in self.sub_candidates_output_data:
             n_dup = int(data_dup[1])
             id_f = data_dup[0]
-            for k in range(0, n_dup):
+            for _k in range(0, n_dup):
                 modified_vect_frags["pos"].append(0)
                 modified_vect_frags["sub_pos"].append(0)
                 modified_vect_frags["id_c"].append(max_id_C)

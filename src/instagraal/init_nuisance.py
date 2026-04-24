@@ -2,12 +2,11 @@
 
 from scipy.optimize import minimize
 import numpy as np
-from scipy.optimize import fmin_slsqp
 from scipy.optimize import fsolve
 
 # from scipy.optimize import minimize
 from scipy.optimize import leastsq
-from .leastsqbound import *
+from .leastsqbound import *  # noqa: F403
 
 d0 = 1.0  # distance bias Hi-C
 d_exp = -10.0

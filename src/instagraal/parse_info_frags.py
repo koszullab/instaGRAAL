@@ -157,7 +157,7 @@ def correct_scaffolds(scaffolds, corrector):
             merged_bin = None
             while "Reading blocks":
                 try:
-                    my_bin = next(blocks)
+                    my_bin = next(blocks)  # noqa: B031
                     if are_overlapping(my_bin, merged_bin):
                         merged_bin = merge_bins(my_bin, merged_bin)
                         continue
@@ -487,8 +487,8 @@ def rearrange_intra_scaffolds(scaffolds):
                 ordering[block_name] = (order, block_length)
             order += 1
 
-        def block_order(block):
-            return ordering[block[0][0]][0]
+        def block_order(block, _ordering=ordering):
+            return _ordering[block[0][0]][0]
 
         for my_block in sorted(my_blocks, key=block_order):
             for my_bin in my_block:
@@ -520,7 +520,7 @@ def reorient_consecutive_blocks(scaffolds, mode="blocks"):
                     end_bin = [-2, -2, -2, -2, -2]
                     current_ori = 0
                     # print(my_bins + end_bin)
-                    for my_bin in my_bins + [end_bin]:
+                    for my_bin in [*my_bins, end_bin]:
                         if not previous_bin:
                             # print("début")
                             previous_bin = copy.copy(my_bin)

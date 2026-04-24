@@ -5,10 +5,11 @@
 # http://docs.scipy.org/doc/numpy/user/basics.subclassing.html
 
 import numpy as np
+from typing import ClassVar
 
 
 class Vec(np.ndarray):
-    props = ["x", "y", "z", "w"]
+    props: ClassVar[list[str]] = ["x", "y", "z", "w"]
 
     def __new__(cls, input_array):
         # Input array is an already formed ndarray instance

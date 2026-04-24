@@ -281,7 +281,7 @@ class sampler:
         self.gpu_id_contigs = ga.to_gpu(self.cpu_id_contigs)
         self.collector_gpu_vect_frags = []
 
-        for k in range(0, self.n_tmp_struct):
+        for _k in range(0, self.n_tmp_struct):
             self.collector_gpu_vect_frags.append(self.create_gpu_struct(data=None))
 
         sub_vect_dist = np.ones((self.n_new_sub_frags * self.n_tmp_struct,), dtype=np.float32)
@@ -476,9 +476,7 @@ class sampler:
                     cgen.Statement("thrust::device_ptr<int> " "thrust_ptr((int*)input_ptr_keys)"),
                     cgen.Statement("thrust::device_ptr<int> " "thrust_ptr_v((int*)input_ptr_vals)"),
                     cgen.Statement(
-                        "thrust::stable_sort_by_key(thrust_ptr, "
-                        "thrust_ptr+length, thrust_ptr_v, "
-                        "thrust::greater<int>())"
+                        "thrust::stable_sort_by_key(thrust_ptr, " "thrust_ptr+length, thrust_ptr_v, " "thrust::greater<int>())"
                     ),
                 ]
             ),
@@ -520,11 +518,7 @@ class sampler:
         # Newer PyCUDA returns DeviceAllocation from .gpudata which is not
         # directly convertible to CUdeviceptr; cast through int first.
         def _gpudata_extract(varname, arr_name):
-            return (
-                f"CUdeviceptr {varname} = "
-                f"(CUdeviceptr)PyLong_AsLongLong("
-                f'object({arr_name}.attr("gpudata")).ptr())'
-            )
+            return f"CUdeviceptr {varname} = " f"(CUdeviceptr)PyLong_AsLongLong(" f'object({arr_name}.attr("gpudata")).ptr())'
 
         host_statements_sort_zip = [
             # Extract information from PyCUDA GPUArray
@@ -977,9 +971,7 @@ class sampler:
         self.val_on_zero_intra = self.gpu_likelihood_on_zeros.get()[0] * self.log_e
         self.n_vals_intra = self.gpu_n_vals_intra.get()[0]
 
-        self.val_on_zero_inter = (
-            self.log_e * (self.n_pixl_sub_mat - self.n_vals_intra) * -1.0 * self.param_simu["v_inter"][0]
-        )
+        self.val_on_zero_inter = self.log_e * (self.n_pixl_sub_mat - self.n_vals_intra) * -1.0 * self.param_simu["v_inter"][0]
         self.curr_likelihood_on_z = self.val_on_zero_intra + self.val_on_zero_inter
         # print "GPU execution time ( approx on zeros single) = ", t1 - t0
 
@@ -1064,9 +1056,7 @@ class sampler:
         # secs
         self.val_on_zero_intra_mut = self.gpu_likelihood_on_zeros.get()[0] * self.log_e
         self.n_vals_intra = self.gpu_n_vals_intra.get()[0]
-        self.val_on_zero_inter_mut = (
-            self.log_e * (self.n_pixl_sub_mat - self.n_vals_intra) * -1.0 * self.param_simu["v_inter"][0]
-        )
+        self.val_on_zero_inter_mut = self.log_e * (self.n_pixl_sub_mat - self.n_vals_intra) * -1.0 * self.param_simu["v_inter"][0]
         self.curr_likelihood_on_z_mut = self.val_on_zero_intra_mut + self.val_on_zero_inter_mut
         # self.curr_likelihood_on_z_mut = self.val_on_zero_inter_mut
         # print "GPU execution time ( approx on zeros single) = ", t1 - t0
@@ -2614,8 +2604,8 @@ class sampler:
             plt.ylabel("frequency of contact")
             plt.title(
                 r"$\mathrm{Frequency\ of\ contact\ versus\ genomic\ distance"
-                " \(data\ tricho test):}\ slope=%.3f,\ max\ cis\ distance(kb)"
-                "=%.3f\ d=%.3f\ scale\ factor=%.3f\ $"
+                r" \(data\ tricho test):}\ slope=%.3f,\ max\ cis\ distance(kb)"
+                r"=%.3f\ d=%.3f\ scale\ factor=%.3f\ $"
                 % (
                     self.param_simu["slope"],
                     estim_max_dist,
@@ -2870,8 +2860,11 @@ class sampler:
         hic_matrix = self.sparse_matrix.toarray()
         matrix = hic_matrix[np.ix_(full_order_high, full_order_high)]
 
-        plt.imshow(matrix, vmax=np.percentile(matrix, 99))
-        plt.savefig(filename)
+        fig, ax = plt.subplots(figsize=(14, 14))
+        ax.imshow(matrix, vmax=np.percentile(matrix, 99), interpolation="nearest")
+        ax.axis("off")
+        fig.savefig(filename, dpi=200, bbox_inches="tight")
+        plt.close(fig)
         return full_order, dict_contig, full_order_high
 
     def genome_content(self):
@@ -3204,14 +3197,11 @@ class sampler:
 
     def f_rippe(self, x, param):
 
-        kuhn, lm, c1, slope, d, d_max, fact, d_nuc = param[0]
+        kuhn, lm, _c1, slope, d, d_max, fact, d_nuc = param[0]
 
         if x < d_max:
             rippe = fact * (
-                0.53
-                * (kuhn**-3.0)
-                * np.power((lm * x / kuhn), slope)
-                * np.exp((d - 2) / ((np.power((lm * x / kuhn), 2) + d)))
+                0.53 * (kuhn**-3.0) * np.power((lm * x / kuhn), slope) * np.exp((d - 2) / ((np.power((lm * x / kuhn), 2) + d)))
             )
         else:
             rippe = d_nuc
@@ -3219,7 +3209,7 @@ class sampler:
         return rippe
 
     def f_hic(self, x, param):
-        d_init, d_max, alpha_0, alpha_1, A, v_inter = param[0]
+        d_init, _d_max, alpha_0, alpha_1, A, _v_inter = param[0]
         hic_c = np.zeros(x.shape)
         val_lim_0 = A * np.power(d_init, alpha_0 - alpha_1)
         for i in range(0, len(hic_c)):

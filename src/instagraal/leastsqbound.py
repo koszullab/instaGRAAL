@@ -14,14 +14,15 @@ fixed above, proceed at your own risk.
 
 from scipy.optimize import leastsq
 import numpy as np
+from numpy.linalg import LinAlgError
 
 
 def internal2external_grad(xi, bounds):
-    """ 
+    """
     Calculate the internal to external gradiant
-    
+
     Calculates the partial of external over internal
-    
+
     """
 
     ge = np.empty_like(xi)
@@ -31,17 +32,17 @@ def internal2external_grad(xi, bounds):
         a = bound[0]  # minimum
         b = bound[1]  # maximum
 
-        if a == None and b == None:  # No constraints
+        if a is None and b is None:  # No constraints
             ge[i] = 1.0
 
-        elif b == None:  # only min
-            ge[i] = v / np.sqrt(v ** 2 + 1)
+        elif b is None:  # only min
+            ge[i] = v / np.sqrt(v**2 + 1)
 
-        elif a == None:  # only max
-            ge[i] = -v / np.sqrt(v ** 2 + 1)
+        elif a is None:  # only max
+            ge[i] = -v / np.sqrt(v**2 + 1)
 
         else:  # both min and max
-            ge[i] = (b - a) * np.cos(v) / 2.
+            ge[i] = (b - a) * np.cos(v) / 2.0
 
     return ge
 
@@ -54,7 +55,7 @@ def i2e_cov_x(xi, bounds, cov_x):
 
 
 def internal2external(xi, bounds):
-    """ Convert a series of internal variables to external variables"""
+    """Convert a series of internal variables to external variables"""
 
     xe = np.empty_like(xi)
 
@@ -63,23 +64,23 @@ def internal2external(xi, bounds):
         a = bound[0]  # minimum
         b = bound[1]  # maximum
 
-        if a == None and b == None:  # No constraints
+        if a is None and b is None:  # No constraints
             xe[i] = v
 
-        elif b == None:  # only min
-            xe[i] = a - 1. + np.sqrt(v ** 2. + 1.)
+        elif b is None:  # only min
+            xe[i] = a - 1.0 + np.sqrt(v**2.0 + 1.0)
 
-        elif a == None:  # only max
-            xe[i] = b + 1. - np.sqrt(v ** 2. + 1.)
+        elif a is None:  # only max
+            xe[i] = b + 1.0 - np.sqrt(v**2.0 + 1.0)
 
         else:  # both min and max
-            xe[i] = a + ((b - a) / 2.) * (np.sin(v) + 1.)
+            xe[i] = a + ((b - a) / 2.0) * (np.sin(v) + 1.0)
 
     return xe
 
 
 def external2internal(xe, bounds):
-    """ Convert a series of external variables to internal variables"""
+    """Convert a series of external variables to internal variables"""
 
     xi = np.empty_like(xe)
 
@@ -88,17 +89,17 @@ def external2internal(xe, bounds):
         a = bound[0]  # minimum
         b = bound[1]  # maximum
 
-        if a == None and b == None:  # No constraints
+        if a is None and b is None:  # No constraints
             xi[i] = v
 
-        elif b == None:  # only min
-            xi[i] = np.sqrt((v - a + 1.) ** 2. - 1)
+        elif b is None:  # only min
+            xi[i] = np.sqrt((v - a + 1.0) ** 2.0 - 1)
 
-        elif a == None:  # only max
-            xi[i] = np.sqrt((b - v + 1.) ** 2. - 1)
+        elif a is None:  # only max
+            xi[i] = np.sqrt((b - v + 1.0) ** 2.0 - 1)
 
         else:  # both min and max
-            xi[i] = np.arcsin((2. * (v - a) / (b - a)) - 1.)
+            xi[i] = np.arcsin((2.0 * (v - a) / (b - a)) - 1.0)
 
     return xi
 
@@ -133,8 +134,8 @@ def leastsqbound(func, x0, bounds, args=(), **kw):
     """
     Constrained multivariant Levenberg-Marquard optimization
 
-    Minimize the sum of squares of a given function using the 
-    Levenberg-Marquard algorithm. Contraints on parameters are inforced using 
+    Minimize the sum of squares of a given function using the
+    Levenberg-Marquard algorithm. Contraints on parameters are inforced using
     variable transformations as described in the MINUIT User's Guide by
     Fred James and Matthias Winkler.
 
@@ -149,16 +150,16 @@ def leastsqbound(func, x0, bounds, args=(), **kw):
 
     Returns: (x,{cov_x,infodict,mesg},ier)
 
-    Return is described in the scipy.optimize.leastsq function.  x and con_v  
-    are corrected to take into account the parameter transformation, infodic 
+    Return is described in the scipy.optimize.leastsq function.  x and con_v
+    are corrected to take into account the parameter transformation, infodic
     is not corrected.
 
-    Additional keyword arguments are passed directly to the 
-    scipy.optimize.leastsq algorithm. 
+    Additional keyword arguments are passed directly to the
+    scipy.optimize.leastsq algorithm.
 
     """
     # check for full output
-    if "full_output" in kw and kw["full_output"]:
+    if kw.get("full_output"):
         full = True
     else:
         full = False
@@ -181,4 +182,3 @@ def leastsqbound(func, x0, bounds, args=(), **kw):
         xi, ier = r
         xe = internal2external(xi, bounds)
         return xe, ier
-

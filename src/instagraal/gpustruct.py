@@ -8,7 +8,7 @@ import pycuda.driver as cuda
 class GPUStruct(object):
     def __init__(self, objs):
         """
-        Initialize the link to the struct on the GPU device.  
+        Initialize the link to the struct on the GPU device.
 
         objs - must be a list of variable in the order they are in the
         C struct.  Pointers are indicated with a * as in C.
@@ -66,7 +66,7 @@ class GPUStruct(object):
         self.__ptrs = {}
 
         # loop over objs, setting attributes from kwargs
-        for fmt, obj in self.__objs:
+        for _fmt, obj in self.__objs:
             if obj.find("*") == 0:
                 # set the obj name without the *
                 obj = obj[1:]
@@ -83,12 +83,12 @@ class GPUStruct(object):
     def __del__(self):
         # loop and delete non-none pointers
         for ptr in self.__ptrs:
-            if not self.__ptrs[ptr] is None:
+            if self.__ptrs[ptr] is not None:
                 # free it
                 self.__ptrs[ptr].free()
                 self.__ptrs[ptr] = None
 
-        if not self.__ptr is None:
+        if self.__ptr is not None:
             # free the main pointer struct
             self.__ptr.free()
             self.__ptr = None
@@ -126,7 +126,7 @@ class GPUStruct(object):
                     self.__ptrs[obj] = cuda.mem_alloc(cur_nbytes)
 
                 # send the data to the memory space
-                if not obj in skip:
+                if obj not in skip:
                     cuda.memcpy_htod(self.__ptrs[obj], dat)
 
         # pack everything and send struct to device
@@ -150,7 +150,6 @@ class GPUStruct(object):
         return self.__packstr
 
     def _pack(self):
-        packed = ""
         self.__fmt = ""
         topack = []
         for fmt, obj in self.__objs:
@@ -195,7 +194,7 @@ class GPUStruct(object):
                 # set the obj name without the *
                 obj = obj[1:]
                 # is a pointer, so retrieve from card
-                if not obj in skip:
+                if obj not in skip:
                     # first make sure dest is correct datatype
                     setattr(self, obj, fmt(getattr(self, obj)))
                     cuda.memcpy_dtoh(getattr(self, obj), self.__ptrs[obj])

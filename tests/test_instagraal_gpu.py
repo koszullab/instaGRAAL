@@ -4,11 +4,11 @@ All tests in this module are skipped unless a CUDA-capable GPU is detected.
 
 The module covers two goals:
 
-1. **End-to-end pipeline coverage** – run ``instagraal`` in-process (so
+1. **End-to-end pipeline coverage** - run ``instagraal`` in-process (so
    pytest-cov instruments the GPU modules) and validate every output artefact
    it produces.
 
-2. **Unit coverage for zero-coverage CPU helpers** – ``leastsqbound``,
+2. **Unit coverage for zero-coverage CPU helpers** - ``leastsqbound``,
    ``vector``, ``optim_rippe_curve_update``, ``parse_info_frags``, and
    ``fragment`` are pure-Python / NumPy / SciPy modules that can be tested
    without touching CUDA, but are placed here so a single GPU-enabled run
@@ -24,7 +24,7 @@ import pandas as pd
 import pytest
 
 # ---------------------------------------------------------------------------
-# GPU detection – must happen before any pycuda.autoinit side-effect
+# GPU detection - must happen before any pycuda.autoinit side-effect
 # ---------------------------------------------------------------------------
 
 GPU_AVAILABLE = False
@@ -56,9 +56,9 @@ MCMC_FRAGS = 727
 MCMC_N_ITERS = MCMC_CYCLES * MCMC_FRAGS if MCMC_FRAGS is not None else None
 
 # Expected number of large (>100 kb) contigs after scaffolding.
-# Yeast genome: expect roughly 15–45 depending on Hi-C library quality.
+# Yeast genome: expect roughly 15-45 depending on Hi-C library quality.
 EXPECTED_LARGE_CONTIGS = 30  # midpoint of expected range
-LARGE_CONTIG_TOLERANCE = 15  # ± 15 → accepts 15–45
+LARGE_CONTIG_TOLERANCE = 15  # ± 15 → accepts 15-45
 
 
 # ---------------------------------------------------------------------------
@@ -85,8 +85,8 @@ def instagraal_run(pre_output_dir, tmp_path_factory):
     output_dir = tmp_path_factory.mktemp("instagraal_out")
     hic_folder_name = pre_output_dir.name
 
-    from click.testing import CliRunner  # noqa: PLC0415
-    from instagraal.cli.main import main  # noqa: PLC0415
+    from click.testing import CliRunner
+    from instagraal.cli.main import main
 
     runner = CliRunner()
     result = runner.invoke(
@@ -155,7 +155,7 @@ def gpu_fasta_lines(mcmc_out):
 
 
 def test_gpu_fasta_has_contigs(gpu_fasta_lines):
-    headers = [l for l in gpu_fasta_lines if l.startswith(">")]
+    headers = [line for line in gpu_fasta_lines if line.startswith(">")]
     assert len(headers) >= 1
 
 
@@ -174,7 +174,7 @@ def test_gpu_fasta_large_contig_count(gpu_fasta_lines):
         large += 1
     lo = EXPECTED_LARGE_CONTIGS - LARGE_CONTIG_TOLERANCE
     hi = EXPECTED_LARGE_CONTIGS + LARGE_CONTIG_TOLERANCE
-    assert lo <= large <= hi, f"Expected {lo}–{hi} contigs >100 kb, got {large}"
+    assert lo <= large <= hi, f"Expected {lo}-{hi} contigs >100 kb, got {large}"
 
 
 def test_gpu_fasta_contig_names(gpu_fasta_lines):
@@ -253,7 +253,7 @@ def test_gpu_save_simu_step_row_count(mcmc_out):
 
 
 def test_gpu_save_simu_step_format(mcmc_out):
-    """Columns are pos, start_bp, id_c, ori – all integers; ori in {1, -1}."""
+    """Columns are pos, start_bp, id_c, ori - all integers; ori in {1, -1}."""
     for line in (mcmc_out / "save_simu_step_0.txt").read_text().splitlines():
         fields = line.split()
         assert len(fields) == 4
@@ -398,7 +398,7 @@ def test_gpu_pyramid_thresh_auto_multi_level(pyramid_dir):
 
 def test_leastsqbound_no_bounds_identity():
     """With no bounds, internal == external."""
-    from instagraal.leastsqbound import internal2external  # noqa: PLC0415
+    from instagraal.leastsqbound import internal2external
 
     xi = np.array([1.0, -3.0, 0.5])
     bounds = [(None, None)] * 3
@@ -408,7 +408,7 @@ def test_leastsqbound_no_bounds_identity():
 
 def test_leastsqbound_roundtrip_min_only():
     """Min-only bound: external2internal then internal2external recovers value."""
-    from instagraal.leastsqbound import external2internal, internal2external  # noqa: PLC0415
+    from instagraal.leastsqbound import external2internal, internal2external
 
     xe_orig = np.array([3.0])
     bounds = [(1.0, None)]
@@ -418,7 +418,7 @@ def test_leastsqbound_roundtrip_min_only():
 
 
 def test_leastsqbound_roundtrip_max_only():
-    from instagraal.leastsqbound import external2internal, internal2external  # noqa: PLC0415
+    from instagraal.leastsqbound import external2internal, internal2external
 
     xe_orig = np.array([-2.0])
     bounds = [(None, 0.0)]
@@ -428,7 +428,7 @@ def test_leastsqbound_roundtrip_max_only():
 
 
 def test_leastsqbound_roundtrip_both_bounds():
-    from instagraal.leastsqbound import external2internal, internal2external  # noqa: PLC0415
+    from instagraal.leastsqbound import external2internal, internal2external
 
     xe_orig = np.array([0.3, 2.5])
     bounds = [(0.0, 1.0), (2.0, 5.0)]
@@ -439,7 +439,7 @@ def test_leastsqbound_roundtrip_both_bounds():
 
 def test_leastsqbound_fit_linear():
     """leastsqbound recovers true parameters for a bounded linear model."""
-    from instagraal.leastsqbound import leastsqbound  # noqa: PLC0415
+    from instagraal.leastsqbound import leastsqbound
 
     def residuals(p, y, x):
         return y - (p[0] * x + p[1])
@@ -456,7 +456,7 @@ def test_leastsqbound_fit_linear():
 
 def test_leastsqbound_full_output():
     """leastsqbound with full_output=True returns all five elements."""
-    from instagraal.leastsqbound import leastsqbound  # noqa: PLC0415
+    from instagraal.leastsqbound import leastsqbound
 
     def residuals(p, y, x):
         return y - p[0] * x
@@ -475,7 +475,7 @@ def test_leastsqbound_full_output():
 
 
 def test_vec_2d_properties():
-    from instagraal.vector import Vec  # noqa: PLC0415
+    from instagraal.vector import Vec
 
     v = Vec([3.0, 4.0])
     assert v.x == 3.0
@@ -483,27 +483,27 @@ def test_vec_2d_properties():
 
 
 def test_vec_3d_properties():
-    from instagraal.vector import Vec  # noqa: PLC0415
+    from instagraal.vector import Vec
 
     v = Vec([1.0, 2.0, 3.0])
     assert v.x == 1.0 and v.y == 2.0 and v.z == 3.0
 
 
 def test_vec_4d_properties():
-    from instagraal.vector import Vec  # noqa: PLC0415
+    from instagraal.vector import Vec
 
     v = Vec([1.0, 2.0, 3.0, 4.0])
     assert v.w == 4.0
 
 
 def test_vec_invalid_size_returns_none():
-    from instagraal.vector import Vec  # noqa: PLC0415
+    from instagraal.vector import Vec
 
     assert Vec([1.0]) is None
 
 
 def test_vec_arithmetic():
-    from instagraal.vector import Vec  # noqa: PLC0415
+    from instagraal.vector import Vec
 
     a = Vec([1.0, 2.0, 3.0])
     b = Vec([4.0, 5.0, 6.0])
@@ -514,7 +514,7 @@ def test_vec_arithmetic():
 
 
 def test_vec_setitem():
-    from instagraal.vector import Vec  # noqa: PLC0415
+    from instagraal.vector import Vec
 
     v = Vec([0.0, 0.0, 0.0])
     v.x = 9.0
@@ -522,7 +522,7 @@ def test_vec_setitem():
 
 
 def test_vec_repr():
-    from instagraal.vector import Vec  # noqa: PLC0415
+    from instagraal.vector import Vec
 
     v = Vec([1.0, 2.0])
     r = repr(v)
@@ -535,7 +535,7 @@ def test_vec_repr():
 
 
 def test_rippe_peval_shape():
-    from instagraal.optim_rippe_curve_update import peval  # noqa: PLC0415
+    from instagraal.optim_rippe_curve_update import peval
 
     x = np.linspace(10.0, 1000.0, 50)
     params = [50.0, 9.6, -1.5, 1.0]
@@ -545,7 +545,7 @@ def test_rippe_peval_shape():
 
 
 def test_rippe_residuals_zero_on_perfect_fit():
-    from instagraal.optim_rippe_curve_update import peval, residuals  # noqa: PLC0415
+    from instagraal.optim_rippe_curve_update import peval, residuals
 
     x = np.linspace(10.0, 1000.0, 30)
     params = [50.0, 9.6, -1.5, 1.0]
@@ -555,7 +555,7 @@ def test_rippe_residuals_zero_on_perfect_fit():
 
 
 def test_rippe_log_peval():
-    from instagraal.optim_rippe_curve_update import log_peval, peval  # noqa: PLC0415
+    from instagraal.optim_rippe_curve_update import log_peval, peval
 
     x = np.linspace(10.0, 1000.0, 20)
     params = [50.0, 9.6, -1.5, 1.0]
@@ -566,7 +566,7 @@ def test_rippe_log_peval():
 
 def test_rippe_estimate_param_rippe_returns_negative_slope():
     """Estimated slope from a synthetic Rippe curve must be negative."""
-    from instagraal.optim_rippe_curve_update import estimate_param_rippe, peval  # noqa: PLC0415
+    from instagraal.optim_rippe_curve_update import estimate_param_rippe, peval
 
     x = np.linspace(10.0, 1000.0, 50)
     y = peval(x, [50.0, 9.6, -1.5, 1.0])
@@ -577,7 +577,7 @@ def test_rippe_estimate_param_rippe_returns_negative_slope():
 
 
 def test_rippe_estimate_max_dist_intra():
-    from instagraal.optim_rippe_curve_update import estimate_max_dist_intra  # noqa: PLC0415
+    from instagraal.optim_rippe_curve_update import estimate_max_dist_intra
 
     p = [50.0, 9.6, -1.5, 2.0, 1.0]
     val_inter = 0.001
@@ -626,7 +626,7 @@ def test_info_frags_txt_block_structure(example_info_frags):
 
 
 def test_basic_fragment_initiate():
-    from instagraal.fragment import basic_fragment  # noqa: PLC0415
+    from instagraal.fragment import basic_fragment
 
     frag = basic_fragment.initiate(
         np_id_abs=0,
@@ -669,8 +669,8 @@ def polish_out(mcmc_out, tmp_path_factory):
     against realistic data.
     """
     out = tmp_path_factory.mktemp("polish_out")
-    from click.testing import CliRunner  # noqa: PLC0415
-    from instagraal.cli.polish import main as polish_main  # noqa: PLC0415
+    from click.testing import CliRunner
+    from instagraal.cli.polish import main as polish_main
 
     runner = CliRunner()
     result = runner.invoke(
@@ -703,7 +703,7 @@ def test_gpu_polish_polished_genome_non_empty(polish_out):
 
 def test_gpu_polish_polished_genome_valid_fasta(polish_out):
     """polished_genome.fa is a valid FASTA with at least one sequence."""
-    from Bio import SeqIO  # noqa: PLC0415
+    from Bio import SeqIO
 
     records = list(SeqIO.parse(str(polish_out / "polished_genome.fa"), "fasta"))
     assert len(records) > 0, "No sequences in polished_genome.fa"
@@ -726,7 +726,7 @@ def test_gpu_polish_new_info_frags_exists(polish_out):
 
 def test_gpu_polish_new_info_frags_non_empty(polish_out):
     """new_info_frags.txt has at least one scaffold block."""
-    from instagraal.parse_info_frags import parse_info_frags  # noqa: PLC0415
+    from instagraal.parse_info_frags import parse_info_frags
 
     scaffolds = parse_info_frags(str(polish_out / "new_info_frags.txt"))
     assert len(scaffolds) > 0

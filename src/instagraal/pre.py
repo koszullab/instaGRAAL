@@ -70,7 +70,7 @@ def _multi_enzyme_digest(fasta_records: dict[str, str], enzymes: list[str]) -> p
         try:
             cut_finders.append(getattr(biorst, name).search)
         except AttributeError:
-            raise ValueError(f"Unknown restriction enzyme: {name!r}")
+            raise ValueError(f"Unknown restriction enzyme: {name!r}") from None
 
     frames = []
     for chrom, chrom_seq in fasta_records.items():
@@ -252,7 +252,7 @@ def _write_fragments_list(bins: pd.DataFrame, output_path: pathlib.Path) -> None
     """
     with open(output_path, "w") as fh:
         fh.write("id\tchrom\tstart_pos\tend_pos\tsize\tgc_content\n")
-        for chrom, grp in bins.groupby("chrom", sort=False):
+        for _chrom, grp in bins.groupby("chrom", sort=False):
             for i, row in enumerate(grp.itertuples(index=False), start=1):
                 size = row.end - row.start
                 fh.write(f"{i}\t{row.chrom}\t{row.start}\t{row.end}\t{size}\t{row.gc_content}\n")

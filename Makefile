@@ -1,5 +1,5 @@
 # instaGRAAL developer Makefile
-# Regenerates the full pipeline from the toy dataset in example/data/pre/.
+# Regenerates the full pipeline from the toy dataset in tests/data/yeast/pre/.
 #
 # Usage:
 #   make all          Run the complete pipeline (pre → main → polish → stats)
@@ -12,17 +12,17 @@
 #
 # NOTE: The 'main' step requires a CUDA-capable GPU.
 
-FASTA      := example/data/pre/metator_00056_00034.fa.gz
-PAIRS      := example/data/pre/valid_idx_pcrfree.pairs.gz
+FASTA      := tests/data/yeast.contigs.fa.gz
+PAIRS      := tests/data/yeast.pairs.gz
 ENZYMES    := DpnII,HinfI
 
 LEVEL      := 4
 CYCLES     := 3
 
-HIC_DIR    := example/data/main
-OUT_BASE   := example/data/out
+HIC_DIR    := tests/data/yeast/main
+OUT_BASE   := tests/data/yeast/out
 MCMC_DIR   := $(OUT_BASE)/main/test_mcmc_$(LEVEL)
-POLISH_DIR := example/data/polish
+POLISH_DIR := tests/data/yeast/polish
 
 # Sentinel files used as Make dependency targets
 HIC_SENTINEL    := $(HIC_DIR)/fragments_list.txt
