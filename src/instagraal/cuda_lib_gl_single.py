@@ -12,11 +12,6 @@ from pycuda import gpuarray as ga
 
 # from pycuda.scan import InclusiveScanKernel
 
-import cgen
-from codepy.bpl import BoostPythonModule
-from codepy.cuda import CudaModule
-import codepy.jit
-import codepy.toolchain
 
 import time
 import matplotlib.pyplot as plt
@@ -38,6 +33,69 @@ logger.setLevel(log.CURRENT_LOG_LEVEL)
 # from scipy import ndimage as ndi
 # from scipy import stats
 # import Image
+
+
+class _NumpyThrustModule:
+    """Pure-NumPy drop-in replacement for the codepy/Boost.Python Thrust module.
+
+    All operations round-trip through CPU (GPU array → NumPy → GPU array).  This
+    removes the dependency on Boost.Python and codepy while keeping identical
+    semantics.  For large arrays the host↔device transfers add latency compared
+    with the original on-device Thrust kernels, but correctness is preserved.
+
+    All methods mirror the original codepy-compiled signatures exactly so that
+    call-sites require no changes.
+    """
+
+    @staticmethod
+    def _write_back(gpu_arr, np_arr):
+        """Overwrite the first len(np_arr) elements of *gpu_arr* with *np_arr*."""
+        cuda.memcpy_htod(gpu_arr.gpudata, np.ascontiguousarray(np_arr, dtype=gpu_arr.dtype))
+
+    def sort_by_keys_zip(self, gpu_keys, n_vals, gpu_valsa, gpu_valsb=None):
+        """Stable ascending sort of gpu_keys[:n_vals], permuting gpu_valsa (and optionally gpu_valsb)."""
+        n = int(n_vals)
+        keys = gpu_keys.get()[:n]
+        valsa = gpu_valsa.get()[:n]
+        idx = np.argsort(keys, kind="stable")
+        self._write_back(gpu_keys, keys[idx])
+        self._write_back(gpu_valsa, valsa[idx])
+        if gpu_valsb is not None:
+            self._write_back(gpu_valsb, gpu_valsb.get()[:n][idx])
+        return gpu_keys
+
+    def sort_by_keys_zip_cmplex(self, gpu_keys_a, gpu_keys_b, n_vals, gpu_vals):
+        """Stable sort by (keys_a, keys_b) lexicographically, permuting gpu_vals."""
+        n = int(n_vals)
+        keys_a = gpu_keys_a.get()[:n]
+        keys_b = gpu_keys_b.get()[:n]
+        # np.lexsort: last key is primary — (keys_b, keys_a) sorts primarily by keys_a
+        idx = np.lexsort((keys_b, keys_a))
+        self._write_back(gpu_keys_a, keys_a[idx])
+        self._write_back(gpu_keys_b, keys_b[idx])
+        self._write_back(gpu_vals, gpu_vals.get()[:n][idx])
+        return gpu_keys_a
+
+    def sort_by_keys_simple(self, gpu_keys, n_vals, gpu_vals):
+        """Stable descending sort of gpu_keys[:n_vals], permuting gpu_vals."""
+        n = int(n_vals)
+        keys = gpu_keys.get()[:n]
+        # Stable descending: negate via int64 to avoid int32 overflow
+        idx = np.argsort(-keys.astype(np.int64), kind="stable")
+        self._write_back(gpu_keys, keys[idx])
+        self._write_back(gpu_vals, gpu_vals.get()[:n][idx])
+        return gpu_keys
+
+    def prefix_sum(self, gpu_vals, n_vals):
+        """Exclusive prefix scan: out[0]=0, out[i]=sum(in[0:i])."""
+        n = int(n_vals)
+        vals = gpu_vals.get()[:n]
+        result = np.empty_like(vals)
+        result[0] = 0
+        if n > 1:
+            result[1:] = np.cumsum(vals[:-1])
+        self._write_back(gpu_vals, result)
+        return gpu_vals
 
 
 class sampler:
@@ -376,269 +434,7 @@ class sampler:
             self.gpu_list_f_downstream = ga.zeros((self.n_insert_blocks,), dtype=np.int32)
 
     def setup_thrust_modules(self):
-
-        host_mod = BoostPythonModule()
-        # Make a device module, compiled with NVCC
-        nvcc_mod = CudaModule(host_mod)
-        # Describe device module code
-        # NVCC includes
-        nvcc_includes = [
-            "thrust/sort.h",
-            "thrust/iterator/zip_iterator.h",
-            "thrust/device_vector.h",
-            "cuda.h",
-            "thrust/scan.h",
-        ]
-        # Add includes to module
-        nvcc_mod.add_to_preamble([cgen.Include(x) for x in nvcc_includes])
-        # NVCC function sort by keys 3 cuda arrays
-        nvcc_function_sort_by_keys_zip = cgen.FunctionBody(
-            cgen.FunctionDeclaration(
-                cgen.Value("void", "my_sort_zip"),
-                [
-                    cgen.Value("CUdeviceptr", "input_ptr_keys"),
-                    cgen.Value("int", "length"),
-                    cgen.Value("CUdeviceptr", "input_ptr_valsa"),
-                    cgen.Value("CUdeviceptr", "input_ptr_valsb"),
-                ],
-            ),
-            cgen.Block(
-                [
-                    cgen.Statement("thrust::device_ptr<int> " "thrust_ptr((int*)input_ptr_keys)"),
-                    cgen.Statement("thrust::device_ptr<int> " "thrust_ptr_valsa((int*)input_ptr_valsa)"),
-                    cgen.Statement("thrust::device_ptr<int> " "thrust_ptr_valsb((int*)input_ptr_valsb)"),
-                    cgen.Statement(
-                        "thrust::tuple< thrust::device_ptr<int>, "
-                        "thrust::device_ptr<int> > keytup_begin = "
-                        "thrust::make_tuple(thrust_ptr_valsa,thrust_ptr_valsb)"
-                    ),
-                    cgen.Statement(
-                        "thrust::zip_iterator<thrust::tuple"
-                        "<thrust::device_ptr<int>, thrust::device_ptr<int> > >"
-                        " first = thrust::make_zip_iterator(keytup_begin)"
-                    ),
-                    cgen.Statement("thrust::stable_sort_by_key(thrust_ptr, " "thrust_ptr+length, first)"),
-                ]
-            ),
-        )
-
-        # Add declaration to nvcc_mod
-        # Adds declaration to host_mod as well
-        nvcc_mod.add_function(nvcc_function_sort_by_keys_zip)
-
-        # NVCC function sort by keys 3 cuda arrays
-        nvcc_function_sort_by_keys_zip_cmplex = cgen.FunctionBody(
-            cgen.FunctionDeclaration(
-                cgen.Value("void", "my_sort_zip_cmplex"),
-                [
-                    cgen.Value("CUdeviceptr", "input_ptr_keys_a"),
-                    cgen.Value("CUdeviceptr", "input_ptr_keys_b"),
-                    cgen.Value("int", "length"),
-                    cgen.Value("CUdeviceptr", "input_ptr_vals"),
-                ],
-            ),
-            cgen.Block(
-                [
-                    cgen.Statement("thrust::device_ptr<int> " "thrust_ptr_v((int*)input_ptr_vals)"),
-                    cgen.Statement("thrust::device_ptr<int> " "thrust_ptr_keysa((int*)input_ptr_keys_a)"),
-                    cgen.Statement("thrust::device_ptr<int> " "thrust_ptr_keysb((int*)input_ptr_keys_b)"),
-                    cgen.Statement(
-                        "thrust::tuple< thrust::device_ptr<int>, "
-                        "thrust::device_ptr<int> > keytup_begin = "
-                        "thrust::make_tuple(thrust_ptr_keysa,thrust_ptr_keysb)"
-                    ),
-                    cgen.Statement(
-                        "thrust::zip_iterator<thrust::tuple<thrust::device_ptr"
-                        "<int>, thrust::device_ptr<int> > > first = "
-                        "thrust::make_zip_iterator(keytup_begin)"
-                    ),
-                    cgen.Statement("thrust::stable_sort_by_key(first, first+length, " "thrust_ptr_v)"),
-                ]
-            ),
-        )
-
-        # Add declaration to nvcc_mod
-        # Adds declaration to host_mod as well
-        nvcc_mod.add_function(nvcc_function_sort_by_keys_zip_cmplex)
-
-        # NVCC function sort by keys a 2 cuda arrays
-        nvcc_function_sort_by_keys_simple = cgen.FunctionBody(
-            cgen.FunctionDeclaration(
-                cgen.Value("void", "my_sort_simple"),
-                [
-                    cgen.Value("CUdeviceptr", "input_ptr_keys"),
-                    cgen.Value("int", "length"),
-                    cgen.Value("CUdeviceptr", "input_ptr_vals"),
-                ],
-            ),
-            cgen.Block(
-                [
-                    cgen.Statement("thrust::device_ptr<int> " "thrust_ptr((int*)input_ptr_keys)"),
-                    cgen.Statement("thrust::device_ptr<int> " "thrust_ptr_v((int*)input_ptr_vals)"),
-                    cgen.Statement(
-                        "thrust::stable_sort_by_key(thrust_ptr, " "thrust_ptr+length, thrust_ptr_v, " "thrust::greater<int>())"
-                    ),
-                ]
-            ),
-        )
-        # Add declaration to nvcc_mod
-        # Adds declaration to host_mod as well
-        nvcc_mod.add_function(nvcc_function_sort_by_keys_simple)
-
-        # NVCC function prefix sum
-        nvcc_function_prefix_sum = cgen.FunctionBody(
-            cgen.FunctionDeclaration(
-                cgen.Value("void", "my_prefix_sum"),
-                [
-                    cgen.Value("CUdeviceptr", "input_ptr_vals"),
-                    cgen.Value("int", "length"),
-                ],
-            ),
-            cgen.Block(
-                [
-                    cgen.Statement("thrust::device_ptr<int> " "thrust_ptr_v((int*)input_ptr_vals)"),
-                    cgen.Statement("thrust::exclusive_scan(thrust_ptr_v, " "thrust_ptr_v+length,thrust_ptr_v)"),
-                ]
-            ),
-        )
-        # Add declaration to nvcc_mod
-        # Adds declaration to host_mod as well
-        nvcc_mod.add_function(nvcc_function_prefix_sum)
-
-        host_includes = ["boost/python/extract.hpp"]
-        # Add host includes to module
-        host_mod.add_to_preamble([cgen.Include(x) for x in host_includes])
-
-        host_namespaces = ["using namespace boost::python"]
-
-        # Add BPL using statement
-        host_mod.add_to_preamble([cgen.Statement(x) for x in host_namespaces])
-
-        # Helper lambda: extract CUdeviceptr from GPUArray attribute.
-        # Newer PyCUDA returns DeviceAllocation from .gpudata which is not
-        # directly convertible to CUdeviceptr; cast through int first.
-        def _gpudata_extract(varname, arr_name):
-            return f"CUdeviceptr {varname} = " f"(CUdeviceptr)PyLong_AsLongLong(" f'object({arr_name}.attr("gpudata")).ptr())'
-
-        host_statements_sort_zip = [
-            # Extract information from PyCUDA GPUArray
-            # Get length
-            "int length = n_vals",
-            # Get data pointer
-            _gpudata_extract("ptr_keys", "gpu_array_keys"),
-            _gpudata_extract("ptr_valsa", "gpu_array_valsa"),
-            _gpudata_extract("ptr_valsb", "gpu_array_valsb"),
-            # Call Thrust routine, compiled into the CudaModule
-            "my_sort_zip(ptr_keys, length, ptr_valsa, ptr_valsb)",
-            # Return result
-            "return gpu_array_keys",
-        ]
-        host_mod.add_function(
-            cgen.FunctionBody(
-                cgen.FunctionDeclaration(
-                    cgen.Value("object", "sort_by_keys_zip"),
-                    [
-                        cgen.Value("object", "gpu_array_keys"),
-                        cgen.Value("int", "n_vals"),
-                        cgen.Value("object", "gpu_array_valsa"),
-                        cgen.Value("object", "gpu_array_valsb"),
-                    ],
-                ),
-                cgen.Block([cgen.Statement(x) for x in host_statements_sort_zip]),
-            )
-        )
-
-        host_statements_sort_zip_cmplex = [
-            # Extract information from PyCUDA GPUArray
-            # Get length
-            "int length = n_vals",
-            # Get data pointer
-            _gpudata_extract("ptr_keys_a", "gpu_array_keys_a"),
-            _gpudata_extract("ptr_keys_b", "gpu_array_keys_b"),
-            _gpudata_extract("ptr_vals", "gpu_array_vals"),
-            # Call Thrust routine, compiled into the CudaModule
-            "my_sort_zip_cmplex(ptr_keys_a, ptr_keys_b, length, ptr_vals)",
-            # Return result
-            "return gpu_array_keys_a",
-        ]
-        host_mod.add_function(
-            cgen.FunctionBody(
-                cgen.FunctionDeclaration(
-                    cgen.Value("object", "sort_by_keys_zip_cmplex"),
-                    [
-                        cgen.Value("object", "gpu_array_keys_a"),
-                        cgen.Value("object", "gpu_array_keys_b"),
-                        cgen.Value("int", "n_vals"),
-                        cgen.Value("object", "gpu_array_vals"),
-                    ],
-                ),
-                cgen.Block([cgen.Statement(x) for x in host_statements_sort_zip_cmplex]),
-            )
-        )
-
-        host_statements_sort_simple = [
-            # Extract information from PyCUDA GPUArray
-            # Get length
-            "int length = n_vals",
-            # Get data pointer
-            _gpudata_extract("ptr_keys", "gpu_array_keys"),
-            _gpudata_extract("ptr_vals", "gpu_array_vals"),
-            # Call Thrust routine, compiled into the CudaModule
-            "my_sort_simple(ptr_keys, length, ptr_vals)",
-            # Return result
-            "return gpu_array_keys",
-        ]
-        host_mod.add_function(
-            cgen.FunctionBody(
-                cgen.FunctionDeclaration(
-                    cgen.Value("object", "sort_by_keys_simple"),
-                    [
-                        cgen.Value("object", "gpu_array_keys"),
-                        cgen.Value("int", "n_vals"),
-                        cgen.Value("object", "gpu_array_vals"),
-                    ],
-                ),
-                cgen.Block([cgen.Statement(x) for x in host_statements_sort_simple]),
-            )
-        )
-
-        host_statements_prefix_sum = [
-            # Extract information from PyCUDA GPUArray
-            # Get length
-            "int length = n_vals",
-            # Get data pointer
-            _gpudata_extract("ptr_vals", "gpu_array_vals"),
-            # Call Thrust routine, compiled into the CudaModule
-            "my_prefix_sum(ptr_vals, length)",
-            # Return result
-            "return gpu_array_vals",
-        ]
-        host_mod.add_function(
-            cgen.FunctionBody(
-                cgen.FunctionDeclaration(
-                    cgen.Value("object", "prefix_sum"),
-                    [
-                        cgen.Value("object", "gpu_array_vals"),
-                        cgen.Value("int", "n_vals"),
-                    ],
-                ),
-                cgen.Block([cgen.Statement(x) for x in host_statements_prefix_sum]),
-            )
-        )
-
-        # Print out generated code, to see what we're actually compiling
-        # print("---------------------- Host code ----------------------")
-        # print(host_mod.generate())
-        # print("--------------------- Device code ---------------------")
-        # print(nvcc_mod.generate())
-        # print("-------------------------------------------------------")
-
-        # Compile modules
-
-        gcc_toolchain = codepy.toolchain.guess_toolchain()
-        nvcc_toolchain = codepy.toolchain.guess_nvcc_toolchain()
-
-        self.thrust_module = nvcc_mod.compile(gcc_toolchain, nvcc_toolchain, debug=True)
+        self.thrust_module = _NumpyThrustModule()
 
     def create_gpu_struct(self, data):
         if data is None:

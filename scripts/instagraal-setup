@@ -18,9 +18,8 @@ echo "OK."
 # Install required libraries:
 #   * OpenGL dependencies
 #   * HDF5
-#   * Boost libraries for Python
 echo "Install the required libraries..."
-sudo apt install libglu1-mesa libxi-dev libxmu-dev libglu1-mesa-dev hdf5-tools libboost-python1.65 || {
+sudo apt install libglu1-mesa libxi-dev libxmu-dev libglu1-mesa-dev hdf5-tools || {
   echo "Error! Installing libraries failed. Note that this install script currently only supports Ubuntu 17+."
   echo "If using another OS or distribution, please refer to the README on the repo for instructions on"
   echo "How to install dependencies by hand."
@@ -47,9 +46,8 @@ cd pycuda || {
   exit 1
 }
 
-# Enable OpenGL support and disable custom boost linking because it is known
-# to cause bugs
-python3 configure.py --cuda-enable-gl --no-use-shipped-boost
+# Enable OpenGL support
+python3 configure.py --cuda-enable-gl
 
 sudo python3 setup.py install || {
   echo "Error! Installing pycuda failed. You need to install pycuda in order to run instaGRAAL,"

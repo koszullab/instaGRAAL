@@ -59,25 +59,6 @@ export PATH=/usr/local/cuda/bin${PATH:+:${PATH}}
 export LD_LIBRARY_PATH=/usr/local/cuda/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
 ```
 
-### Boost with Boost.Python
-
-instaGRAAL uses `codepy` to JIT-compile CUDA/C++ code at runtime, which requires **Boost.Python** headers and a `libboost_python` shared library matching your Python version.
-
-#### On an HPC cluster
-
-```sh
-module avail boost
-module load boost/1.89.0
-```
-
-**Important:** The Boost.Python library must match your Python version. For example, if Boost was built with `libboost_python312.so` but you use Python 3.13, linking will fail.
-
-#### On Ubuntu / Debian
-
-```sh
-sudo apt-get install libboost-all-dev
-```
-
 ### System libraries (Ubuntu / Debian)
 
 Some Python dependencies need system-level headers to compile. Install these if you encounter build errors:
@@ -85,7 +66,6 @@ Some Python dependencies need system-level headers to compile. Install these if 
 ```sh
 sudo apt-get install \
   hdf5-tools \
-  libboost-all-dev \
   libjpeg-dev \
   zlib1g-dev
 ```
@@ -226,7 +206,7 @@ instagraal-polish -m polishing -i info_frags.txt -f reference.fasta -o polished_
 
 If the output is not as you would expect:
 * check the Hi-C mapping rate; if the mapping rate is low, this may be due to:
-    * a poor contig completeness (check BUSCO and _k_-mer completeness)  
+    * a poor contig completeness (check BUSCO and _k_-mer completeness)
     * not using the parameter iterative or cutsite when running hicstuff
 * make sure that there are few artefactual duplications
 * if the assembly was obtained with low-accuracy Nanopore reads, polish the assembly with highly accurate reads prior to scaffolding
@@ -275,7 +255,7 @@ As a Python package, instaGRAAL provides both a scaffolding and polishing librar
 ## References
 
 ### Principle
-* [instaGRAAL: chromosome-level quality scaffolding of genomes using a proximity ligation-based scaffolder](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-020-02041-z) Lyam Baudry, Nadège Guiglielmoni, Hervé Marie-Nelly, Alexandre Cormier, Martial Marbouty, Komlan Avia, Yann Loe Mie, Olivier Godfroy, Lieven Sterck, J. Mark Cock, Christophe Zimmer, Susana M. Coelho & Romain Koszul 
+* [instaGRAAL: chromosome-level quality scaffolding of genomes using a proximity ligation-based scaffolder](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-020-02041-z) Lyam Baudry, Nadège Guiglielmoni, Hervé Marie-Nelly, Alexandre Cormier, Martial Marbouty, Komlan Avia, Yann Loe Mie, Olivier Godfroy, Lieven Sterck, J. Mark Cock, Christophe Zimmer, Susana M. Coelho & Romain Koszul
 * [High-quality genome assembly using chromosomal contact data](https://www.ncbi.nlm.nih.gov/pubmed/25517223), Hervé Marie-Nelly, Martial Marbouty, Axel Cournac, Jean-François Flot, Gianni Liti, Dante Poggi Parodi, Sylvie Syan, Nancy Guillén, Antoine Margeot, Christophe Zimmer and Romain Koszul, Nature Communications, 2014
 * [A probabilistic approach for genome assembly from high-throughput chromosome conformation capture data](https://www.theses.fr/2013PA066714), Hervé Marie-Nelly, 2013, PhD thesis
 

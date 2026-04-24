@@ -17,7 +17,6 @@ RUN apt-get update \
   libjpeg-dev \
   zlib1g-dev \
   hdf5-tools \
-  libboost-all-dev \
   curl \
   ca-certificates \
   && apt-get clean autoclean \

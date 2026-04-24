@@ -36,68 +36,6 @@ DEFAULT_TEST_LEVEL = 4
 # ---------------------------------------------------------------------------
 
 
-def _check_boost() -> None:
-    """Verify that Boost.Python headers and a matching shared library are available."""
-    import ctypes.util
-    import os
-
-    # 1. codepy must be importable with BoostPythonModule
-    try:
-        from codepy.bpl import BoostPythonModule  # noqa: F401
-    except ImportError as exc:
-        raise click.ClickException(
-            f"Cannot import codepy.bpl.BoostPythonModule: {exc}\n" "Install codepy: pip install codepy"
-        ) from exc
-    click.echo("  codepy.bpl.BoostPythonModule: importable")
-
-    # 2. Look for libboost_python<MAJOR><MINOR> matching the running interpreter
-    pyver = f"{sys.version_info.major}{sys.version_info.minor}"  # e.g. "312"
-    lib_versioned = ctypes.util.find_library(f"boost_python{pyver}")
-    lib_generic = ctypes.util.find_library("boost_python3")
-
-    if lib_versioned:
-        click.echo(f"  libboost_python{pyver}: {lib_versioned}")
-    elif lib_generic:
-        click.echo(
-            f"  libboost_python3 (generic): {lib_generic}\n"
-            f"  Warning: version-matched library libboost_python{pyver} not found. "
-            "Linking may fail if this library was built for a different Python version."
-        )
-    else:
-        raise click.ClickException(
-            f"Boost.Python library not found "
-            f"(searched for libboost_python{pyver} and libboost_python3).\n"
-            "On Ubuntu/Debian:  sudo apt-get install libboost-all-dev\n"
-            "On HPC clusters:   module load boost\n"
-            "The library version must match your Python version "
-            f"(currently {sys.version_info.major}.{sys.version_info.minor})."
-        )
-
-    # 3. Check that Boost.Python headers are present in common locations
-    include_search_dirs = [
-        pathlib.Path("/usr/include"),
-        pathlib.Path("/usr/local/include"),
-    ]
-    for env_var in ("BOOST_INCLUDE_PATH", "CPATH", "C_INCLUDE_PATH"):
-        val = os.environ.get(env_var, "")
-        if val:
-            include_search_dirs.append(pathlib.Path(val))
-
-    header = "boost/python/extract.hpp"
-    found = next(
-        (d / header for d in include_search_dirs if (d / header).exists()),
-        None,
-    )
-    if found:
-        click.echo(f"  Boost.Python headers: {found}")
-    else:
-        click.echo(
-            "  Warning: boost/python/extract.hpp not found under standard include paths. "
-            "Runtime JIT compilation will fail if headers are missing.\n"
-            "  Set BOOST_INCLUDE_PATH or install libboost-all-dev."
-        )
-
-
 def _check_nvcc() -> None:
     """Verify that nvcc (NVIDIA CUDA Compiler) is available in PATH."""
     try:
@@ -155,9 +93,6 @@ def _check_gpu(device: int) -> None:
 
     # Check for nvcc availability
     _check_nvcc()
-
-    # Check for Boost.Python
-    _check_boost()
 
 
 def _reporthook(block_num: int, block_size: int, total_size: int) -> None:

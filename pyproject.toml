@@ -31,7 +31,6 @@ dependencies = [
     "numpy",
     "scipy",
     "matplotlib",
-    "codepy",
     "h5py",
     "biopython>=1.78",
     "pycuda",
@@ -144,4 +143,3 @@ addopts = [
 ]
 filterwarnings = ["ignore::PendingDeprecationWarning"]
 testpaths = ["tests"]
-

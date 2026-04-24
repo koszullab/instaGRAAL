@@ -992,53 +992,6 @@ wheels = [
 ]
 
 [[package]]
-name = "cgen"
-version = "2020.1"
-source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version == '3.9.*'",
-    "python_full_version < '3.9' and platform_machine == 'aarch64' and platform_machine not in 'arm64|aarch64'",
-    "python_full_version < '3.9' and platform_machine == 'arm64' and platform_machine not in 'arm64|aarch64'",
-    "python_full_version < '3.9' and platform_machine != 'aarch64' and platform_machine != 'arm64' and platform_machine not in 'arm64|aarch64'",
-    "python_full_version < '3.9' and platform_machine == 'aarch64' and platform_machine in 'arm64|aarch64'",
-    "python_full_version < '3.9' and platform_machine == 'arm64' and platform_machine in 'arm64|aarch64'",
-    "python_full_version < '3.9' and platform_machine != 'aarch64' and platform_machine != 'arm64' and platform_machine in 'arm64|aarch64'",
-]
-dependencies = [
-    { name = "numpy", version = "1.24.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
-    { name = "numpy", version = "2.0.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.9.*'" },
-    { name = "pytools", version = "2024.1.14", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/63/d2/2184a24fa93a921937d5da5465e33370c314061f722edf6bebda4e17d7d5/cgen-2020.1.tar.gz", hash = "sha256:4ec99d0c832d9f95f5e51dd18a629ad50df0b5464ce557ef42c6e0cd9478bfcf", size = 19895, upload-time = "2020-02-06T23:04:59.246Z" }
-
-[[package]]
-name = "cgen"
-version = "2025.1"
-source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.14' and sys_platform == 'win32'",
-    "python_full_version >= '3.14' and sys_platform == 'emscripten'",
-    "python_full_version >= '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
-    "python_full_version == '3.13.*' and sys_platform == 'win32'",
-    "python_full_version == '3.12.*' and sys_platform == 'win32'",
-    "python_full_version == '3.13.*' and sys_platform == 'emscripten'",
-    "python_full_version == '3.12.*' and sys_platform == 'emscripten'",
-    "python_full_version == '3.13.*' and sys_platform != 'emscripten' and sys_platform != 'win32'",
-    "python_full_version == '3.12.*' and sys_platform != 'emscripten' and sys_platform != 'win32'",
-    "python_full_version == '3.11.*' and sys_platform == 'win32'",
-    "python_full_version == '3.11.*' and sys_platform == 'emscripten'",
-    "python_full_version == '3.11.*' and sys_platform != 'emscripten' and sys_platform != 'win32'",
-    "python_full_version == '3.10.*'",
-]
-dependencies = [
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.10.*'" },
-    { name = "numpy", version = "2.4.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "pytools", version = "2026.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
-    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/18/4b/a84a2fd2abce1c7bdef848ef7e7763f9447040e01514f741f8c7dfae1bab/cgen-2025.1.tar.gz", hash = "sha256:79f01e010d49c13e58b4ca8f2d4996a6b7178968f5f2d906262733480ae7a2d4", size = 19236, upload-time = "2025-06-17T03:03:17.662Z" }
-
-[[package]]
 name = "charset-normalizer"
 version = "3.4.7"
 source = { registry = "https://pypi.org/simple" }
@@ -1196,61 +1149,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/ef/ff/d291d66595b30b83d1cb9e314b2c9be7cfc7327d4a0d40a15da2416ea97b/click_option_group-0.5.9.tar.gz", hash = "sha256:f94ed2bc4cf69052e0f29592bd1e771a1789bd7bfc482dd0bc482134aff95823", size = 22222, upload-time = "2025-10-09T09:38:01.474Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/75/45/54bb2d8d4138964a94bef6e9afe48b0be4705ba66ac442ae7d8a8dc4ffef/click_option_group-0.5.9-py3-none-any.whl", hash = "sha256:ad2599248bd373e2e19bec5407967c3eec1d0d4fc4a5e77b08a0481e75991080", size = 11553, upload-time = "2025-10-09T09:38:00.066Z" },
-]
-
-[[package]]
-name = "codepy"
-version = "2023.1"
-source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version == '3.9.*'",
-    "python_full_version < '3.9' and platform_machine == 'aarch64' and platform_machine not in 'arm64|aarch64'",
-    "python_full_version < '3.9' and platform_machine == 'arm64' and platform_machine not in 'arm64|aarch64'",
-    "python_full_version < '3.9' and platform_machine != 'aarch64' and platform_machine != 'arm64' and platform_machine not in 'arm64|aarch64'",
-    "python_full_version < '3.9' and platform_machine == 'aarch64' and platform_machine in 'arm64|aarch64'",
-    "python_full_version < '3.9' and platform_machine == 'arm64' and platform_machine in 'arm64|aarch64'",
-    "python_full_version < '3.9' and platform_machine != 'aarch64' and platform_machine != 'arm64' and platform_machine in 'arm64|aarch64'",
-]
-dependencies = [
-    { name = "cgen", version = "2020.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "numpy", version = "1.24.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
-    { name = "numpy", version = "2.0.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.9.*'" },
-    { name = "platformdirs", version = "4.3.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
-    { name = "platformdirs", version = "4.4.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.9.*'" },
-    { name = "pytools", version = "2024.1.14", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/f0/75/6e16a64cb03581c310db65da9dadb2e3e1882251817babf69caf7e98a10a/codepy-2023.1.tar.gz", hash = "sha256:bce2e136e9fb3cf59949427d4ef419648778401e6db288596e75b53e144f8b93", size = 21344, upload-time = "2023-05-21T22:57:43.433Z" }
-
-[[package]]
-name = "codepy"
-version = "2025.1"
-source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.14' and sys_platform == 'win32'",
-    "python_full_version >= '3.14' and sys_platform == 'emscripten'",
-    "python_full_version >= '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
-    "python_full_version == '3.13.*' and sys_platform == 'win32'",
-    "python_full_version == '3.12.*' and sys_platform == 'win32'",
-    "python_full_version == '3.13.*' and sys_platform == 'emscripten'",
-    "python_full_version == '3.12.*' and sys_platform == 'emscripten'",
-    "python_full_version == '3.13.*' and sys_platform != 'emscripten' and sys_platform != 'win32'",
-    "python_full_version == '3.12.*' and sys_platform != 'emscripten' and sys_platform != 'win32'",
-    "python_full_version == '3.11.*' and sys_platform == 'win32'",
-    "python_full_version == '3.11.*' and sys_platform == 'emscripten'",
-    "python_full_version == '3.11.*' and sys_platform != 'emscripten' and sys_platform != 'win32'",
-    "python_full_version == '3.10.*'",
-]
-dependencies = [
-    { name = "cgen", version = "2025.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.10.*'" },
-    { name = "numpy", version = "2.4.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "platformdirs", version = "4.9.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
-    { name = "pytools", version = "2026.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
-    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/a2/a8/a5de752b791895b5c3eb84383bfc1196520deda1b4b6726a2b23506ca00b/codepy-2025.1.tar.gz", hash = "sha256:ccc8365955050e827368ec0034c74cc3523a5cc60d8aff46a1a5345b769a9b75", size = 23482, upload-time = "2025-04-30T21:05:25.122Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/4c/3d/3af73f8b481a379b2093523426e6e0b342d03957b95e49684b51172f14d8/codepy-2025.1-py3-none-any.whl", hash = "sha256:becbe8892affbdc11890ef1fb7e0cf066dba1e1a5760277834cd8962c2d858de", size = 22171, upload-time = "2025-04-30T21:05:24.098Z" },
 ]
 
 [[package]]
@@ -3365,8 +3263,6 @@ dependencies = [
     { name = "biopython", version = "1.85", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.9.*'" },
     { name = "biopython", version = "1.87", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "click" },
-    { name = "codepy", version = "2023.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "codepy", version = "2025.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "cooler", version = "0.10.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
     { name = "cooler", version = "0.10.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
     { name = "h5py", version = "3.11.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
@@ -3483,7 +3379,6 @@ requires-dist = [
     { name = "biopython", specifier = ">=1.78" },
     { name = "black", marker = "extra == 'dev'" },
     { name = "click" },
-    { name = "codepy" },
     { name = "cooler" },
     { name = "coverage", extras = ["toml"], marker = "extra == 'test'" },
     { name = "furo", marker = "extra == 'docs'" },

@@ -95,6 +95,8 @@ pre_out0/
 
 # Generated example pipeline outputs (regenerate with `make`)
 tests/yeast/
+tests/data/out/
 tests/data/yeast/main/
 tests/data/yeast/out/
 tests/data/yeast/polish/
+out/
