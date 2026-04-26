@@ -13,21 +13,29 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends \
   gcc \
   g++ \
-  python3-full \
-  python3-dev \
-  python3-pip \
+  software-properties-common \
   libjpeg-dev \
   zlib1g-dev \
   hdf5-tools \
   curl \
   ca-certificates \
+  && . /etc/os-release \
+  && if [ "$VERSION_ID" = "22.04" ]; then \
+    add-apt-repository ppa:deadsnakes/ppa \
+    && apt-get update; \
+  fi \
+  && apt-get install -y --no-install-recommends \
+  python3.12 \
+  python3.12-dev \
+  python3.12-venv \
   && apt-get clean autoclean \
   && apt-get autoremove -y \
-  && rm -rf /var/lib/apt/lists/*
+  && rm -rf /var/lib/apt/lists/* \
+  && curl -sS https://bootstrap.pypa.io/get-pip.py | python3.12 - --break-system-packages
 
 COPY . /tmp/instaGRAAL
 
-RUN pip install --break-system-packages /tmp/instaGRAAL[dev] \
+RUN python3.12 -m pip install --break-system-packages /tmp/instaGRAAL[dev] \
   && rm -rf /tmp/instaGRAAL
 
 WORKDIR /work

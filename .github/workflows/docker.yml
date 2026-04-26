@@ -14,15 +14,19 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        cuda-version: ["11.8.0", "12.8.1", "13.2.1"]
-        ubuntu-version: ["22.04", "24.04"]
-        exclude:
-          # CUDA 11.8.0 only ships with Ubuntu 22.04
+        include:
+          # CUDA 11.8.0: Ubuntu 22.04 is the latest available
           - cuda-version: "11.8.0"
-            ubuntu-version: "24.04"
-          # CUDA 13.2.1 only ships with Ubuntu 24.04
-          - cuda-version: "13.2.1"
             ubuntu-version: "22.04"
+          # CUDA 12.4.1: Ubuntu 22.04 is the latest available
+          - cuda-version: "12.4.1"
+            ubuntu-version: "22.04"
+          # CUDA 12.8.1: Ubuntu 24.04 is the latest available
+          - cuda-version: "12.8.1"
+            ubuntu-version: "24.04"
+          # CUDA 13.2.1: Ubuntu 24.04 is the latest available
+          - cuda-version: "13.2.1"
+            ubuntu-version: "24.04"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -37,7 +41,7 @@ jobs:
       - name: Build CUDA image tag
         id: cuda-tag
         run: |
-          echo "cuda_tag=cuda${{ matrix.cuda-version }}-ubuntu${{ matrix.ubuntu-version }}" >> $GITHUB_OUTPUT
+          echo "cuda_tag=python3.12-cuda${{ matrix.cuda-version }}-ubuntu${{ matrix.ubuntu-version }}" >> $GITHUB_OUTPUT
 
       - name: Extract Docker metadata
         id: meta
@@ -48,7 +52,7 @@ jobs:
             type=ref,event=branch,suffix=-${{ steps.cuda-tag.outputs.cuda_tag }}
             type=ref,event=pr,suffix=-${{ steps.cuda-tag.outputs.cuda_tag }}
             type=sha,suffix=-${{ steps.cuda-tag.outputs.cuda_tag }}
-            type=raw,value=latest,enable=${{ matrix.cuda-version == '13.2.1' && matrix.ubuntu-version == '24.04' }}
+            type=raw,value=latest-${{ steps.cuda-tag.outputs.cuda_tag }}
 
       - name: Build and push
         uses: docker/build-push-action@v5
