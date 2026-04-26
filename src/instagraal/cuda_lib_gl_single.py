@@ -291,7 +291,7 @@ class sampler:
             self.n_generators * characterize.sizeof("curandStateXORWOW", "#include <curand_kernel.h>")
         )
 
-        (free, total) = cuda.mem_get_info()
+        free, total = cuda.mem_get_info()
         logger.debug(("Global memory occupancy after init:%f%% free" % (free * 100.0 / total)))
         logger.debug(("Global free memory after init:%i Mo free" % (free / 10**6.0)))
 
@@ -3255,7 +3255,7 @@ class sampler:
 
         self.gpu_vect_frags.__del__()
         self.rng_states.free()
-        (free, total) = cuda.mem_get_info()
+        free, total = cuda.mem_get_info()
         logger.debug(("Global memory occupancy after cleaning processes: %f%% free" % (free * 100 / total)))
         logger.debug(("Global free memory  :%i Mo free" % (free / 10**6)))
         self.ctx.detach()

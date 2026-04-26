@@ -60,8 +60,7 @@ from ..version import __version__ as VERSION_NUMBER
     show_default=True,
     type=float,
     help=(
-        "Number of standard deviations below the mean coverage, "
-        "below which fragments should be filtered out prior to binning."
+        "Number of standard deviations below the mean coverage, " "below which fragments should be filtered out prior to binning."
     ),
 )
 @click.option(

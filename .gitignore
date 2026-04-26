@@ -100,3 +100,4 @@ tests/data/yeast/main/
 tests/data/yeast/out/
 tests/data/yeast/polish/
 out/
+uv.lock

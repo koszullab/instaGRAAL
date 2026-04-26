@@ -51,9 +51,7 @@ def main(
     if labels is not None:
         label_list = [lb.strip() for lb in labels.split(",")]
         if len(label_list) != len(fasta_files):
-            raise click.UsageError(
-                f"--labels supplied {len(label_list)} label(s) but {len(fasta_files)} file(s) were given."
-            )
+            raise click.UsageError(f"--labels supplied {len(label_list)} label(s) but {len(fasta_files)} file(s) were given.")
     else:
         label_list = [f.name for f in fasta_files]
 

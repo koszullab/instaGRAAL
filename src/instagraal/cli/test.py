@@ -192,9 +192,15 @@ def _run_test(
     """
     ran_cmds: list[str] = []
     # Resolve CLI entry points from the same environment as this process.
+    # shutil.which() searches PATH and handles cases where the interpreter and
+    # the entry-point scripts live in different directories (e.g. /usr/bin vs
+    # /usr/local/bin in some Linux distributions).
     bin_dir = pathlib.Path(sys.executable).parent
 
     def cmd(name: str) -> pathlib.Path:
+        found = shutil.which(name)
+        if found:
+            return pathlib.Path(found)
         return bin_dir / name
 
     # -- 1. GPU check --------------------------------------------------------
@@ -405,8 +411,10 @@ def main(
         _elapsed = time.monotonic() - _start
         click.echo(f"\n[instagraal-test] ALL STEPS PASSED  (total time: {_elapsed:.1f}s).")
         click.echo("\nCommands executed (for reproducibility):")
+        click.echo("\n```")
         for c in ran_cmds:
-            click.echo(f"  $ {c}")
+            click.echo(c)
+        click.echo("```")
     finally:
         if _tmp_dir is not None and not keep:
             shutil.rmtree(_tmp_dir, ignore_errors=True)

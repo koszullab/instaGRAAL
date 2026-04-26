@@ -1,0 +1,340 @@
+name: Test (GPU)
+
+on:
+  workflow_dispatch:
+  push:
+  pull_request:
+
+concurrency:
+  group: gpu-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+
+  # ---------------------------------------------------------------------------
+  # Launch one pod per Python x CUDA combo. Each pod self-registers as a
+  # GHA runner. Outputs a dynamic matrix for test-gpu and a pod-ids list
+  # for cleanup.
+  # ---------------------------------------------------------------------------
+  start-runners:
+    name: Start pods
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || contains(github.event.head_commit.message, '[gpu]')
+    outputs:
+      matrix:  ${{ steps.launch-all.outputs.matrix }}
+      pod-ids: ${{ steps.launch-all.outputs.pod-ids }}
+    steps:
+
+      - name: Generate Runner Registration Token
+        id: token
+        run: |
+          TOKEN=$(curl -s -X POST \
+            -H "Authorization: token ${{ secrets.GH_PAT }}" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/${{ github.repository }}/actions/runners/registration-token \
+            | jq -r '.token')
+          echo "::add-mask::$TOKEN"
+          echo "registration_token=$TOKEN" >> "$GITHUB_OUTPUT"
+
+      - name: Clean up stale runners
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: |
+          RUNNERS=$(curl -fsSL \
+            -H "Authorization: Bearer $GH_PAT" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/runners")
+
+          echo "$RUNNERS" | jq -r '
+            .runners[]
+            | select(.name | startswith("runpod-"))
+            | select(.status == "offline")
+            | "\(.id) \(.name)"
+          ' | while read -r ID NAME; do
+            echo "Removing stale runner: $NAME (id=$ID)"
+            curl -fsSL -X DELETE \
+              -H "Authorization: Bearer $GH_PAT" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/runners/$ID" || true
+          done
+
+      - name: Launch all pods
+        id: launch-all
+        env:
+          RUNPOD_API_KEY: ${{ secrets.RUNPOD_API_KEY }}
+        run: |
+          REG_TOKEN="${{ steps.token.outputs.registration_token }}"
+          RUN_ID="${{ github.run_id }}"
+          REPO="${{ github.repository }}"
+          RUN_ID="${{ github.run_id }}"
+          ATTEMPT="${{ github.run_attempt }}"
+
+          # ── Edit this list to add/remove combos ──────────────────────
+          # Each pod costs ~$0.69/hr (RTX 4090), so keep it lean.
+          # Python is installed by setup-python; CUDA comes from the image.
+          # Use images with CUDA ≤ 12.6 for broad driver compatibility.
+          # CUDA > 12.6 requires very recent drivers, which may not be available on runpods.
+          COMBOS=$(cat <<'EOF'
+          [
+            { "python-version": "3.10", "cuda-version": "12.1.1", "image": "nvidia/cuda:12.1.1-devel-ubuntu22.04" },
+            { "python-version": "3.11", "cuda-version": "12.1.1", "image": "nvidia/cuda:12.1.1-devel-ubuntu22.04" },
+            { "python-version": "3.12", "cuda-version": "12.1.1", "image": "nvidia/cuda:12.1.1-devel-ubuntu22.04" },
+
+            { "python-version": "3.10", "cuda-version": "12.4.1", "image": "nvidia/cuda:12.4.1-devel-ubuntu22.04" },
+            { "python-version": "3.11", "cuda-version": "12.4.1", "image": "nvidia/cuda:12.4.1-devel-ubuntu22.04" },
+            { "python-version": "3.12", "cuda-version": "12.4.1", "image": "nvidia/cuda:12.4.1-devel-ubuntu22.04" }
+          ]
+          EOF
+          )
+
+          # ── Startup command (same for every pod) ─────────────────────
+          read -r -d '' STARTUP_CMD << 'SCRIPT' || true
+          bash -lc '
+          set -euo pipefail
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update
+          apt-get install -y --no-install-recommends curl ca-certificates tar git libicu-dev
+          rm -rf /var/lib/apt/lists/*
+          id -u runner &>/dev/null || useradd -m -s /bin/bash runner
+          RUNNER_DIR=/opt/actions-runner
+          WORK_DIR=/workspace/_work
+          mkdir -p "$RUNNER_DIR" "$WORK_DIR"
+          chown -R runner:runner "$RUNNER_DIR" "$WORK_DIR"
+          if [ ! -f "$RUNNER_DIR/config.sh" ]; then
+            cd "$RUNNER_DIR"
+            RUNNER_VERSION=$(curl -fsSL https://api.github.com/repos/actions/runner/releases/latest \
+              | grep -oP "\"tag_name\":\s*\"v\K[^\"]+")
+            curl -fL -o actions-runner.tar.gz \
+              "https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-linux-x64-${RUNNER_VERSION}.tar.gz"
+            tar xzf actions-runner.tar.gz
+            rm -f actions-runner.tar.gz
+            chown -R runner:runner "$RUNNER_DIR"
+          fi
+          cd "$RUNNER_DIR"
+          su - runner -c "
+            cd $RUNNER_DIR
+            ./config.sh \
+              --url https://github.com/REPO_PLACEHOLDER \
+              --token $RUNNER_TOKEN \
+              --name $LABEL \
+              --labels $LABEL \
+              --work $WORK_DIR \
+              --unattended --ephemeral
+            ./run.sh --once
+          "
+          '
+          SCRIPT
+
+          STARTUP_CMD="${STARTUP_CMD//REPO_PLACEHOLDER/$REPO}"
+
+          # ── Launch loop ──────────────────────────────────────────────
+          MATRIX="[]"
+          POD_IDS="[]"
+
+          for row in $(echo "$COMBOS" | jq -r '.[] | @base64'); do
+            _jq() { echo "$row" | base64 -d | jq -r "$1"; }
+            PY=$(_jq '.["python-version"]')
+            CUDA=$(_jq '.["cuda-version"]')
+            IMAGE=$(_jq '.image')
+
+            LABEL="runpod-${RUN_ID}-py${PY//./}-cuda${CUDA//./}"
+
+            QUERY=$(jq -n -c \
+              --arg name "$LABEL" \
+              --arg image "$IMAGE" \
+              --arg gpu "NVIDIA GeForce RTX 4090" \
+              --arg cmd "$STARTUP_CMD" \
+              --arg token "$REG_TOKEN" \
+              --arg label "$LABEL" \
+              '{
+                query: "mutation($input: PodFindAndDeployOnDemandInput!) { podFindAndDeployOnDemand(input: $input) { id imageName machine { gpuDisplayName } } }",
+                variables: {
+                  input: {
+                    name: $name,
+                    imageName: $image,
+                    gpuTypeId: $gpu,
+                    cloudType: "SECURE",
+                    gpuCount: 1,
+                    containerDiskInGb: 20,
+                    volumeInGb: 0,
+                    volumeMountPath: "/workspace",
+                    ports: "8888/http,22/tcp",
+                    dockerArgs: $cmd,
+                    env: [
+                      { key: "RUNNER_TOKEN", value: $token },
+                      { key: "LABEL", value: $label }
+                    ]
+                  }
+                }
+              }')
+
+            RESPONSE=$(curl -s -X POST \
+              -H "Content-Type: application/json" \
+              -H "Authorization: Bearer $RUNPOD_API_KEY" \
+              -d "$QUERY" \
+              https://api.runpod.io/graphql)
+
+            POD_ID=$(echo "$RESPONSE" | jq -r '.data.podFindAndDeployOnDemand.id')
+            if [ -z "$POD_ID" ] || [ "$POD_ID" = "null" ]; then
+              echo "ERROR: Pod creation failed for $LABEL"
+              echo "$RESPONSE" | jq .
+              exit 1
+            fi
+
+            echo "✓ $LABEL → pod $POD_ID  (py$PY + cuda$CUDA)"
+
+            MATRIX=$(echo "$MATRIX" | jq -c \
+              --arg label "$LABEL" \
+              --arg py "$PY" \
+              --arg cuda "$CUDA" \
+              '. + [{"label": $label, "python-version": $py, "cuda-version": $cuda}]')
+
+            POD_IDS=$(echo "$POD_IDS" | jq -c --arg id "$POD_ID" '. + [$id]')
+          done
+
+          echo "matrix=$(echo "$MATRIX" | jq -c '{"include": .}')" >> "$GITHUB_OUTPUT"
+          echo "pod-ids=$(echo "$POD_IDS" | jq -c '.')" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for all runners to come online
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: |
+          MATRIX='${{ steps.launch-all.outputs.matrix }}'
+          LABELS=$(echo "$MATRIX" | jq -r '.include[].label')
+
+          for LABEL in $LABELS; do
+            echo "Waiting for runner: $LABEL"
+            STATUS=""
+            for i in $(seq 1 12); do
+              STATUS=$(curl -fsSL \
+                -H "Authorization: Bearer $GH_PAT" \
+                -H "Accept: application/vnd.github+json" \
+                "https://api.github.com/repos/${{ github.repository }}/actions/runners" \
+                | jq -r ".runners[] | select(.name == \"$LABEL\") | .status")
+              if [ "$STATUS" = "online" ]; then
+                echo "  ✓ $LABEL is online."
+                break
+              fi
+              echo "  Attempt $i/12 — not online yet, retrying in 10s..."
+              sleep 10
+            done
+            if [ "$STATUS" != "online" ]; then
+              echo "ERROR: $LABEL did not come online within 2 minutes." >&2
+              exit 1
+            fi
+          done
+
+  # ---------------------------------------------------------------------------
+  # Run the full test suite — one job per Python × CUDA combo.
+  # ---------------------------------------------------------------------------
+  test-gpu:
+    name: Test (py${{ matrix.python-version }} / CUDA ${{ matrix.cuda-version }})
+    needs: start-runners
+    runs-on: ${{ matrix.label }}
+    if: github.event_name == 'pull_request' || contains(github.event.head_commit.message, '[gpu]')
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.start-runners.outputs.matrix) }}
+    steps:
+      - name: Verify GPU
+        run: nvidia-smi
+
+      - name: Set up CUDA environment
+        run: |
+          echo "/usr/local/cuda/bin" >> "$GITHUB_PATH"
+          echo "CUDA_HOME=/usr/local/cuda" >> "$GITHUB_ENV"
+          echo "CUDA_INC_DIR=/usr/local/cuda/include" >> "$GITHUB_ENV"
+          echo "LD_LIBRARY_PATH=/usr/local/cuda/lib64:${LD_LIBRARY_PATH:-}" >> "$GITHUB_ENV"
+
+      - name: Verify CUDA toolkit
+        run: nvcc --version
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install instagraal with test extras
+        run: pip install ".[test]"
+
+      - name: Run pytest
+        run: pytest -v --tb=short --junitxml=test-results.xml
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-py${{ matrix.python-version }}-cuda${{ matrix.cuda-version }}
+          path: test-results.xml
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report-py${{ matrix.python-version }}-cuda${{ matrix.cuda-version }}
+          path: |
+            coverage.xml
+            htmlcov/
+
+  # ---------------------------------------------------------------------------
+  # Terminate ALL pods — always runs, even on failure/cancellation.
+  # ---------------------------------------------------------------------------
+  stop-runners:
+    name: Stop pods
+    runs-on: ubuntu-latest
+    needs: [start-runners, test-gpu]
+    if: always() && needs.start-runners.result != 'skipped'
+    steps:
+      - name: Install runpodctl
+        run: |
+          mkdir -p ~/.local/bin
+          wget -q https://github.com/runpod/runpodctl/releases/latest/download/runpodctl-linux-amd64 \
+            -O ~/.local/bin/runpodctl
+          chmod +x ~/.local/bin/runpodctl
+
+      - name: Terminate all pods
+        env:
+          RUNPOD_API_KEY: ${{ secrets.RUNPOD_API_KEY }}
+        run: |
+          POD_IDS='${{ needs.start-runners.outputs.pod-ids }}'
+          if [ -z "$POD_IDS" ] || [ "$POD_IDS" = "null" ]; then
+            echo "WARNING: No pod IDs found — check for orphaned pods!"
+            exit 0
+          fi
+          for POD_ID in $(echo "$POD_IDS" | jq -r '.[]'); do
+            runpodctl pod get "$POD_ID" || true
+            runpodctl pod delete "$POD_ID" || true
+            echo "Terminated pod: $POD_ID"
+          done
+
+      - name: Deregister runners from GitHub
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: |
+          MATRIX='${{ needs.start-runners.outputs.matrix }}'
+          if [ -z "$MATRIX" ] || [ "$MATRIX" = "null" ]; then
+            exit 0
+          fi
+
+          LABELS=$(echo "$MATRIX" | jq -r '.include[].label')
+          for LABEL in $LABELS; do
+            RUNNER_ID=$(curl -fsSL \
+              -H "Authorization: Bearer $GH_PAT" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/runners" \
+              | jq -r ".runners[] | select(.name == \"$LABEL\") | .id")
+
+            if [ -n "$RUNNER_ID" ] && [ "$RUNNER_ID" != "null" ]; then
+              curl -fsSL -X DELETE \
+                -H "Authorization: Bearer $GH_PAT" \
+                -H "Accept: application/vnd.github+json" \
+                "https://api.github.com/repos/${{ github.repository }}/actions/runners/$RUNNER_ID" || true
+              echo "Deregistered runner: $LABEL (id=$RUNNER_ID)"
+            fi
+          done

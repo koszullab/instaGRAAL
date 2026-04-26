@@ -1,0 +1,52 @@
+name: Test (CPU)
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test-cpu:
+    name: Test (py${{ matrix.python-version }}, CPU)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # Installs as distribution name "pycuda" so pip considers the hard
+      # dependency satisfied without needing a CUDA toolkit to compile from source.
+      - name: Install pycuda stub
+        run: pip install ./tools/pycuda-stub/
+
+      - name: Install instagraal with test extras
+        run: pip install ".[test]"
+
+      - name: Run pytest (GPU tests auto-skipped)
+        run: pytest -v --tb=short --junitxml=test-results.xml
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-cpu-py${{ matrix.python-version }}
+          path: test-results.xml
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report-cpu-py${{ matrix.python-version }}
+          path: |
+            coverage.xml
+            htmlcov/

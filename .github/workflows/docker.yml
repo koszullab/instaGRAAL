@@ -1,0 +1,61 @@
+name: Docker
+
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  docker:
+    name: Build and push Docker image (CUDA ${{ matrix.cuda-version }} / Ubuntu ${{ matrix.ubuntu-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        cuda-version: ["11.8.0", "12.8.1", "13.2.1"]
+        ubuntu-version: ["22.04", "24.04"]
+        exclude:
+          # CUDA 11.8.0 only ships with Ubuntu 22.04
+          - cuda-version: "11.8.0"
+            ubuntu-version: "24.04"
+          # CUDA 13.2.1 only ships with Ubuntu 24.04
+          - cuda-version: "13.2.1"
+            ubuntu-version: "22.04"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build CUDA image tag
+        id: cuda-tag
+        run: |
+          echo "cuda_tag=cuda${{ matrix.cuda-version }}-ubuntu${{ matrix.ubuntu-version }}" >> $GITHUB_OUTPUT
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=ref,event=branch,suffix=-${{ steps.cuda-tag.outputs.cuda_tag }}
+            type=ref,event=pr,suffix=-${{ steps.cuda-tag.outputs.cuda_tag }}
+            type=sha,suffix=-${{ steps.cuda-tag.outputs.cuda_tag }}
+            type=raw,value=latest,enable=${{ matrix.cuda-version == '13.2.1' && matrix.ubuntu-version == '24.04' }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          build-args: |
+            CUDA_IMAGE=nvidia/cuda:${{ matrix.cuda-version }}-devel-ubuntu${{ matrix.ubuntu-version }}
+          push: ${{ github.event_name == 'push' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

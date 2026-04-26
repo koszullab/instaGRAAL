@@ -1,7 +1,8 @@
 # syntax=docker/dockerfile:1
 # This image requires nvidia-docker2 and must be run with --gpus all
 
-FROM nvidia/cuda:11.8.0-devel-ubuntu22.04
+ARG CUDA_IMAGE=nvidia/cuda:12.4.1-devel-ubuntu22.04
+FROM ${CUDA_IMAGE}
 
 LABEL Name=instagraal Version=0.1.6
 
@@ -12,8 +13,9 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends \
   gcc \
   g++ \
-  python3 \
+  python3-full \
   python3-dev \
+  python3-pip \
   libjpeg-dev \
   zlib1g-dev \
   hdf5-tools \
@@ -23,11 +25,9 @@ RUN apt-get update \
   && apt-get autoremove -y \
   && rm -rf /var/lib/apt/lists/*
 
-# Install uv
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
-
-# Install instagraal and all its dependencies via uv
 COPY . /tmp/instaGRAAL
-RUN uv pip install --system /tmp/instaGRAAL && rm -rf /tmp/instaGRAAL
+
+RUN pip install --break-system-packages /tmp/instaGRAAL[dev] \
+  && rm -rf /tmp/instaGRAAL
 
 WORKDIR /work

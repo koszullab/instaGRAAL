@@ -112,9 +112,7 @@ def main(
     output_dir = pathlib.Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     scaffolds = {
-        name: scaffold
-        for name, scaffold in parse_info_frags(str(info_frags)).items()
-        if len(scaffold) > min_scaffold_size
+        name: scaffold for name, scaffold in parse_info_frags(str(info_frags)).items() if len(scaffold) > min_scaffold_size
     }
 
     if mode == "fasta":
