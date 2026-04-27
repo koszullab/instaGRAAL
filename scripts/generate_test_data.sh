@@ -109,9 +109,7 @@ fi
 # =============================================================================
 # Step 3 – Generate in silico contig-level assembly
 # =============================================================================
-# make_insilico_assembly.py fragments the reference using a Poisson break
-# process (rate = 1.5 breaks/Mb, seed = 42) to mimic a typical ONT/PacBio
-# HiFi assembly.  Expected output: ~30 contigs, N50 ~400–600 kb.
+# make_insilico_assembly.py fragments the reference using a Poisson break process
 
 echo "==> Step 3: Generate in silico assembly"
 python "${SCRIPTS_DIR}/make_insilico_assembly.py" "$FASTA_GZ" "$ASSEMBLY"

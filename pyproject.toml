@@ -39,6 +39,7 @@ dependencies = [
     "pycuda",
     "click",
     "cooler",
+    "pandas",
     "pyfaidx",
 ]
 [project.optional-dependencies]
