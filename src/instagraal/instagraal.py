@@ -50,6 +50,7 @@ Options:
 """
 
 import os
+from typing import Any
 
 import pycuda.autoinit  # noqa: F401
 
@@ -116,21 +117,21 @@ class instagraal_class:
 
     def __init__(
         self,
-        name,
-        folder_path,
-        fasta,
-        device,
-        level,
-        n_iterations_em,
-        n_iterations_mcmc,
-        is_simu,
-        scrambled,
-        perform_em,
-        use_rippe,
-        sample_param,
-        thresh_factor,
-        output_folder,
-    ):
+        name: str,
+        folder_path: str,
+        fasta: str,
+        device: int,
+        level: int,
+        n_iterations_em: int,
+        n_iterations_mcmc: int,
+        is_simu: bool,
+        scrambled: bool,
+        perform_em: bool,
+        use_rippe: bool,
+        sample_param: bool,
+        thresh_factor: float,
+        output_folder: str | None,
+    ) -> None:
         """Initialize parameters"""
 
         self.device = device
@@ -192,7 +193,14 @@ class instagraal_class:
         self.txt_file_list_mutations = os.path.join(self.simulation.output_folder, "list_mutations.txt")
         self.file_all_data = os.path.join(self.simulation.output_folder, "behaviour_all.txt")
 
-    def full_em(self, n_cycles, n_neighbours, bomb, id_start_sample_param, save_matrix=False):
+    def full_em(
+        self,
+        n_cycles: int,
+        n_neighbours: int,
+        bomb: bool,
+        id_start_sample_param: int,
+        save_matrix: bool = False,
+    ) -> None:
         sampler = self.simulation.sampler
         if bomb:
             sampler.bomb_the_genome()
@@ -204,13 +212,12 @@ class instagraal_class:
 
             np.random.shuffle(list_frags)
             logger.info("cycle = {}".format(j))
-            # np.random.shuffle(list_frags)
             count = 0
             nb_frags = list_frags.size
             for id_frag in list_frags:
                 count += 1
                 if count % 100 == 0:
-                    print("{}% proceeded".format(count / nb_frags))
+                    logger.info("{}% proceeded".format(count / nb_frags))
                 (
                     o,
                     dist,
@@ -260,7 +267,7 @@ class instagraal_class:
                 "save_simu_step_" + str(j) + ".txt",
             )
             h = open(file_out, "w")
-            for pos, start_bp, id_c, ori in zip(c.pos, c.start_bp, c.id_c, c.ori):
+            for pos, start_bp, id_c, ori in zip(c.pos, c.start_bp, c.id_c, c.ori, strict=False):
                 h.write(str(pos) + "\t" + str(start_bp) + "\t" + str(id_c) + "\t" + str(ori) + "\n")
             h.close()
             try:
@@ -281,7 +288,7 @@ class instagraal_class:
 
         self.save_behaviour_to_txt()
 
-    def save_behaviour_to_txt(self):
+    def save_behaviour_to_txt(self) -> None:
         list_file = [
             self.txt_file_mean_len,
             self.txt_file_n_contigs,
@@ -322,9 +329,7 @@ class instagraal_class:
             f_mutations.write("%s\t%s\t%s\n" % (id_fA, id_fB, id_mut))
         f_mutations.close()
 
-    def start_MCMC(
-        self,
-    ):
+    def start_MCMC(self) -> None:
         logger.info("set jumping distribution...")
         delta = 5
         self.simulation.sampler.set_jumping_distributions_parameters(delta)
@@ -333,12 +338,6 @@ class instagraal_class:
         logger.info((self.simulation.n_iterations))
         delta = list(range(5, 5 + self.simulation.n_iterations * 2, 2))
         logger.info(delta)
-        # if self.scrambled:
-        #     self.simulation.sampler.modify_genome(500)
-        # o, d, d_high =
-        # self.simulation.sampler.display_current_matrix(
-        # self.simulation.input_matrix
-        # )
         n_iter = np.float32(self.simulation.n_iterations)
         list_frags = np.arange(0, self.n_frags, dtype=np.int32)
         for j in range(0, self.n_iterations_mcmc):
@@ -346,7 +345,6 @@ class instagraal_class:
             self.str_curr_cycle = "current cycle = " + str(j)
             np.random.shuffle(list_frags)
             for i in list_frags:
-                # print "id_frag =", i
                 (
                     o,
                     n_contigs,
@@ -409,9 +407,7 @@ class instagraal_class:
 
         self.save_behaviour_to_txt()
 
-    def start_MTM(
-        self,
-    ):
+    def start_MTM(self) -> None:
         logger.info("set jumping distribution...")
         delta = 5
         self.simulation.sampler.set_jumping_distributions_parameters(delta)
@@ -420,14 +416,7 @@ class instagraal_class:
         logger.info((self.simulation.n_iterations))
         delta = list(range(5, 5 + self.simulation.n_iterations * 2, 2))
         logger.info(delta)
-        # if self.scrambled:
-        #     self.simulation.sampler.modify_genome(500)
-        # o, d, d_high =
-        # self.simulation.sampler.display_current_matrix(
-        # self.simulation.input_matrix
-        # )
         if self.scrambled:
-            #     self.simulation.sampler.modify_genome(500)
             self.simulation.sampler.explode_genome(self.dt)
         n_iter = np.float32(self.simulation.n_iterations)
         list_frags = np.arange(0, self.n_frags, dtype=np.int32)
@@ -436,7 +425,6 @@ class instagraal_class:
             self.str_curr_cycle = "current cycle = " + str(j)
             np.random.shuffle(list_frags)
             for i in list_frags:
-                # print "id_frag =", i
                 (
                     o,
                     n_contigs,
@@ -499,7 +487,7 @@ class instagraal_class:
 
         self.save_behaviour_to_txt()
 
-    def setup_simu(self, id_f_ins):
+    def setup_simu(self, id_f_ins: Any) -> None:
         self.simulation.sampler.insert_repeats(id_f_ins)
         self.simulation.sampler.simulate_rippe_contacts()
         plt.imshow(
@@ -512,21 +500,21 @@ class instagraal_class:
 
 
 def run_instagraal(
-    hic_folder,
-    reference_fa,
-    output_folder=None,
-    level=DEFAULT_LEVEL,
-    cycles=DEFAULT_CYCLES,
-    coverage_std=DEFAULT_COVERAGE_STDS,
-    neighborhood=DEFAULT_NEIGHBOURS,
-    device=0,
-    circular=DEFAULT_CIRCULAR,
-    bomb=False,
-    pyramid_only=False,
-    save_pickle=False,
-    save_matrix=False,
-    simple=False,
-):
+    hic_folder: str | os.PathLike[str],
+    reference_fa: str | os.PathLike[str],
+    output_folder: str | os.PathLike[str] | None = None,
+    level: int = DEFAULT_LEVEL,
+    cycles: int = DEFAULT_CYCLES,
+    coverage_std: float = DEFAULT_COVERAGE_STDS,
+    neighborhood: int = DEFAULT_NEIGHBOURS,
+    device: int = 0,
+    circular: bool = DEFAULT_CIRCULAR,
+    bomb: bool = False,
+    pyramid_only: bool = False,
+    save_pickle: bool = False,
+    save_matrix: bool = False,
+    simple: bool = False,
+) -> None:
     """Run the instaGRAAL scaffolding pipeline.
 
     Parameters

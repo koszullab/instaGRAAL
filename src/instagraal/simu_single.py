@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
 
-# import pp
 import os
+from typing import Any
 from . import pyramid_sparse as pyr
 
-# import Image
 import numpy as np
 from .cuda_lib_gl_single import sampler as sampler_lib
-
-# from cuda_lib_gl import sampler as sampler_lib
 import matplotlib.pyplot as plt
 
 from . import log
@@ -16,10 +13,8 @@ from .log import logger
 
 logger.setLevel(log.CURRENT_LOG_LEVEL)
 
-# cuda.init()
 
-
-def kth_diag_indices(a, k):
+def kth_diag_indices(a: np.ndarray, k: int) -> tuple[np.ndarray, np.ndarray]:
     rows, cols = np.diag_indices_from(a)
     if k < 0:
         return rows[:k], cols[-k:]
@@ -32,16 +27,16 @@ def kth_diag_indices(a, k):
 class simulation:
     def __init__(
         self,
-        name,
-        folder_path,
-        fasta,
-        level,
-        n_iterations,
-        is_simu,
-        use_rippe,
-        thresh_factor=1,
-        output_folder=None,
-    ):
+        name: str,
+        folder_path: str,
+        fasta: str,
+        level: int,
+        n_iterations: int,
+        is_simu: bool,
+        use_rippe: bool,
+        thresh_factor: float = 1,
+        output_folder: str | None = None,
+    ) -> None:
         self.name = name
         self.use_rippe = use_rippe
         self.str_sub_level = str(level - 1)
@@ -179,7 +174,7 @@ class simulation:
 
         # self.sampler.setup_texture()
 
-    def blacklist_contig(self):
+    def blacklist_contig(self) -> None:
         # list_blacklist_manual = raw_input("ids (separated by space): ")
         list_blacklist_manual = ""
         if list_blacklist_manual != "":
@@ -208,7 +203,7 @@ class simulation:
             self.col_vect_frags_4_GL[id_f_black, 2] = np.float32(0)
             self.col_vect_frags_4_GL[id_f_black, 3] = np.float32(0)
 
-    def discard_low_coverage_frags(self):
+    def discard_low_coverage_frags(self) -> None:
         mat = np.copy(self.level.im_curr)
         mat_norm = np.array(self.norm_vect.T * self.norm_vect, dtype=np.float32)
         self.matrix_normalized = mat / mat_norm
@@ -223,7 +218,7 @@ class simulation:
             ids = self.collector_id_repeats[dis["x"] : dis["y"]]
             self.frag_blacklisted.extend(list(ids))
 
-    def modify_vect_frags(self):
+    def modify_vect_frags(self) -> None:
         "include repeated frags"
         modified_vect_frags = dict()
         init_vect_frags = self.level.S_o_A_frags
@@ -351,7 +346,7 @@ class simulation:
         self.pos_vect_frags_4_GL = pos_vect_frags_4_GL
         self.new_S_o_A_frags = modified_vect_frags
 
-    def modify_sub_vect_frags(self):
+    def modify_sub_vect_frags(self) -> None:
         "include repeated frags"
         modified_vect_frags = dict()
         init_vect_frags = self.sub_level.S_o_A_frags
@@ -459,49 +454,11 @@ class simulation:
         self.sub_frag_dispatcher = np.array(frag_dispatcher, dtype=self.int2)
 
         self.sub_n_frags = len(modified_vect_frags["id"])
-
-        # pos_vect_frags_4_GL = np.ndarray((self.n_frags, 4), dtype=np.float32)
-        # col_vect_frags_4_GL = np.ndarray((self.n_frags, 4), dtype=np.float32)
-        #
-        # for id_f_curr in xrange(0 , self.sub_n_frags):
-        #     id_d = modified_vect_frags['id_d'][id_f_curr]
-        #     id_c = init_vect_frags['id_c'][id_d]
-        #     pos_vect_frags_4_GL[id_f_curr, 0] =
-        #     modified_vect_frags['pos'][id_f_curr]
-        #     pos_vect_frags_4_GL[id_f_curr, 1] =
-        #     modified_vect_frags['id_c'][id_f_curr]
-        #     pos_vect_frags_4_GL[id_f_curr, 2] = 0.
-        #     pos_vect_frags_4_GL[id_f_curr, 3] = np.float32(1.0)
-        #
-        #     col_vect_frags_4_GL[id_f_curr, 0] =
-        #     np.float32(RGB_tuples[id_c - 1][0])
-        #     col_vect_frags_4_GL[id_f_curr, 1] =
-        #     np.float32(RGB_tuples[id_c - 1][1])
-        #     col_vect_frags_4_GL[id_f_curr, 2] =
-        #     np.float32(RGB_tuples[id_c - 1][2])
-        #     col_vect_frags_4_GL[id_f_curr, 3] =
-        #     np.float32(1.0)
-        #
-        # self.sub_col_vect_frags_4_GL = col_vect_frags_4_GL
-        # self.sub_pos_vect_frags_4_GL = pos_vect_frags_4_GL
         self.new_sub_S_o_A_frags = modified_vect_frags
 
-    def select_repeated_frags(self):  #
-
-        # collect_cov = []
-        # step = 0
-        # p = ProgressBar('green', width=20, block='▣', empty='□')
-        # for i in range(0, self.level.n_frags):
-        #     v_r = self.level.sparse_mat_csr[i, :]
-        #     v_c = self.level.sparse_mat_csc[:, i]
-        #     non_zeros = v_c.nnz + v_r.nnz
-        #     collect_cov.append(non_zeros)
-        #     step += 1
-        #     if step%1000 == 0:
-        #         pt = step * 100 / self.level.n_frags
-        #         p.render(pt, 'step %s\nProcessing...\nDescription: computing
-        #         coverage per frag.' % step)
-
+    def select_repeated_frags(
+        self,
+    ) -> tuple[list[Any], list[Any], list[Any], list[Any]]:
         coverage = np.array(self.level.sparse_mat_csr.sum(axis=0))[0]
         coverage += np.array(self.level.sparse_mat_csr.transpose().sum(axis=0))[0]
         mean_coverage = coverage.mean()
@@ -579,7 +536,7 @@ class simulation:
             sub_candidates_output_data,
         )
 
-    def select_data_set(self, name):
+    def select_data_set(self, name: str) -> None:
 
         size_pyramid = 9
         factor = 3
@@ -612,7 +569,7 @@ class simulation:
         self.input_matrix = os.path.join(self.output_folder, "pre_simu.tiff")
         self.scrambled_input_matrix = os.path.join(self.output_folder, "scrambled_simu.tiff")
 
-    def load_gl_buffers(self):
+    def load_gl_buffers(self) -> None:
         num = self.n_frags
         pos = np.ndarray((num, 4), dtype=np.float32)
         seed = np.random.rand(2, num)
@@ -654,9 +611,7 @@ class simulation:
         self.vel[:, 0] = 3.0
         self.vel[:, 3] = np.random.random_sample((self.n_frags,))
 
-    def init_gl_image(
-        self,
-    ):
+    def init_gl_image(self) -> None:
         import OpenGL.GL
 
         self.texid = 0
@@ -679,10 +634,6 @@ class simulation:
             OpenGL.GL.GL_PIXEL_UNPACK_BUFFER, OpenGL.GL.GL_BUFFER_SIZE
         )  # Check allocated buffer size
 
-        #        try:
-        #            assert(bsize == self.gl_size_im * self.gl_size_im)
-        #        except AssertionError as e:
-        #            print str(e)
         OpenGL.GL.glBindBuffer(OpenGL.GL.GL_PIXEL_UNPACK_BUFFER, 0)  # Unbind
 
         OpenGL.GL.glGenTextures(1, self.texid)  # generate 1 texture reference
@@ -720,7 +671,7 @@ class simulation:
         OpenGL.GL.glPixelStorei(OpenGL.GL.GL_UNPACK_ALIGNMENT, 1)  # 1-byte row alignment
         OpenGL.GL.glPixelStorei(OpenGL.GL.GL_PACK_ALIGNMENT, 1)  # 1-byte row alignment
 
-    def create_sub_frags(self):
+    def create_sub_frags(self) -> None:
         self.sub_frags_len_bp = []
         self.sub_frags_id = []
         self.sub_frags_accu = []
@@ -771,9 +722,7 @@ class simulation:
         self.norm_vect = np.asmatrix(self.norm_vect)
         self.init_n_sub_frags = n_sub_frags
 
-    def create_new_sub_frags(
-        self,
-    ):
+    def create_new_sub_frags(self) -> None:
         out = 0
         rep_sub_frags_id = []
         idx = 0
@@ -791,11 +740,11 @@ class simulation:
 
     def plot_info_simu(
         self,
-        collect_likelihood_input,
-        collect_n_contigs_input,
-        file_plot,
-        title_ax,
-    ):
+        collect_likelihood_input: list[Any],
+        collect_n_contigs_input: list[Any],
+        file_plot: str,
+        title_ax: str,
+    ) -> None:
         collect_likelihood = np.array(collect_likelihood_input)
         collect_n_contigs = np.array(collect_n_contigs_input)
         len_collect = len(collect_likelihood)
@@ -813,9 +762,6 @@ class simulation:
         for tl in ax1.get_yticklabels():
             tl.set_color("r")
         ax2 = ax1.twinx()
-        # if title_ax == "distance from init genome":
-        #     ax2.semilogy(collect_n_contigs, 'b-')
-        # else:
         ax2.plot(collect_n_contigs[idx_2_plot], "b-")
         ax2.set_ylabel(title_ax, color="b")
         for tl in ax2.get_yticklabels():
@@ -831,28 +777,9 @@ class simulation:
             plt.ylabel("counts")
             plt.show()
 
-    # def plot_all_info_simu(self, all_data, headers):
-    #     print "here we go!!"
-    #     folder = self.output_folder
-    #     ## generate files ##
-    #     n_vals =
-    #     # the main axes is subplot(111) by default
-    #     plt.plot(t, s)
-    #     plt.axis([0, 1, 1.1*amin(s), 2*amax(s) ])
-    #     plt.xlabel('time (s)')
-    #     plt.ylabel('current (nA)')
-    #     plt.title('Gaussian colored noise')
-    #
-    #     # this is an inset axes over the main axes
-    #     a = plt.axes([.65, .6, .2, .2], axisbg='w')
-    #     n, bins, patches = plt.hist(s, 400, normed=1)
-    #     plt.title('Counts')
-    #     plt.setp(a, xticks=[], yticks=[])
-    #     plt.show()
-
-    def export_new_fasta(self):
+    def export_new_fasta(self) -> None:
         self.sampler.gpu_vect_frags.copy_from_gpu()
         self.level.generate_new_fasta(self.sampler.gpu_vect_frags, self.new_fasta, self.info_frags)
 
-    def release(self):
+    def release(self) -> None:
         self.sampler.free_gpu()
