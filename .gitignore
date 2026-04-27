@@ -94,10 +94,12 @@ pre_out/
 pre_out0/
 
 # Generated example pipeline outputs (regenerate with `make`)
+example/yeast
 tests/yeast/
 tests/data/out/
 tests/data/yeast/main/
 tests/data/yeast/out/
 tests/data/yeast/polish/
+tests/data/yeast/post/
 out/
 uv.lock

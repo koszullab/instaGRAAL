@@ -277,7 +277,7 @@ class instagraal_class:
                     self.simulation.sampler.display_current_matrix(my_file_path)
                     plt.close("all")
             except OSError as e:
-                logger.warning("Could not write matrix at cycle {} " "due to error: {}".format(j, e))
+                logger.warning("Could not write matrix at cycle {} due to error: {}".format(j, e))
 
         self.save_behaviour_to_txt()
 

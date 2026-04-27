@@ -28,7 +28,6 @@ def internal2external_grad(xi, bounds):
     ge = np.empty_like(xi)
 
     for i, (v, bound) in enumerate(zip(xi, bounds)):
-
         a = bound[0]  # minimum
         b = bound[1]  # maximum
 
@@ -60,7 +59,6 @@ def internal2external(xi, bounds):
     xe = np.empty_like(xi)
 
     for i, (v, bound) in enumerate(zip(xi, bounds)):
-
         a = bound[0]  # minimum
         b = bound[1]  # maximum
 
@@ -85,7 +83,6 @@ def external2internal(xe, bounds):
     xi = np.empty_like(xe)
 
     for i, (v, bound) in enumerate(zip(xe, bounds)):
-
         a = bound[0]  # minimum
         b = bound[1]  # maximum
 

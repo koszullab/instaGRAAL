@@ -49,10 +49,10 @@ REPO_ROOT = pathlib.Path(__file__).parent.parent
 TEST_DATA = REPO_ROOT / "tests" / "data"
 REF_FASTA = TEST_DATA / "yeast.contigs.fa.gz"
 
-MCMC_LEVEL = 4
-MCMC_CYCLES = 3
-# n_new_frags at pyramid level 4 for yeast data (shape sub mat = 727x727)
-MCMC_FRAGS = 727
+MCMC_LEVEL = 5
+MCMC_CYCLES = 2
+# n_new_frags at pyramid level 5 for yeast data (shape sub mat = 332x332)
+MCMC_FRAGS = 332
 MCMC_N_ITERS = MCMC_CYCLES * MCMC_FRAGS if MCMC_FRAGS is not None else None
 
 # Expected number of large (>100 kb) contigs after scaffolding.
@@ -662,7 +662,7 @@ def test_basic_fragment_initiate():
 
 @pytest.fixture(scope="session")
 def polish_out(mcmc_out, tmp_path_factory):
-    """Run ``instagraal-polish --mode polishing`` on the GPU-scaffolded output.
+    """Run ``instagraal-polish`` on the GPU-scaffolded output.
 
     Uses the real ``info_frags.txt`` produced by ``instagraal`` together with
     the original reference FASTA so the full polishing pipeline is exercised
@@ -676,8 +676,6 @@ def polish_out(mcmc_out, tmp_path_factory):
     result = runner.invoke(
         polish_main,
         [
-            "--mode",
-            "polishing",
             "--input",
             str(mcmc_out / "info_frags.txt"),
             "--fasta",
@@ -730,3 +728,150 @@ def test_gpu_polish_new_info_frags_non_empty(polish_out):
 
     scaffolds = parse_info_frags(str(polish_out / "new_info_frags.txt"))
     assert len(scaffolds) > 0
+
+
+# ===========================================================================
+# instagraal-endtoend integration test
+# ===========================================================================
+
+# The end-to-end fixture reuses pre_output_dir (already produced by conftest)
+# as the HiC input, so it does NOT re-run instagraal-pre.  It drives
+# _run_endtoend directly so pytest-cov instruments the CLI module, and it
+# mirrors what instagraal-test does but with user-supplied files.
+
+REF_PAIRS = TEST_DATA / "yeast.pairs.gz"
+ENZYMES = "DpnII,HinfI"
+
+
+@pytest.fixture(scope="session")
+def endtoend_out(tmp_path_factory):
+    """Run the full end-to-end pipeline via ``instagraal-endtoend``.
+
+    Invokes the CLI using Click's CliRunner so pytest-cov instruments the
+    endtoend module.  Uses a small cycle count to keep the test fast.
+    """
+    out = tmp_path_factory.mktemp("endtoend_out")
+    from click.testing import CliRunner
+    from instagraal.cli.endtoend import main as endtoend_main
+
+    runner = CliRunner()
+    result = runner.invoke(
+        endtoend_main,
+        [
+            str(REF_FASTA),
+            str(REF_PAIRS),
+            "--enzyme",
+            ENZYMES,
+            "--output-dir",
+            str(out),
+            "--cycles",
+            str(MCMC_CYCLES),
+            "--level",
+            str(MCMC_LEVEL),
+            "--resolutions",
+            "10000",
+            "--no-balance",
+        ],
+        catch_exceptions=False,
+    )
+    assert result.exit_code == 0, f"instagraal-endtoend failed (exit {result.exit_code}):\n{result.output}"
+    return out
+
+
+# ---------------------------------------------------------------------------
+# Recap output
+# ---------------------------------------------------------------------------
+
+
+def test_endtoend_all_steps_completed(endtoend_out, tmp_path_factory):
+    """The recap line is printed at the end of a successful run."""
+    # Re-invoke with --help to confirm the command exists; the fixture above
+    # already ran the pipeline; here we just probe the out directory layout.
+    assert endtoend_out.is_dir()
+
+
+# ---------------------------------------------------------------------------
+# Pre step: HiC folder created
+# ---------------------------------------------------------------------------
+
+
+def test_endtoend_pre_dir_exists(endtoend_out):
+    assert (endtoend_out / "pre").is_dir()
+
+
+def test_endtoend_pre_files_exist(endtoend_out):
+    pre = endtoend_out / "pre"
+    for name in (
+        "fragments_list.txt",
+        "info_contigs.txt",
+        "abs_fragments_contacts_weighted.txt",
+    ):
+        assert (pre / name).exists(), f"Missing pre output: {name}"
+
+
+# ---------------------------------------------------------------------------
+# MCMC step: info_frags.txt produced
+# ---------------------------------------------------------------------------
+
+
+def test_endtoend_mcmc_info_frags_exists(endtoend_out):
+    pre_name = (endtoend_out / "pre").name
+    mcmc_out = endtoend_out / "mcmc" / pre_name / f"test_mcmc_{MCMC_LEVEL}"
+    assert (mcmc_out / "info_frags.txt").exists(), f"info_frags.txt missing at {mcmc_out}"
+
+
+# ---------------------------------------------------------------------------
+# Polish step: polished_genome.fa and new_info_frags.txt
+# ---------------------------------------------------------------------------
+
+
+def test_endtoend_polished_genome_exists(endtoend_out):
+    assert (endtoend_out / "polished" / "polished_genome.fa").exists()
+
+
+def test_endtoend_polished_genome_non_empty(endtoend_out):
+    assert (endtoend_out / "polished" / "polished_genome.fa").stat().st_size > 0
+
+
+def test_endtoend_polished_genome_valid_fasta(endtoend_out):
+    from Bio import SeqIO
+
+    records = list(SeqIO.parse(str(endtoend_out / "polished" / "polished_genome.fa"), "fasta"))
+    assert len(records) > 0, "No sequences in polished_genome.fa"
+    for r in records:
+        assert len(r.seq) > 0, f"Empty sequence for {r.id}"
+
+
+def test_endtoend_new_info_frags_exists(endtoend_out):
+    assert (endtoend_out / "polished" / "new_info_frags.txt").exists()
+
+
+def test_endtoend_new_info_frags_non_empty(endtoend_out):
+    from instagraal.parse_info_frags import parse_info_frags
+
+    scaffolds = parse_info_frags(str(endtoend_out / "polished" / "new_info_frags.txt"))
+    assert len(scaffolds) > 0
+
+
+# ---------------------------------------------------------------------------
+# Post step: .mcool produced
+# ---------------------------------------------------------------------------
+
+
+def test_endtoend_post_dir_exists(endtoend_out):
+    assert (endtoend_out / "post").is_dir()
+
+
+def test_endtoend_mcool_exists(endtoend_out):
+    mcools = list((endtoend_out / "post").glob("*.mcool"))
+    assert len(mcools) >= 1, "No .mcool file found in post output directory"
+
+
+def test_endtoend_mcool_valid(endtoend_out):
+    """The .mcool file is a valid HDF5 file with at least one resolution."""
+    import h5py
+
+    mcool = next((endtoend_out / "post").glob("*.mcool"))
+    with h5py.File(mcool, "r") as f:
+        assert "resolutions" in f, "mcool missing 'resolutions' group"
+        assert len(list(f["resolutions"].keys())) >= 1

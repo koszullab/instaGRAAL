@@ -12,9 +12,9 @@ from ..parse_info_frags import (
     DEFAULT_NEW_INFO_FRAGS_NAME,
     correct_spurious_inversions,
     find_lost_dna,
+    plot_contig_composition,
     integrate_lost_dna,
     parse_info_frags,
-    plot_info_frags,
     rearrange_intra_scaffolds,
     reorient_consecutive_blocks,
     remove_spurious_insertions,
@@ -30,9 +30,9 @@ VALID_MODES = (
     "rearrange",
     "reincorporation",
     "polishing",
-    "plot",
 )
 
+DEFAULT_MIN_SCAFFOLD_LENGTH = 0  # in bp
 POLISHED_GENOME_NAME = "polished_genome.fa"
 
 
@@ -40,18 +40,16 @@ POLISHED_GENOME_NAME = "polished_genome.fa"
 @click.option(
     "-m",
     "--mode",
-    required=True,
+    default=None,
     type=click.Choice(VALID_MODES, case_sensitive=False),
     help=(
-        "\b\nProcessing mode:\n"
+        "\b\nProcessing mode (default: run full polishing pipeline):\n"
+        "  rearrange       Rearrange intra-scaffold blocks.\n"
+        "  inversion2      Correct spurious inversions (blocks criterion).\n"
+        "  reincorporation Reincorporate lost DNA from reference.\n"
         "  fasta           Write a new genome FASTA from info_frags + reference.\n"
         "  singleton       Remove spurious singleton insertions.\n"
         "  inversion       Correct spurious inversions (colinear criterion).\n"
-        "  inversion2      Correct spurious inversions (blocks criterion).\n"
-        "  rearrange       Rearrange intra-scaffold blocks.\n"
-        "  reincorporation Reincorporate lost DNA from reference.\n"
-        "  polishing       Full pipeline: rearrange + inversion2 + reincorporation + fasta.\n"
-        "  plot            Plot a visual summary of the scaffolds."
     ),
 )
 @click.option(
@@ -68,7 +66,10 @@ POLISHED_GENOME_NAME = "polished_genome.fa"
     "init_fasta",
     default=None,
     type=click.Path(exists=True, dir_okay=False, path_type=pathlib.Path),
-    help="Reference FASTA file (required for fasta, reincorporation, and polishing modes).",
+    help=(
+        "The initial reference FASTA file, before running instaGRAAL. "
+        "(required for 'fasta', 'reincorporation', and 'polishing' modes)"
+    ),
 )
 @click.option(
     "-o",
@@ -94,26 +95,48 @@ POLISHED_GENOME_NAME = "polished_genome.fa"
     help="Minimum scaffold size in bins.",
 )
 @click.option(
+    "-l",
+    "--min-scaffold-length",
+    default=DEFAULT_MIN_SCAFFOLD_LENGTH,
+    show_default=True,
+    type=int,
+    help="Minimum scaffold length in bp.",
+)
+@click.option(
     "-j",
     "--junction",
     default="",
     help="Junction sequence inserted between stitched bins.",
 )
 def main(
-    mode: str,
+    mode: str | None,
     info_frags: pathlib.Path,
     init_fasta: pathlib.Path | None,
     output_dir: pathlib.Path,
     criterion: str | None,
     min_scaffold_size: int,
+    min_scaffold_length: int,
     junction: str,
 ) -> None:
-    """Polish and post-process instaGRAAL assemblies."""
+    """Polish and post-process instaGRAAL assemblies.
+
+    By default (no --mode given), runs the full polishing pipeline:
+    rearrange → inversion2 → reincorporation → fasta.
+    A reference FASTA (--fasta) is required for this default pipeline.
+    """
+    mode = mode or "polishing"
     output_dir = pathlib.Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     scaffolds = {
         name: scaffold for name, scaffold in parse_info_frags(str(info_frags)).items() if len(scaffold) > min_scaffold_size
     }
+    print(len(scaffolds), "scaffolds retained after filtering by minimum number of bins [", min_scaffold_size, "].")
+    scaffolds = {
+        name: scaffold
+        for name, scaffold in scaffolds.items()
+        if sum(end - start for _, _, start, end, _ in scaffold) >= min_scaffold_length
+    }
+    print(len(scaffolds), "scaffolds retained after filtering by minimum length [", min_scaffold_length, "].")
 
     if mode == "fasta":
         if init_fasta is None:
@@ -129,28 +152,38 @@ def main(
 
     elif "singleton" in mode:
         new_scaffolds = remove_spurious_insertions(scaffolds)
-        write_info_frags(new_scaffolds, output=str(output_dir / DEFAULT_NEW_INFO_FRAGS_NAME))
+        info_frags_file = str(output_dir / DEFAULT_NEW_INFO_FRAGS_NAME)
+        write_info_frags(new_scaffolds, output=info_frags_file)
+        plot_contig_composition(info_frags_file, output_path=output_dir / "contig_composition.png")
 
     elif mode == "inversion":
         effective_criterion = criterion or DEFAULT_CRITERION
         new_scaffolds = correct_spurious_inversions(scaffolds=scaffolds, criterion=effective_criterion)
-        write_info_frags(new_scaffolds, output=str(output_dir / DEFAULT_NEW_INFO_FRAGS_NAME))
+        info_frags_file = str(output_dir / DEFAULT_NEW_INFO_FRAGS_NAME)
+        write_info_frags(new_scaffolds, output=info_frags_file)
+        plot_contig_composition(info_frags_file, output_path=output_dir / "contig_composition.png")
 
     elif mode == "inversion2":
         effective_criterion = criterion or DEFAULT_CRITERION_2
         new_scaffolds = reorient_consecutive_blocks(scaffolds=scaffolds, mode=effective_criterion)
-        write_info_frags(new_scaffolds, output=str(output_dir / DEFAULT_NEW_INFO_FRAGS_NAME))
+        info_frags_file = str(output_dir / DEFAULT_NEW_INFO_FRAGS_NAME)
+        write_info_frags(new_scaffolds, output=info_frags_file)
+        plot_contig_composition(info_frags_file, output_path=output_dir / "contig_composition.png")
 
     elif "rearrange" in mode:
         new_scaffolds = rearrange_intra_scaffolds(scaffolds=scaffolds)
-        write_info_frags(new_scaffolds, output=str(output_dir / DEFAULT_NEW_INFO_FRAGS_NAME))
+        info_frags_file = str(output_dir / DEFAULT_NEW_INFO_FRAGS_NAME)
+        write_info_frags(new_scaffolds, output=info_frags_file)
+        plot_contig_composition(info_frags_file, output_path=output_dir / "contig_composition.png")
 
     elif "reincorporation" in mode:
         if init_fasta is None:
             raise click.UsageError("A reference FASTA file must be provided (--fasta) for 'reincorporation' mode.")
         removed = find_lost_dna(init_fasta=str(init_fasta), scaffolds=scaffolds)
         new_scaffolds = integrate_lost_dna(scaffolds=scaffolds, lost_dna_positions=removed)
-        write_info_frags(new_scaffolds, output=str(output_dir / DEFAULT_NEW_INFO_FRAGS_NAME))
+        info_frags_file = str(output_dir / DEFAULT_NEW_INFO_FRAGS_NAME)
+        write_info_frags(new_scaffolds, output=info_frags_file)
+        plot_contig_composition(info_frags_file, output_path=output_dir / "contig_composition.png")
 
     elif "polishing" in mode:
         if init_fasta is None:
@@ -168,7 +201,5 @@ def main(
             output=genome_file,
             junction=junction,
         )
+        plot_contig_composition(info_frags_file, output_path=output_dir / "contig_composition.png")
         print_assembly_stats(genome_file, label="Assembly (polishing mode)")
-
-    elif mode == "plot":
-        plot_info_frags(scaffolds)

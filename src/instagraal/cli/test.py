@@ -18,8 +18,8 @@ from ..version import __version__ as VERSION_NUMBER
 # Update ZENODO_RECORD_ID once the dataset is published.
 # ---------------------------------------------------------------------------
 
-ZENODO_DOI = "10.5281/zenodo.19711358"
-ZENODO_RECORD_ID = "19711358"  # numeric record ID extracted from the DOI
+ZENODO_DOI = "10.5281/zenodo.19813387"
+ZENODO_RECORD_ID = "19813387"  # numeric record ID extracted from the DOI
 ZENODO_BASE_URL = f"https://zenodo.org/record/{ZENODO_RECORD_ID}/files"
 
 TEST_FASTA = "yeast.contigs.fa.gz"
@@ -86,10 +86,10 @@ def _check_gpu(device: int) -> None:
     if n_devices == 0:
         raise click.ClickException("No CUDA devices found.  instagraal requires at least one GPU.")
     if device >= n_devices:
-        raise click.ClickException(f"Requested device {device} but only {n_devices} device(s) available " f"(0-{n_devices - 1}).")
+        raise click.ClickException(f"Requested device {device} but only {n_devices} device(s) available (0-{n_devices - 1}).")
 
     dev = cuda.Device(device)
-    click.echo(f"  GPU {device}: {dev.name()} " f"({dev.total_memory() // 1024 ** 2} MB)")
+    click.echo(f"  GPU {device}: {dev.name()} ({dev.total_memory() // 1024**2} MB)")
 
     # Check for nvcc availability
     _check_nvcc()
@@ -204,18 +204,18 @@ def _run_test(
         return bin_dir / name
 
     # -- 1. GPU check --------------------------------------------------------
-    click.echo("\n[1/6] Checking GPU …")
+    click.echo("\n[1/7] Checking GPU …")
     _check_gpu(device)
 
     # -- 2. Download test data -----------------------------------------------
     if fasta_path_override or pairs_path_override:
-        click.echo("\n[2/6] Locating test data …")
+        click.echo("\n[2/7] Locating test data …")
     else:
-        click.echo(f"\n[2/6] Fetching test data from Zenodo (DOI: {ZENODO_DOI}) …")
+        click.echo(f"\n[2/7] Fetching test data from Zenodo (DOI: {ZENODO_DOI}) …")
     fasta_path, pairs_path = _fetch_test_data(workdir, fasta_path_override, pairs_path_override)
 
     # -- 3. instagraal-pre ---------------------------------------------------
-    click.echo("\n[3/6] Running instagraal-pre …")
+    click.echo("\n[3/7] Running instagraal-pre …")
     pre_dir = workdir / "pre"
     pre_dir.mkdir(exist_ok=True)
     _run_cmd(
@@ -232,7 +232,7 @@ def _run_test(
     )
 
     # -- 4. instagraal (MCMC scaffolding) ------------------------------------
-    click.echo("\n[4/6] Running instagraal …")
+    click.echo("\n[4/7] Running instagraal …")
     mcmc_base_dir = workdir / "mcmc"
     mcmc_base_dir.mkdir(exist_ok=True)
     _run_cmd(
@@ -261,14 +261,12 @@ def _run_test(
         raise click.ClickException(f"instagraal did not produce info_frags.txt at expected path:\n  {info_frags}")
 
     # -- 5. instagraal-polish ------------------------------------------------
-    click.echo("\n[5/6] Running instagraal-polish …")
+    click.echo("\n[5/7] Running instagraal-polish …")
     polish_dir = workdir / "polished"
     polish_dir.mkdir(exist_ok=True)
     _run_cmd(
         [
             cmd("instagraal-polish"),
-            "--mode",
-            "polishing",
             "--input",
             info_frags,
             "--fasta",
@@ -279,9 +277,28 @@ def _run_test(
         _record=ran_cmds,
     )
     polished_fa = polish_dir / "polished_genome.fa"
+    new_info_frags = polish_dir / "new_info_frags.txt"
 
-    # -- 6. instagraal-stats -------------------------------------------------
-    click.echo("\n[6/6] Running instagraal-stats …")
+    # -- 6. instagraal-post --------------------------------------------------
+    click.echo("\n[6/7] Running instagraal-post …")
+    post_dir = workdir / "post"
+    post_dir.mkdir(exist_ok=True)
+    _run_cmd(
+        [
+            cmd("instagraal-post"),
+            pairs_path,
+            new_info_frags,
+            "--resolutions",
+            "1000",
+            "--output-dir",
+            post_dir,
+            "--no-balance",
+        ],
+        _record=ran_cmds,
+    )
+
+    # -- 7. instagraal-stats -------------------------------------------------
+    click.echo("\n[7/7] Running instagraal-stats …")
     _run_cmd(
         [
             cmd("instagraal-stats"),
@@ -324,21 +341,13 @@ def _run_test(
     "--fasta",
     default=None,
     type=click.Path(exists=True, file_okay=True, dir_okay=False, path_type=pathlib.Path),
-    help=(
-        "Path to manually downloaded FASTA file. "
-        "If provided, skips downloading from Zenodo. "
-        "Useful for offline environments."
-    ),
+    help=("Path to manually downloaded FASTA file. If provided, skips downloading from Zenodo. Useful for offline environments."),
 )
 @click.option(
     "--pairs",
     default=None,
     type=click.Path(exists=True, file_okay=True, dir_okay=False, path_type=pathlib.Path),
-    help=(
-        "Path to manually downloaded pairs file. "
-        "If provided, skips downloading from Zenodo. "
-        "Useful for offline environments."
-    ),
+    help=("Path to manually downloaded pairs file. If provided, skips downloading from Zenodo. Useful for offline environments."),
 )
 @click.option(
     "--device",
@@ -379,12 +388,13 @@ def main(
     -----
       1. Check that a CUDA-capable GPU is accessible.
       2. Download the test dataset (yeast in silico assembly + Hi-C pairs)
-         from Zenodo (DOI: 10.5281/zenodo.19711358), or use locally provided
+         from Zenodo (DOI: 10.5281/zenodo.19813387), or use locally provided
          files if --fasta and --pairs are specified.
       3. instagraal-pre   - digest FASTA and bin Hi-C pairs into fragments.
       4. instagraal       - MCMC-based scaffolding.
       5. instagraal-polish - full polishing pipeline.
-      6. instagraal-stats  - compare input vs. polished assembly statistics.
+      6. instagraal-post   - remap pairs to new assembly, write mcool.
+      7. instagraal-stats  - compare input vs. polished assembly statistics.
 
     The test uses S. cerevisiae as the model organism (enzyme: DpnII).
     """

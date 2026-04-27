@@ -24,6 +24,7 @@ import pathlib
 import Bio.Restriction as biorst
 import Bio.Seq as bioseq
 import cooler
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from Bio import SeqIO
@@ -291,6 +292,52 @@ def _write_abs_contacts(pixels: pd.DataFrame, n_frags: int, output_path: pathlib
 
 
 # ---------------------------------------------------------------------------
+# HiC map visualisation
+# ---------------------------------------------------------------------------
+
+
+def _plot_hic_map(
+    cool_path: pathlib.Path,
+    output_path: pathlib.Path,
+    title: str = "",
+    max_display_bins: int = 1000,
+) -> None:
+    """Plot a genome-wide Hi-C contact map from a ``.cool`` file.
+
+    Pixels are aggregated into a display matrix of at most *max_display_bins*
+    x *max_display_bins* to keep memory usage bounded for fragment-level
+    coolers.  The colour scale uses a log1p transform clipped at the 98th
+    percentile of non-zero values.
+    """
+    clr = cooler.Cooler(str(cool_path))
+    n_bins = clr.info["nbins"]
+
+    agg = max(1, (n_bins + max_display_bins - 1) // max_display_bins)
+    display_n = (n_bins + agg - 1) // agg
+
+    mat = np.zeros((display_n, display_n), dtype=np.float32)
+    pixels = clr.pixels()[:]
+    b1 = (pixels["bin1_id"].to_numpy() // agg).astype(np.int32)
+    b2 = (pixels["bin2_id"].to_numpy() // agg).astype(np.int32)
+    c = pixels["count"].to_numpy().astype(np.float32)
+    np.add.at(mat, (b1, b2), c)
+    off_diag = b1 != b2
+    np.add.at(mat, (b2[off_diag], b1[off_diag]), c[off_diag])
+
+    mat = np.log1p(mat)
+    nonzero = mat[mat > 0]
+    vmax = float(np.percentile(nonzero, 98)) if nonzero.size else 1.0
+
+    fig, ax = plt.subplots(figsize=(8, 8))
+    ax.matshow(mat, cmap="YlOrRd", vmin=0, vmax=vmax, aspect="auto", origin="upper")
+    ax.set_title(title or cool_path.stem, pad=10)
+    ax.axis("off")
+    fig.tight_layout()
+    fig.savefig(str(output_path), dpi=150, bbox_inches="tight")
+    plt.close(fig)
+
+
+# ---------------------------------------------------------------------------
 # Main pipeline
 # ---------------------------------------------------------------------------
 
@@ -359,6 +406,10 @@ def run_pre(
         ordered=True,
         symmetric_upper=True,
     )
+
+    plot_path = output_dir / f"{cool_name}_hic_map.png"
+    print(f"      → {plot_path.name}")
+    _plot_hic_map(cool_path, plot_path, title=f"{cool_name} — pre-assembly Hi-C map")
 
     frags_path = output_dir / "fragments_list.txt"
     print(f"      → {frags_path.name}")

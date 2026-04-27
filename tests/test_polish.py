@@ -501,7 +501,7 @@ def test_cli_polishing_mode(cli_runner, example_info_frags, example_ref_fasta, t
     out_dir = tmp_path / "out"
     result = cli_runner.invoke(
         polish_main,
-        ["-m", "polishing", "-i", example_info_frags, "-f", example_ref_fasta, "-o", str(out_dir)],
+        ["-i", example_info_frags, "-f", example_ref_fasta, "-o", str(out_dir)],
         catch_exceptions=False,
     )
     assert result.exit_code == 0, f"CLI failed:\n{result.output}"

@@ -1,0 +1,1505 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>instagraal package &mdash; instagraal 0.1.4 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=fd825880"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="instagraal" href="modules.html" />
+</head>
+
+<body class="wy-body-for-nav">
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+
+
+          <a href="../index.html" class="icon icon-home">
+            instagraal
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">instagraal</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">instagraal package</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-instagraal.cuda_lib_gl_single">instagraal.cuda_lib_gl_single module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.cuda_lib_gl_single.sampler"><code class="docutils literal notranslate"><span class="pre">sampler</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#module-instagraal.fragment">instagraal.fragment module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.fragment.basic_fragment"><code class="docutils literal notranslate"><span class="pre">basic_fragment</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#instagraal-glutil-module">instagraal.glutil module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-instagraal.gpustruct">instagraal.gpustruct module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.gpustruct.GPUStruct"><code class="docutils literal notranslate"><span class="pre">GPUStruct</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#module-instagraal.init_nuisance">instagraal.init_nuisance module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.init_nuisance.estimate_max_dist_intra"><code class="docutils literal notranslate"><span class="pre">estimate_max_dist_intra()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.init_nuisance.estimate_param_hic"><code class="docutils literal notranslate"><span class="pre">estimate_param_hic()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.init_nuisance.log_residuals"><code class="docutils literal notranslate"><span class="pre">log_residuals()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.init_nuisance.log_residuals_4_min"><code class="docutils literal notranslate"><span class="pre">log_residuals_4_min()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.init_nuisance.peval"><code class="docutils literal notranslate"><span class="pre">peval()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.init_nuisance.residual_4_max_dist"><code class="docutils literal notranslate"><span class="pre">residual_4_max_dist()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.init_nuisance.residuals"><code class="docutils literal notranslate"><span class="pre">residuals()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#module-instagraal.instagraal">instagraal.instagraal module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.instagraal.instagraal_class"><code class="docutils literal notranslate"><span class="pre">instagraal_class</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.instagraal.run_instagraal"><code class="docutils literal notranslate"><span class="pre">run_instagraal()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#module-instagraal.leastsqbound">instagraal.leastsqbound module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.leastsqbound.calc_cov_x"><code class="docutils literal notranslate"><span class="pre">calc_cov_x()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.leastsqbound.err"><code class="docutils literal notranslate"><span class="pre">err()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.leastsqbound.external2internal"><code class="docutils literal notranslate"><span class="pre">external2internal()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.leastsqbound.i2e_cov_x"><code class="docutils literal notranslate"><span class="pre">i2e_cov_x()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.leastsqbound.internal2external"><code class="docutils literal notranslate"><span class="pre">internal2external()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.leastsqbound.internal2external_grad"><code class="docutils literal notranslate"><span class="pre">internal2external_grad()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.leastsqbound.leastsqbound"><code class="docutils literal notranslate"><span class="pre">leastsqbound()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#instagraal-linkage-module">instagraal.linkage module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-instagraal.log">instagraal.log module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-instagraal.optim_rippe_curve_update">instagraal.optim_rippe_curve_update module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.optim_rippe_curve_update.estimate_max_dist_intra"><code class="docutils literal notranslate"><span class="pre">estimate_max_dist_intra()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.optim_rippe_curve_update.estimate_max_dist_intra_nuis"><code class="docutils literal notranslate"><span class="pre">estimate_max_dist_intra_nuis()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.optim_rippe_curve_update.estimate_param_rippe"><code class="docutils literal notranslate"><span class="pre">estimate_param_rippe()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.optim_rippe_curve_update.log_peval"><code class="docutils literal notranslate"><span class="pre">log_peval()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.optim_rippe_curve_update.log_residuals"><code class="docutils literal notranslate"><span class="pre">log_residuals()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.optim_rippe_curve_update.peval"><code class="docutils literal notranslate"><span class="pre">peval()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.optim_rippe_curve_update.residual_4_max_dist"><code class="docutils literal notranslate"><span class="pre">residual_4_max_dist()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.optim_rippe_curve_update.residuals"><code class="docutils literal notranslate"><span class="pre">residuals()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#module-instagraal.parse_info_frags">instagraal.parse_info_frags module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.parse_info_frags.correct_scaffolds"><code class="docutils literal notranslate"><span class="pre">correct_scaffolds()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.parse_info_frags.correct_spurious_inversions"><code class="docutils literal notranslate"><span class="pre">correct_spurious_inversions()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.parse_info_frags.find_lost_dna"><code class="docutils literal notranslate"><span class="pre">find_lost_dna()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.parse_info_frags.format_info_frags"><code class="docutils literal notranslate"><span class="pre">format_info_frags()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.parse_info_frags.integrate_lost_dna"><code class="docutils literal notranslate"><span class="pre">integrate_lost_dna()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.parse_info_frags.is_block"><code class="docutils literal notranslate"><span class="pre">is_block()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.parse_info_frags.parse_bed"><code class="docutils literal notranslate"><span class="pre">parse_bed()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.parse_info_frags.parse_info_frags"><code class="docutils literal notranslate"><span class="pre">parse_info_frags()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.parse_info_frags.plot_contig_composition"><code class="docutils literal notranslate"><span class="pre">plot_contig_composition()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.parse_info_frags.plot_info_frags"><code class="docutils literal notranslate"><span class="pre">plot_info_frags()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.parse_info_frags.rearrange_intra_scaffolds"><code class="docutils literal notranslate"><span class="pre">rearrange_intra_scaffolds()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.parse_info_frags.remove_spurious_insertions"><code class="docutils literal notranslate"><span class="pre">remove_spurious_insertions()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.parse_info_frags.reorient_consecutive_blocks"><code class="docutils literal notranslate"><span class="pre">reorient_consecutive_blocks()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.parse_info_frags.write_fasta"><code class="docutils literal notranslate"><span class="pre">write_fasta()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.parse_info_frags.write_info_frags"><code class="docutils literal notranslate"><span class="pre">write_info_frags()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#module-instagraal.pyramid_sparse">instagraal.pyramid_sparse module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.pyramid_sparse.abs_contact_2_coo_file"><code class="docutils literal notranslate"><span class="pre">abs_contact_2_coo_file()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.pyramid_sparse.build"><code class="docutils literal notranslate"><span class="pre">build()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.pyramid_sparse.build_and_filter"><code class="docutils literal notranslate"><span class="pre">build_and_filter()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.pyramid_sparse.file_len"><code class="docutils literal notranslate"><span class="pre">file_len()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.pyramid_sparse.fill_sparse_pyramid_level"><code class="docutils literal notranslate"><span class="pre">fill_sparse_pyramid_level()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.pyramid_sparse.get_contig_info_from_file"><code class="docutils literal notranslate"><span class="pre">get_contig_info_from_file()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.pyramid_sparse.get_frag_info_from_fil"><code class="docutils literal notranslate"><span class="pre">get_frag_info_from_fil()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.pyramid_sparse.init_frag_list"><code class="docutils literal notranslate"><span class="pre">init_frag_list()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.pyramid_sparse.level"><code class="docutils literal notranslate"><span class="pre">level</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.pyramid_sparse.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.pyramid_sparse.new_remove_problematic_fragments"><code class="docutils literal notranslate"><span class="pre">new_remove_problematic_fragments()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.pyramid_sparse.pyramid"><code class="docutils literal notranslate"><span class="pre">pyramid</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.pyramid_sparse.remove_problematic_fragments"><code class="docutils literal notranslate"><span class="pre">remove_problematic_fragments()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.pyramid_sparse.subsample_data_set"><code class="docutils literal notranslate"><span class="pre">subsample_data_set()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#module-instagraal.simu_single">instagraal.simu_single module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.simu_single.kth_diag_indices"><code class="docutils literal notranslate"><span class="pre">kth_diag_indices()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.simu_single.simulation"><code class="docutils literal notranslate"><span class="pre">simulation</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#module-instagraal.vector">instagraal.vector module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#instagraal.vector.Vec"><code class="docutils literal notranslate"><span class="pre">Vec</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#module-instagraal.version">instagraal.version module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-instagraal">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">instagraal</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="modules.html">instagraal</a></li>
+      <li class="breadcrumb-item active">instagraal package</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/api/instagraal.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+
+  <section id="instagraal-package">
+<h1>instagraal package<a class="headerlink" href="#instagraal-package" title="Link to this heading"></a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading"></a></h2>
+</section>
+<section id="module-instagraal.cuda_lib_gl_single">
+<span id="instagraal-cuda-lib-gl-single-module"></span><h2>instagraal.cuda_lib_gl_single module<a class="headerlink" href="#module-instagraal.cuda_lib_gl_single" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">instagraal.cuda_lib_gl_single.</span></span><span class="sig-name descname"><span class="pre">sampler</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">use_rippe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">S_o_A_frags</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collector_id_repeats</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frag_dispatcher</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id_frag_duplicated</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id_frags_blacklisted</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_frags</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_new_frags</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">init_n_sub_frags</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_new_sub_frags</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">np_rep_sub_frags_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sub_sampled_sparse_matrix</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">np_sub_frags_len_bp</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">np_sub_frags_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">np_sub_frags_accu</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">np_sub_frags_2_frags</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mean_squared_frags_per_bin</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">norm_vect_accu</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sub_candidates_dup</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sub_candidates_output_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">S_o_A_sub_frags</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sub_collector_id_repeats</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sub_frag_dispatcher</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sparse_matrix</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mean_value_trans</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_iterations</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_simu</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vel</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pos</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.apply_replay_simu">
+<span class="sig-name descname"><span class="pre">apply_replay_simu</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id_fA</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id_fB</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">op_sampled</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dt</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.apply_replay_simu"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.apply_replay_simu" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.approx_all_likelihood_on_zeros">
+<span class="sig-name descname"><span class="pre">approx_all_likelihood_on_zeros</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.approx_all_likelihood_on_zeros"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.approx_all_likelihood_on_zeros" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.approx_single_likelihood_on_zeros">
+<span class="sig-name descname"><span class="pre">approx_single_likelihood_on_zeros</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.approx_single_likelihood_on_zeros"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.approx_single_likelihood_on_zeros" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.approx_single_likelihood_on_zeros_mut">
+<span class="sig-name descname"><span class="pre">approx_single_likelihood_on_zeros_mut</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.approx_single_likelihood_on_zeros_mut"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.approx_single_likelihood_on_zeros_mut" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.approx_single_likelihood_on_zeros_nuisance">
+<span class="sig-name descname"><span class="pre">approx_single_likelihood_on_zeros_nuisance</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.approx_single_likelihood_on_zeros_nuisance"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.approx_single_likelihood_on_zeros_nuisance" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.bomb_the_genome">
+<span class="sig-name descname"><span class="pre">bomb_the_genome</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.bomb_the_genome"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.bomb_the_genome" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.create_gpu_struct">
+<span class="sig-name descname"><span class="pre">create_gpu_struct</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.create_gpu_struct"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.create_gpu_struct" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.display_current_matrix">
+<span class="sig-name descname"><span class="pre">display_current_matrix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.display_current_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.display_current_matrix" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.dist_inter_genome">
+<span class="sig-name descname"><span class="pre">dist_inter_genome</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tmp_gpu_vect_frags</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.dist_inter_genome"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.dist_inter_genome" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.estimate_parameters">
+<span class="sig-name descname"><span class="pre">estimate_parameters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">max_dist_kb</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size_bin_kb</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">display_graph</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.estimate_parameters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.estimate_parameters" title="Link to this definition"></a></dt>
+<dd><p>estimation by least square optimization of Rippe parameters on the
+experimental data
+:param max_dist_kb:
+:param size_bin_kb:</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.estimate_parameters_rippe">
+<span class="sig-name descname"><span class="pre">estimate_parameters_rippe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">max_dist_kb</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size_bin_kb</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">display_graph</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.estimate_parameters_rippe"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.estimate_parameters_rippe" title="Link to this definition"></a></dt>
+<dd><p>estimation by least square optimization of Rippe parameters on the
+experimental data
+:param max_dist_kb:
+:param size_bin_kb:</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.eval_all_sub_likelihood">
+<span class="sig-name descname"><span class="pre">eval_all_sub_likelihood</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.eval_all_sub_likelihood"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.eval_all_sub_likelihood" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.eval_likelihood">
+<span class="sig-name descname"><span class="pre">eval_likelihood</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.eval_likelihood"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.eval_likelihood" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.eval_likelihood_4_nuisance">
+<span class="sig-name descname"><span class="pre">eval_likelihood_4_nuisance</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.eval_likelihood_4_nuisance"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.eval_likelihood_4_nuisance" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.eval_likelihood_init">
+<span class="sig-name descname"><span class="pre">eval_likelihood_init</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.eval_likelihood_init"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.eval_likelihood_init" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.eval_likelihood_on_mut">
+<span class="sig-name descname"><span class="pre">eval_likelihood_on_mut</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id_mut</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.eval_likelihood_on_mut"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.eval_likelihood_on_mut" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.explode_genome">
+<span class="sig-name descname"><span class="pre">explode_genome</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dt</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.explode_genome"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.explode_genome" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.extract_current_sub_likelihood">
+<span class="sig-name descname"><span class="pre">extract_current_sub_likelihood</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.extract_current_sub_likelihood"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.extract_current_sub_likelihood" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.extract_uniq_mutations">
+<span class="sig-name descname"><span class="pre">extract_uniq_mutations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id_fi</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id_fj</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">flip_eject</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.extract_uniq_mutations"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.extract_uniq_mutations" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.f_hic">
+<span class="sig-name descname"><span class="pre">f_hic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.f_hic"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.f_hic" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.f_rippe">
+<span class="sig-name descname"><span class="pre">f_rippe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.f_rippe"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.f_rippe" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.fill_dist_all_mut">
+<span class="sig-name descname"><span class="pre">fill_dist_all_mut</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.fill_dist_all_mut"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.fill_dist_all_mut" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.fill_dist_single">
+<span class="sig-name descname"><span class="pre">fill_dist_single</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.fill_dist_single"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.fill_dist_single" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.fill_dist_single_mut">
+<span class="sig-name descname"><span class="pre">fill_dist_single_mut</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id_mut</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.fill_dist_single_mut"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.fill_dist_single_mut" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.free_gpu">
+<span class="sig-name descname"><span class="pre">free_gpu</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.free_gpu"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.free_gpu" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.genome_content">
+<span class="sig-name descname"><span class="pre">genome_content</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.genome_content"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.genome_content" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.insert_blocks">
+<span class="sig-name descname"><span class="pre">insert_blocks</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id_fA</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id_fB</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.insert_blocks"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.insert_blocks" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.insert_repeats">
+<span class="sig-name descname"><span class="pre">insert_repeats</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id_f_ins</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.insert_repeats"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.insert_repeats" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.loadProgram">
+<span class="sig-name descname"><span class="pre">loadProgram</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.loadProgram"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.loadProgram" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.load_gl_cuda_tex_buffer">
+<span class="sig-name descname"><span class="pre">load_gl_cuda_tex_buffer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">im_init</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.load_gl_cuda_tex_buffer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.load_gl_cuda_tex_buffer" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.load_gl_cuda_vbo">
+<span class="sig-name descname"><span class="pre">load_gl_cuda_vbo</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.load_gl_cuda_vbo"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.load_gl_cuda_vbo" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.local_flip">
+<span class="sig-name descname"><span class="pre">local_flip</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id_fA</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.local_flip"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.local_flip" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.modify_genome">
+<span class="sig-name descname"><span class="pre">modify_genome</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.modify_genome"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.modify_genome" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.modify_gl_cuda_buffer">
+<span class="sig-name descname"><span class="pre">modify_gl_cuda_buffer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id_fi</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dt</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.modify_gl_cuda_buffer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.modify_gl_cuda_buffer" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.modify_image_thresh">
+<span class="sig-name descname"><span class="pre">modify_image_thresh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">val</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.modify_image_thresh"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.modify_image_thresh" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.modify_param_simu">
+<span class="sig-name descname"><span class="pre">modify_param_simu</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">param_simu</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id_val</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">val</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.modify_param_simu"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.modify_param_simu" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.perform_mutations">
+<span class="sig-name descname"><span class="pre">perform_mutations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id_fA</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id_fB</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_first</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.perform_mutations"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.perform_mutations" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.pop_out_pop_in">
+<span class="sig-name descname"><span class="pre">pop_out_pop_in</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id_f_pop</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id_f_ins</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.pop_out_pop_in"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.pop_out_pop_in" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.prepare_sparse_call">
+<span class="sig-name descname"><span class="pre">prepare_sparse_call</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.prepare_sparse_call"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.prepare_sparse_call" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.return_neighbours">
+<span class="sig-name descname"><span class="pre">return_neighbours</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id_fA</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delta0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.return_neighbours"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.return_neighbours" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.return_rippe_vals">
+<span class="sig-name descname"><span class="pre">return_rippe_vals</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.return_rippe_vals"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.return_rippe_vals" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.set_jumping_distributions_parameters">
+<span class="sig-name descname"><span class="pre">set_jumping_distributions_parameters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">delta</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.set_jumping_distributions_parameters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.set_jumping_distributions_parameters" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.setup_all_gpu_struct">
+<span class="sig-name descname"><span class="pre">setup_all_gpu_struct</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.setup_all_gpu_struct"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.setup_all_gpu_struct" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.setup_distri_frags">
+<span class="sig-name descname"><span class="pre">setup_distri_frags</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.setup_distri_frags"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.setup_distri_frags" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.setup_model_parameters">
+<span class="sig-name descname"><span class="pre">setup_model_parameters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">param</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_max</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.setup_model_parameters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.setup_model_parameters" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.setup_rippe_parameters">
+<span class="sig-name descname"><span class="pre">setup_rippe_parameters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">param</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_max</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.setup_rippe_parameters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.setup_rippe_parameters" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.setup_rippe_parameters_4_simu">
+<span class="sig-name descname"><span class="pre">setup_rippe_parameters_4_simu</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">kuhn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lm</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slope</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">val_inter</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_max</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.setup_rippe_parameters_4_simu"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.setup_rippe_parameters_4_simu" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.setup_thrust_modules">
+<span class="sig-name descname"><span class="pre">setup_thrust_modules</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.setup_thrust_modules"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.setup_thrust_modules" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.show_sub_slice">
+<span class="sig-name descname"><span class="pre">show_sub_slice</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id_ctg1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id_ctg2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id_frag_a</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id_frag_b</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.show_sub_slice"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.show_sub_slice" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.slice_sparse_mat">
+<span class="sig-name descname"><span class="pre">slice_sparse_mat</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id_ctg1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id_ctg2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id_fragA</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id_fragB</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.slice_sparse_mat"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.slice_sparse_mat" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.sparse_data_2_gpu">
+<span class="sig-name descname"><span class="pre">sparse_data_2_gpu</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.sparse_data_2_gpu"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.sparse_data_2_gpu" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.sparse_data_4_gl">
+<span class="sig-name descname"><span class="pre">sparse_data_4_gl</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">precision</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.sparse_data_4_gl"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.sparse_data_4_gl" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.step_nuisance_parameters">
+<span class="sig-name descname"><span class="pre">step_nuisance_parameters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_step</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.step_nuisance_parameters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.step_nuisance_parameters" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.step_sampler">
+<span class="sig-name descname"><span class="pre">step_sampler</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id_frag</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_neighbours</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dt</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.step_sampler"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.step_sampler" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.step_sampler_debug">
+<span class="sig-name descname"><span class="pre">step_sampler_debug</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id_frag</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_neighbours</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.step_sampler_debug"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.step_sampler_debug" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.temperature">
+<span class="sig-name descname"><span class="pre">temperature</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">t</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_step</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.temperature"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.temperature" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.test_copy_struct">
+<span class="sig-name descname"><span class="pre">test_copy_struct</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id_fA</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id_f_sampled</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.test_copy_struct"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.test_copy_struct" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.test_thrust">
+<span class="sig-name descname"><span class="pre">test_thrust</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.test_thrust"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.test_thrust" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.transloc">
+<span class="sig-name descname"><span class="pre">transloc</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id_fA</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id_fB</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.transloc"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.transloc" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.cuda_lib_gl_single.sampler.update_neighbourhood">
+<span class="sig-name descname"><span class="pre">update_neighbourhood</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/cuda_lib_gl_single.html#sampler.update_neighbourhood"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.cuda_lib_gl_single.sampler.update_neighbourhood" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-instagraal.fragment">
+<span id="instagraal-fragment-module"></span><h2>instagraal.fragment module<a class="headerlink" href="#module-instagraal.fragment" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="instagraal.fragment.basic_fragment">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">instagraal.fragment.</span></span><span class="sig-name descname"><span class="pre">basic_fragment</span></span><a class="reference internal" href="../_modules/instagraal/fragment.html#basic_fragment"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.fragment.basic_fragment" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.fragment.basic_fragment.initiate">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">initiate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">np_id_abs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id_init</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">init_contig</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">curr_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_pos</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_pos</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">length_kb</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gc_content</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">init_frag_start</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">init_frag_end</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sub_frag_start</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sub_frag_end</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">super_index</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id_contig</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_accu_frags</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/fragment.html#basic_fragment.initiate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.fragment.basic_fragment.initiate" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="instagraal-glutil-module">
+<h2>instagraal.glutil module<a class="headerlink" href="#instagraal-glutil-module" title="Link to this heading"></a></h2>
+</section>
+<section id="module-instagraal.gpustruct">
+<span id="instagraal-gpustruct-module"></span><h2>instagraal.gpustruct module<a class="headerlink" href="#module-instagraal.gpustruct" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="instagraal.gpustruct.GPUStruct">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">instagraal.gpustruct.</span></span><span class="sig-name descname"><span class="pre">GPUStruct</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">objs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/gpustruct.html#GPUStruct"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.gpustruct.GPUStruct" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.gpustruct.GPUStruct.copy_from_gpu">
+<span class="sig-name descname"><span class="pre">copy_from_gpu</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">skip</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/gpustruct.html#GPUStruct.copy_from_gpu"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.gpustruct.GPUStruct.copy_from_gpu" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.gpustruct.GPUStruct.copy_to_gpu">
+<span class="sig-name descname"><span class="pre">copy_to_gpu</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">skip</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/gpustruct.html#GPUStruct.copy_to_gpu"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.gpustruct.GPUStruct.copy_to_gpu" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.gpustruct.GPUStruct.get_packed">
+<span class="sig-name descname"><span class="pre">get_packed</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/gpustruct.html#GPUStruct.get_packed"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.gpustruct.GPUStruct.get_packed" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.gpustruct.GPUStruct.get_ptr">
+<span class="sig-name descname"><span class="pre">get_ptr</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/gpustruct.html#GPUStruct.get_ptr"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.gpustruct.GPUStruct.get_ptr" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-instagraal.init_nuisance">
+<span id="instagraal-init-nuisance-module"></span><h2>instagraal.init_nuisance module<a class="headerlink" href="#module-instagraal.init_nuisance" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.init_nuisance.estimate_max_dist_intra">
+<span class="sig-prename descclassname"><span class="pre">instagraal.init_nuisance.</span></span><span class="sig-name descname"><span class="pre">estimate_max_dist_intra</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">val_inter</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/init_nuisance.html#estimate_max_dist_intra"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.init_nuisance.estimate_max_dist_intra" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.init_nuisance.estimate_param_hic">
+<span class="sig-prename descclassname"><span class="pre">instagraal.init_nuisance.</span></span><span class="sig-name descname"><span class="pre">estimate_param_hic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y_meas</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_bins</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/init_nuisance.html#estimate_param_hic"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.init_nuisance.estimate_param_hic" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.init_nuisance.log_residuals">
+<span class="sig-prename descclassname"><span class="pre">instagraal.init_nuisance.</span></span><span class="sig-name descname"><span class="pre">log_residuals</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">param</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/init_nuisance.html#log_residuals"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.init_nuisance.log_residuals" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.init_nuisance.log_residuals_4_min">
+<span class="sig-prename descclassname"><span class="pre">instagraal.init_nuisance.</span></span><span class="sig-name descname"><span class="pre">log_residuals_4_min</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">param</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/init_nuisance.html#log_residuals_4_min"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.init_nuisance.log_residuals_4_min" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.init_nuisance.peval">
+<span class="sig-prename descclassname"><span class="pre">instagraal.init_nuisance.</span></span><span class="sig-name descname"><span class="pre">peval</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/init_nuisance.html#peval"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.init_nuisance.peval" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.init_nuisance.residual_4_max_dist">
+<span class="sig-prename descclassname"><span class="pre">instagraal.init_nuisance.</span></span><span class="sig-name descname"><span class="pre">residual_4_max_dist</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">p</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/init_nuisance.html#residual_4_max_dist"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.init_nuisance.residual_4_max_dist" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.init_nuisance.residuals">
+<span class="sig-prename descclassname"><span class="pre">instagraal.init_nuisance.</span></span><span class="sig-name descname"><span class="pre">residuals</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">param</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/init_nuisance.html#residuals"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.init_nuisance.residuals" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</section>
+<section id="module-instagraal.instagraal">
+<span id="instagraal-instagraal-module"></span><h2>instagraal.instagraal module<a class="headerlink" href="#module-instagraal.instagraal" title="Link to this heading"></a></h2>
+<p>Large genome reassembly based on Hi-C data.</p>
+<dl>
+<dt>Usage:</dt><dd><dl class="simple">
+<dt>instagraal &lt;hic_folder&gt; &lt;reference.fa&gt; [&lt;output_folder&gt;]</dt><dd><p>[–level=4] [–cycles=100] [–coverage-std=1]
+[–neighborhood=5] [–device=0] [–circular] [–bomb]
+[–save-matrix] [–pyramid-only] [–save-pickle] [–simple]
+[–quiet] [–debug]</p>
+</dd>
+</dl>
+</dd>
+<dt>Options:</dt><dd><dl class="option-list">
+<dt><kbd><span class="option">-h</span>, <span class="option">--help</span></kbd></dt>
+<dd><p>Display this help message.</p>
+</dd>
+<dt><kbd><span class="option">--version</span></kbd></dt>
+<dd><p>Display the program’s current version.</p>
+</dd>
+</dl>
+<dl class="simple">
+<dt>-l 4, –level 4         Level (resolution) of the contact map.</dt><dd><p>Increasing level by one means a threefold smaller
+resolution but also a threefold faster computation
+time. [default: 4]</p>
+</dd>
+<dt>-n 100, –cycles 100    Number of iterations to perform for each bin.</dt><dd><p>(row/column of the contact map). A high number of
+cycles has diminishing returns but there is a
+necessary minimum for assembly convergence.
+[default: 100]</p>
+</dd>
+<dt>-c 1, –coverage-std 1  Number of standard deviations below the mean.</dt><dd><p>coverage, below which fragments should be filtered
+out prior to binning. [default: 1]</p>
+</dd>
+<dt>-N 5, –neighborhood 5  Number of neighbors to sample for potential</dt><dd><p>mutations for each bin. [default: 5]</p>
+</dd>
+<dt>–device 0              If multiple graphic cards are available, select</dt><dd><p>a specific device (numbered from 0). [default: 0]</p>
+</dd>
+</dl>
+<dl class="option-list">
+<dt><kbd><span class="option">-C</span>, <span class="option">--circular</span></kbd></dt>
+<dd><p>Indicates genome is circular. [default: False]</p>
+</dd>
+<dt><kbd><span class="option">-b</span>, <span class="option">--bomb</span></kbd></dt>
+<dd><p>Explode the genome prior to scaffolding.
+[default: False]</p>
+</dd>
+<dt><kbd><span class="option">--pyramid-only</span></kbd></dt>
+<dd><p>Only build multi-resolution contact maps (pyramids)
+and don’t do any scaffolding. [default: False]</p>
+</dd>
+<dt><kbd><span class="option">--save-pickle</span></kbd></dt>
+<dd><p>Dump all info from the instaGRAAL run into a
+pickle. Primarily for development purposes, but
+also for advanced post hoc introspection.
+[default: False]</p>
+</dd>
+<dt><kbd><span class="option">--save-matrix</span></kbd></dt>
+<dd><p>Saves a preview of the contact map after each
+cycle. [default: False]</p>
+</dd>
+<dt><kbd><span class="option">--simple</span></kbd></dt>
+<dd><p>Only perform operations at the edge of the contigs.
+[default: False]</p>
+</dd>
+<dt><kbd><span class="option">--quiet</span></kbd></dt>
+<dd><p>Only display warnings and errors as outputs.
+[default: False]</p>
+</dd>
+<dt><kbd><span class="option">--debug</span></kbd></dt>
+<dd><p>Display debug information. For development purposes
+only. Mutually exclusive with –quiet, and will
+override it. [default: False]</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<dl class="py class">
+<dt class="sig sig-object py" id="instagraal.instagraal.instagraal_class">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">instagraal.instagraal.</span></span><span class="sig-name descname"><span class="pre">instagraal_class</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">folder_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fasta</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">level</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_iterations_em</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_iterations_mcmc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_simu</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scrambled</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">perform_em</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_rippe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_param</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thresh_factor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_folder</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/instagraal.html#instagraal_class"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.instagraal.instagraal_class" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>class to manage the calculations performed by
+the scaffolder.</p>
+<p>[description]</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The name of the project. Will determine the window title.</p></li>
+<li><p><strong>folder_path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><em>pathlib.Path</em></a>) – The directory containing the Hi-C conact map.</p></li>
+<li><p><strong>fasta</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><em>pathlib.Path</em></a>) – The path to the reference genome in FASTA format.</p></li>
+<li><p><strong>device</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – The identifier of the graphic card to be used, numbered from 0. If only
+one is available, it should be 0.</p></li>
+<li><p><strong>level</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – The level (resolution) at which to perform scaffolding.</p></li>
+<li><p><strong>n_iterations_em</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – The number of EM (expectation maximization) iterations.</p></li>
+<li><p><strong>n_iterations_mcmc</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – The number of MCMC (Markov chain Monte-Carlo) iterations.</p></li>
+<li><p><strong>is_simu</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – Whether the parameters should be simulated. Mutually exclusive with
+use_rippe and will override it.</p></li>
+<li><p><strong>scrambled</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – Whether to scramble the genome.</p></li>
+<li><p><strong>perform_em</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – Whether to perform EM (expectation maximization).</p></li>
+<li><p><strong>use_rippe</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – Whether to explicitly use the model from Rippe et al., 2001.</p></li>
+<li><p><strong>sample_param</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – Whether to sample the parameters.</p></li>
+<li><p><strong>thresh_factor</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – The sparsity (coverage) threshold below which fragments are discarded,
+as a number of standard deviations below the mean.</p></li>
+<li><p><strong>output_folder</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><em>pathlib.Path</em></a>) – The path to the output folder where the scaffolded genome and other
+relevant information will be saved.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.instagraal.instagraal_class.full_em">
+<span class="sig-name descname"><span class="pre">full_em</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_cycles</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_neighbours</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bomb</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id_start_sample_param</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_matrix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/instagraal.html#instagraal_class.full_em"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.instagraal.instagraal_class.full_em" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.instagraal.instagraal_class.save_behaviour_to_txt">
+<span class="sig-name descname"><span class="pre">save_behaviour_to_txt</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/instagraal.html#instagraal_class.save_behaviour_to_txt"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.instagraal.instagraal_class.save_behaviour_to_txt" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.instagraal.instagraal_class.setup_simu">
+<span class="sig-name descname"><span class="pre">setup_simu</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id_f_ins</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/instagraal.html#instagraal_class.setup_simu"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.instagraal.instagraal_class.setup_simu" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.instagraal.instagraal_class.start_MCMC">
+<span class="sig-name descname"><span class="pre">start_MCMC</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/instagraal.html#instagraal_class.start_MCMC"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.instagraal.instagraal_class.start_MCMC" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.instagraal.instagraal_class.start_MTM">
+<span class="sig-name descname"><span class="pre">start_MTM</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/instagraal.html#instagraal_class.start_MTM"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.instagraal.instagraal_class.start_MTM" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.instagraal.run_instagraal">
+<span class="sig-prename descclassname"><span class="pre">instagraal.instagraal.</span></span><span class="sig-name descname"><span class="pre">run_instagraal</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">hic_folder</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reference_fa</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_folder</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">level</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cycles</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coverage_std</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">neighborhood</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">circular</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bomb</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pyramid_only</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_pickle</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_matrix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">simple</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/instagraal.html#run_instagraal"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.instagraal.run_instagraal" title="Link to this definition"></a></dt>
+<dd><p>Run the instaGRAAL scaffolding pipeline.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>hic_folder</strong> – Directory containing the Hi-C contact map files.</p></li>
+<li><p><strong>reference_fa</strong> – Path to the reference genome in FASTA format.</p></li>
+<li><p><strong>output_folder</strong> – Optional output directory. Defaults to the current directory.</p></li>
+<li><p><strong>level</strong> – Resolution level of the contact map.</p></li>
+<li><p><strong>cycles</strong> – Number of MCMC iterations per bin.</p></li>
+<li><p><strong>coverage_std</strong> – Coverage standard-deviation threshold for fragment filtering.</p></li>
+<li><p><strong>neighborhood</strong> – Number of neighbours sampled for each mutation.</p></li>
+<li><p><strong>device</strong> – GPU device index (0-based).</p></li>
+<li><p><strong>circular</strong> – Whether the genome is circular.</p></li>
+<li><p><strong>bomb</strong> – Explode the genome prior to scaffolding.</p></li>
+<li><p><strong>pyramid_only</strong> – Only build multi-resolution pyramids, skip scaffolding.</p></li>
+<li><p><strong>save_pickle</strong> – Dump run state to a pickle file.</p></li>
+<li><p><strong>save_matrix</strong> – Save a contact-map preview after each cycle.</p></li>
+<li><p><strong>simple</strong> – Only perform operations at contig edges.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-instagraal.leastsqbound">
+<span id="instagraal-leastsqbound-module"></span><h2>instagraal.leastsqbound module<a class="headerlink" href="#module-instagraal.leastsqbound" title="Link to this heading"></a></h2>
+<p>Constrained multivariate Levenberg-Marquardt optimization</p>
+<p>An updated version of this file can be found at
+<a class="reference external" href="https://github.com/jjhelmus/leastsqbound-scipy">https://github.com/jjhelmus/leastsqbound-scipy</a></p>
+<p>The version here has known bugs which have been
+fixed above, proceed at your own risk.</p>
+<ul class="simple">
+<li><p>Jonathan J. Helmus (<a class="reference external" href="mailto:jjhelmus&#37;&#52;&#48;gmail&#46;com">jjhelmus<span>&#64;</span>gmail<span>&#46;</span>com</a>)</p></li>
+</ul>
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.leastsqbound.calc_cov_x">
+<span class="sig-prename descclassname"><span class="pre">instagraal.leastsqbound.</span></span><span class="sig-name descname"><span class="pre">calc_cov_x</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">infodic</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">p</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/leastsqbound.html#calc_cov_x"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.leastsqbound.calc_cov_x" title="Link to this definition"></a></dt>
+<dd><p>Calculate cov_x from fjac, ipvt and p as is done in leastsq</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.leastsqbound.err">
+<span class="sig-prename descclassname"><span class="pre">instagraal.leastsqbound.</span></span><span class="sig-name descname"><span class="pre">err</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bounds</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">efunc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">args</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/leastsqbound.html#err"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.leastsqbound.err" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.leastsqbound.external2internal">
+<span class="sig-prename descclassname"><span class="pre">instagraal.leastsqbound.</span></span><span class="sig-name descname"><span class="pre">external2internal</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">xe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bounds</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/leastsqbound.html#external2internal"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.leastsqbound.external2internal" title="Link to this definition"></a></dt>
+<dd><p>Convert a series of external variables to internal variables</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.leastsqbound.i2e_cov_x">
+<span class="sig-prename descclassname"><span class="pre">instagraal.leastsqbound.</span></span><span class="sig-name descname"><span class="pre">i2e_cov_x</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">xi</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bounds</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cov_x</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/leastsqbound.html#i2e_cov_x"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.leastsqbound.i2e_cov_x" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.leastsqbound.internal2external">
+<span class="sig-prename descclassname"><span class="pre">instagraal.leastsqbound.</span></span><span class="sig-name descname"><span class="pre">internal2external</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">xi</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bounds</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/leastsqbound.html#internal2external"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.leastsqbound.internal2external" title="Link to this definition"></a></dt>
+<dd><p>Convert a series of internal variables to external variables</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.leastsqbound.internal2external_grad">
+<span class="sig-prename descclassname"><span class="pre">instagraal.leastsqbound.</span></span><span class="sig-name descname"><span class="pre">internal2external_grad</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">xi</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bounds</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/leastsqbound.html#internal2external_grad"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.leastsqbound.internal2external_grad" title="Link to this definition"></a></dt>
+<dd><p>Calculate the internal to external gradiant</p>
+<p>Calculates the partial of external over internal</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.leastsqbound.leastsqbound">
+<span class="sig-prename descclassname"><span class="pre">instagraal.leastsqbound.</span></span><span class="sig-name descname"><span class="pre">leastsqbound</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bounds</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">()</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kw</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/leastsqbound.html#leastsqbound"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.leastsqbound.leastsqbound" title="Link to this definition"></a></dt>
+<dd><p>Constrained multivariant Levenberg-Marquard optimization</p>
+<p>Minimize the sum of squares of a given function using the
+Levenberg-Marquard algorithm. Contraints on parameters are inforced using
+variable transformations as described in the MINUIT User’s Guide by
+Fred James and Matthias Winkler.</p>
+<p>Parameters:</p>
+<ul class="simple">
+<li><p>func      functions to call for optimization.</p></li>
+<li><p>x0        Starting estimate for the minimization.</p></li>
+<li><dl class="simple">
+<dt>bounds    (min,max) pair for each element of x, defining the bounds on</dt><dd><p>that parameter.  Use None for one of min or max when there is
+no bound in that direction.</p>
+</dd>
+</dl>
+</li>
+<li><p>args      Any extra arguments to func are places in this tuple.</p></li>
+</ul>
+<p>Returns: (x,{cov_x,infodict,mesg},ier)</p>
+<p>Return is described in the scipy.optimize.leastsq function.  x and con_v
+are corrected to take into account the parameter transformation, infodic
+is not corrected.</p>
+<p>Additional keyword arguments are passed directly to the
+scipy.optimize.leastsq algorithm.</p>
+</dd></dl>
+
+</section>
+<section id="instagraal-linkage-module">
+<h2>instagraal.linkage module<a class="headerlink" href="#instagraal-linkage-module" title="Link to this heading"></a></h2>
+</section>
+<section id="module-instagraal.log">
+<span id="instagraal-log-module"></span><h2>instagraal.log module<a class="headerlink" href="#module-instagraal.log" title="Link to this heading"></a></h2>
+<p>Basic logging setup for instaGRAAL.</p>
+<p>Logging level can be set by the user and determines the verbosity of the
+whole program.</p>
+</section>
+<section id="module-instagraal.optim_rippe_curve_update">
+<span id="instagraal-optim-rippe-curve-update-module"></span><h2>instagraal.optim_rippe_curve_update module<a class="headerlink" href="#module-instagraal.optim_rippe_curve_update" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.optim_rippe_curve_update.estimate_max_dist_intra">
+<span class="sig-prename descclassname"><span class="pre">instagraal.optim_rippe_curve_update.</span></span><span class="sig-name descname"><span class="pre">estimate_max_dist_intra</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">val_inter</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/optim_rippe_curve_update.html#estimate_max_dist_intra"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.optim_rippe_curve_update.estimate_max_dist_intra" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.optim_rippe_curve_update.estimate_max_dist_intra_nuis">
+<span class="sig-prename descclassname"><span class="pre">instagraal.optim_rippe_curve_update.</span></span><span class="sig-name descname"><span class="pre">estimate_max_dist_intra_nuis</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">val_inter</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">old_s</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/optim_rippe_curve_update.html#estimate_max_dist_intra_nuis"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.optim_rippe_curve_update.estimate_max_dist_intra_nuis" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.optim_rippe_curve_update.estimate_param_rippe">
+<span class="sig-prename descclassname"><span class="pre">instagraal.optim_rippe_curve_update.</span></span><span class="sig-name descname"><span class="pre">estimate_param_rippe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y_meas</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_bins</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/optim_rippe_curve_update.html#estimate_param_rippe"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.optim_rippe_curve_update.estimate_param_rippe" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.optim_rippe_curve_update.log_peval">
+<span class="sig-prename descclassname"><span class="pre">instagraal.optim_rippe_curve_update.</span></span><span class="sig-name descname"><span class="pre">log_peval</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/optim_rippe_curve_update.html#log_peval"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.optim_rippe_curve_update.log_peval" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.optim_rippe_curve_update.log_residuals">
+<span class="sig-prename descclassname"><span class="pre">instagraal.optim_rippe_curve_update.</span></span><span class="sig-name descname"><span class="pre">log_residuals</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/optim_rippe_curve_update.html#log_residuals"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.optim_rippe_curve_update.log_residuals" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.optim_rippe_curve_update.peval">
+<span class="sig-prename descclassname"><span class="pre">instagraal.optim_rippe_curve_update.</span></span><span class="sig-name descname"><span class="pre">peval</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/optim_rippe_curve_update.html#peval"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.optim_rippe_curve_update.peval" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.optim_rippe_curve_update.residual_4_max_dist">
+<span class="sig-prename descclassname"><span class="pre">instagraal.optim_rippe_curve_update.</span></span><span class="sig-name descname"><span class="pre">residual_4_max_dist</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">p</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/optim_rippe_curve_update.html#residual_4_max_dist"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.optim_rippe_curve_update.residual_4_max_dist" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.optim_rippe_curve_update.residuals">
+<span class="sig-prename descclassname"><span class="pre">instagraal.optim_rippe_curve_update.</span></span><span class="sig-name descname"><span class="pre">residuals</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/optim_rippe_curve_update.html#residuals"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.optim_rippe_curve_update.residuals" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</section>
+<section id="module-instagraal.parse_info_frags">
+<span id="instagraal-parse-info-frags-module"></span><h2>instagraal.parse_info_frags module<a class="headerlink" href="#module-instagraal.parse_info_frags" title="Link to this heading"></a></h2>
+<p>A couple of functions to manipulate info_frags.txt files and BED files.</p>
+<p>This module started as a couple scripts to flip back artefact inversions
+introduced by the GRAAL assembler and its derivatives (see:
+<a class="reference external" href="https://github.com/koszullab/GRAAL">https://github.com/koszullab/GRAAL</a>, <a class="reference external" href="https://github.com/koszullab/instaGRAAL">https://github.com/koszullab/instaGRAAL</a>).
+It has greatly evolved since, and provides a range of functions to polish
+assemblies and correct potential missassemblies.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.parse_info_frags.correct_scaffolds">
+<span class="sig-prename descclassname"><span class="pre">instagraal.parse_info_frags.</span></span><span class="sig-name descname"><span class="pre">correct_scaffolds</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scaffolds</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">corrector</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/parse_info_frags.html#correct_scaffolds"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.parse_info_frags.correct_scaffolds" title="Link to this definition"></a></dt>
+<dd><p>Unfinished</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.parse_info_frags.correct_spurious_inversions">
+<span class="sig-prename descclassname"><span class="pre">instagraal.parse_info_frags.</span></span><span class="sig-name descname"><span class="pre">correct_spurious_inversions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scaffolds</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">criterion</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'colinear'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/parse_info_frags.html#correct_spurious_inversions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.parse_info_frags.correct_spurious_inversions" title="Link to this definition"></a></dt>
+<dd><p>Invert bins based on orientation neighborhoods. Neighborhoods can be
+defined by three criteria:</p>
+<p>-a ‘cis’ neighborhood is a group of bins belonging to the same initial
+contig
+-a ‘colinear’ neighborhood is a ‘cis’ neighborhood where bins are
+ordered the same way they were on the initial contig
+-a ‘contiguous’ neighborhood is a ‘colinear’ neighborhood where all bins
+are exactly consecutive, i.e. the end position of each bin matches the
+starting position of the next bin</p>
+<p>This function looks for such neighborhoods and orients all bins in it
+according to the majority orientation.</p>
+<p>An example with three inversions, one for each criterion:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">scaffolds</span> <span class="o">=</span> <span class="p">{</span>
+<span class="gp">... </span>    <span class="s2">&quot;scaffold1&quot;</span><span class="p">:</span> <span class="p">[</span>
+<span class="gp">... </span>        <span class="p">[</span><span class="s2">&quot;contig1&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">200</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+<span class="gp">... </span>        <span class="p">[</span><span class="s2">&quot;contig1&quot;</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">200</span><span class="p">,</span> <span class="mi">300</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+<span class="gp">... </span>        <span class="p">[</span><span class="s2">&quot;contig1&quot;</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">300</span><span class="p">,</span> <span class="mi">400</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="c1"># &lt;-- inversion (contiguous)</span>
+<span class="gp">... </span>        <span class="p">[</span><span class="s2">&quot;contig1&quot;</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">400</span><span class="p">,</span> <span class="mi">500</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+<span class="gp">... </span>        <span class="p">[</span><span class="s2">&quot;contig1&quot;</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">1500</span><span class="p">,</span> <span class="mi">1605</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+<span class="gp">... </span>        <span class="p">[</span><span class="s2">&quot;contig1&quot;</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">1750</span><span class="p">,</span> <span class="mi">1850</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="c1"># &lt;-- inversion (colinear)</span>
+<span class="gp">... </span>        <span class="p">[</span><span class="s2">&quot;contig1&quot;</span><span class="p">,</span> <span class="mi">23</span><span class="p">,</span> <span class="mi">2100</span><span class="p">,</span> <span class="mi">2499</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+<span class="gp">... </span>        <span class="p">[</span><span class="s2">&quot;contig1&quot;</span><span class="p">,</span> <span class="mi">28</span><span class="p">,</span> <span class="mi">2850</span><span class="p">,</span> <span class="mi">3000</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+<span class="gp">... </span>        <span class="p">[</span><span class="s2">&quot;contig1&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="c1"># &lt;-- inversion (cis)</span>
+<span class="gp">... </span>        <span class="p">[</span><span class="s2">&quot;contig2&quot;</span><span class="p">,</span> <span class="mi">554</span><span class="p">,</span> <span class="mi">1850</span><span class="p">,</span> <span class="mi">1900</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+<span class="gp">... </span>    <span class="p">],</span>
+<span class="gp">... </span><span class="p">}</span>
+</pre></div>
+</div>
+<p>With the ‘cis’ criterion, pretty much all bins from “contig1” get inverted
+to the majority orientation (+):</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">sc_cis</span> <span class="o">=</span> <span class="n">correct_spurious_inversions</span><span class="p">(</span><span class="n">scaffolds</span><span class="p">,</span> <span class="s2">&quot;cis&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">my_bin</span> <span class="ow">in</span> <span class="n">sc_cis</span><span class="p">[</span><span class="s1">&#39;scaffold1&#39;</span><span class="p">]:</span>
+<span class="gp">... </span>    <span class="nb">print</span><span class="p">(</span><span class="n">my_bin</span><span class="p">)</span>
+<span class="gp">...</span>
+<span class="go">[&#39;contig1&#39;, 1, 100, 200, 1]</span>
+<span class="go">[&#39;contig1&#39;, 2, 200, 300, 1]</span>
+<span class="go">[&#39;contig1&#39;, 3, 300, 400, 1]</span>
+<span class="go">[&#39;contig1&#39;, 4, 400, 500, 1]</span>
+<span class="go">[&#39;contig1&#39;, 10, 1500, 1605, 1]</span>
+<span class="go">[&#39;contig1&#39;, 12, 1750, 1850, 1]</span>
+<span class="go">[&#39;contig1&#39;, 23, 2100, 2499, 1]</span>
+<span class="go">[&#39;contig1&#39;, 28, 2850, 3000, 1]</span>
+<span class="go">[&#39;contig1&#39;, 0, 0, 100, 1]</span>
+<span class="go">[&#39;contig2&#39;, 554, 1850, 1900, -1]</span>
+</pre></div>
+</div>
+<p>With the ‘colinear’ criterion, the bin [‘contig1’, 0, 0, 100, -1] is
+treated as a different neighborhood from the rest (as it is not colinear
+with the other bins from ‘contig1’) and remains untouched:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">sc_colinear</span> <span class="o">=</span> <span class="n">correct_spurious_inversions</span><span class="p">(</span><span class="n">scaffolds</span><span class="p">,</span> <span class="s2">&quot;colinear&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">my_bin</span> <span class="ow">in</span> <span class="n">sc_colinear</span><span class="p">[</span><span class="s1">&#39;scaffold1&#39;</span><span class="p">]:</span>
+<span class="gp">... </span>    <span class="nb">print</span><span class="p">(</span><span class="n">my_bin</span><span class="p">)</span>
+<span class="gp">...</span>
+<span class="go">[&#39;contig1&#39;, 1, 100, 200, 1]</span>
+<span class="go">[&#39;contig1&#39;, 2, 200, 300, 1]</span>
+<span class="go">[&#39;contig1&#39;, 3, 300, 400, 1]</span>
+<span class="go">[&#39;contig1&#39;, 4, 400, 500, 1]</span>
+<span class="go">[&#39;contig1&#39;, 10, 1500, 1605, 1]</span>
+<span class="go">[&#39;contig1&#39;, 12, 1750, 1850, 1]</span>
+<span class="go">[&#39;contig1&#39;, 23, 2100, 2499, 1]</span>
+<span class="go">[&#39;contig1&#39;, 28, 2850, 3000, 1]</span>
+<span class="go">[&#39;contig1&#39;, 0, 0, 100, -1]</span>
+<span class="go">[&#39;contig2&#39;, 554, 1850, 1900, -1]</span>
+</pre></div>
+</div>
+<p>With the ‘contiguous’ criterion, the [‘contig1’, 12, 1750, 1850, -1] breaks
+with the contiguous region spanning from 100 to 400 bp on ‘contig1’ and
+so is treated as a different neighborhood as well:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">sc_cont</span> <span class="o">=</span> <span class="n">correct_spurious_inversions</span><span class="p">(</span><span class="n">scaffolds</span><span class="p">,</span> <span class="s2">&quot;contiguous&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">my_bin</span> <span class="ow">in</span> <span class="n">sc_cont</span><span class="p">[</span><span class="s1">&#39;scaffold1&#39;</span><span class="p">]:</span>
+<span class="gp">... </span>    <span class="nb">print</span><span class="p">(</span><span class="n">my_bin</span><span class="p">)</span>
+<span class="gp">...</span>
+<span class="go">[&#39;contig1&#39;, 1, 100, 200, 1]</span>
+<span class="go">[&#39;contig1&#39;, 2, 200, 300, 1]</span>
+<span class="go">[&#39;contig1&#39;, 3, 300, 400, 1]</span>
+<span class="go">[&#39;contig1&#39;, 4, 400, 500, 1]</span>
+<span class="go">[&#39;contig1&#39;, 10, 1500, 1605, 1]</span>
+<span class="go">[&#39;contig1&#39;, 12, 1750, 1850, -1]</span>
+<span class="go">[&#39;contig1&#39;, 23, 2100, 2499, 1]</span>
+<span class="go">[&#39;contig1&#39;, 28, 2850, 3000, 1]</span>
+<span class="go">[&#39;contig1&#39;, 0, 0, 100, -1]</span>
+<span class="go">[&#39;contig2&#39;, 554, 1850, 1900, -1]</span>
+</pre></div>
+</div>
+<p>Note that ‘contig2’ remains untouched at all times since bins in it are
+never in the same neighborhood as those from ‘contig1’.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.parse_info_frags.find_lost_dna">
+<span class="sig-prename descclassname"><span class="pre">instagraal.parse_info_frags.</span></span><span class="sig-name descname"><span class="pre">find_lost_dna</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">init_fasta</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scaffolds</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/parse_info_frags.html#find_lost_dna"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.parse_info_frags.find_lost_dna" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.parse_info_frags.format_info_frags">
+<span class="sig-prename descclassname"><span class="pre">instagraal.parse_info_frags.</span></span><span class="sig-name descname"><span class="pre">format_info_frags</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">info_frags</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/parse_info_frags.html#format_info_frags"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.parse_info_frags.format_info_frags" title="Link to this definition"></a></dt>
+<dd><p>A function to seamlessly run on either scaffold dictionaries or
+info_frags.txt files without having to check the input first.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.parse_info_frags.integrate_lost_dna">
+<span class="sig-prename descclassname"><span class="pre">instagraal.parse_info_frags.</span></span><span class="sig-name descname"><span class="pre">integrate_lost_dna</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scaffolds</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lost_dna_positions</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/parse_info_frags.html#integrate_lost_dna"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.parse_info_frags.integrate_lost_dna" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.parse_info_frags.is_block">
+<span class="sig-prename descclassname"><span class="pre">instagraal.parse_info_frags.</span></span><span class="sig-name descname"><span class="pre">is_block</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bin_list</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/parse_info_frags.html#is_block"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.parse_info_frags.is_block" title="Link to this definition"></a></dt>
+<dd><p>Check if a bin list has exclusively consecutive bin ids.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.parse_info_frags.parse_bed">
+<span class="sig-prename descclassname"><span class="pre">instagraal.parse_info_frags.</span></span><span class="sig-name descname"><span class="pre">parse_bed</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bed_file</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/parse_info_frags.html#parse_bed"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.parse_info_frags.parse_bed" title="Link to this definition"></a></dt>
+<dd><p>Import a BED file (where the data entries are analogous to what may be
+expected in an info_frags.txt file) and return a scaffold dictionary,
+similarly to parse_info_frags.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.parse_info_frags.parse_info_frags">
+<span class="sig-prename descclassname"><span class="pre">instagraal.parse_info_frags.</span></span><span class="sig-name descname"><span class="pre">parse_info_frags</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">info_frags</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/parse_info_frags.html#parse_info_frags"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.parse_info_frags.parse_info_frags" title="Link to this definition"></a></dt>
+<dd><p>Import an info_frags.txt file and return a dictionary where each key
+is a newly formed scaffold and each value is the list of bins and their
+origin on the initial scaffolding.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.parse_info_frags.plot_contig_composition">
+<span class="sig-prename descclassname"><span class="pre">instagraal.parse_info_frags.</span></span><span class="sig-name descname"><span class="pre">plot_contig_composition</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">new_info_frags_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/parse_info_frags.html#plot_contig_composition"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.parse_info_frags.plot_contig_composition" title="Link to this definition"></a></dt>
+<dd><p>Plot a stacked barplot of new-contig composition by source contig.</p>
+<p>For each new contig on the X-axis the bar height (Y-axis, bp) is split
+into coloured segments representing the contribution (in bp) of each
+original contig.  New contigs are sorted from longest to shortest.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>new_info_frags_path</strong> – Path to <code class="docutils literal notranslate"><span class="pre">new_info_frags.txt</span></code> produced by <code class="docutils literal notranslate"><span class="pre">instagraal-polish</span></code>.</p></li>
+<li><p><strong>output_path</strong> – Path where the figure is saved.  When <code class="docutils literal notranslate"><span class="pre">None</span></code> the figure is shown
+interactively.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.parse_info_frags.plot_info_frags">
+<span class="sig-prename descclassname"><span class="pre">instagraal.parse_info_frags.</span></span><span class="sig-name descname"><span class="pre">plot_info_frags</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scaffolds</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/parse_info_frags.html#plot_info_frags"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.parse_info_frags.plot_info_frags" title="Link to this definition"></a></dt>
+<dd><p>A crude way to visualize new scaffolds according to their origin on the
+initial scaffolding. Each scaffold spawns a new plot. Orientations are
+represented by different colors.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.parse_info_frags.rearrange_intra_scaffolds">
+<span class="sig-prename descclassname"><span class="pre">instagraal.parse_info_frags.</span></span><span class="sig-name descname"><span class="pre">rearrange_intra_scaffolds</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scaffolds</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/parse_info_frags.html#rearrange_intra_scaffolds"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.parse_info_frags.rearrange_intra_scaffolds" title="Link to this definition"></a></dt>
+<dd><p>Rearranges all bins within each scaffold such that all bins belonging
+to the same initial contig are grouped together in the same order. When
+two such groups are found, the smaller one is moved to the larger one.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.parse_info_frags.remove_spurious_insertions">
+<span class="sig-prename descclassname"><span class="pre">instagraal.parse_info_frags.</span></span><span class="sig-name descname"><span class="pre">remove_spurious_insertions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scaffolds</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/parse_info_frags.html#remove_spurious_insertions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.parse_info_frags.remove_spurious_insertions" title="Link to this definition"></a></dt>
+<dd><p>Remove all bins whose left and right neighbors belong to the same,
+different scaffold.</p>
+<p>Example with three such insertions in two different scaffolds:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">scaffolds</span> <span class="o">=</span> <span class="p">{</span>
+<span class="gp">... </span>    <span class="s2">&quot;scaffold1&quot;</span><span class="p">:</span> <span class="p">[</span>
+<span class="gp">... </span>        <span class="p">[</span><span class="s2">&quot;contig1&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+<span class="gp">... </span>        <span class="p">[</span><span class="s2">&quot;contig1&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">200</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+<span class="gp">... </span>        <span class="p">[</span><span class="s2">&quot;contig23&quot;</span><span class="p">,</span> <span class="mi">53</span><span class="p">,</span> <span class="mi">1845</span><span class="p">,</span> <span class="mi">2058</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="c1"># &lt;-- insertion</span>
+<span class="gp">... </span>        <span class="p">[</span><span class="s2">&quot;contig1&quot;</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">254</span><span class="p">,</span> <span class="mi">408</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+<span class="gp">... </span>        <span class="p">[</span><span class="s2">&quot;contig1&quot;</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">805</span><span class="p">,</span> <span class="mi">1253</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+<span class="gp">... </span>        <span class="p">[</span><span class="s2">&quot;contig5&quot;</span><span class="p">,</span> <span class="mi">23</span><span class="p">,</span> <span class="mi">1500</span><span class="p">,</span> <span class="mi">1605</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+<span class="gp">... </span>        <span class="p">[</span><span class="s2">&quot;contig65&quot;</span><span class="p">,</span> <span class="mi">405</span><span class="p">,</span> <span class="mi">32145</span><span class="p">,</span> <span class="mi">45548</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="c1"># &lt;-- insertion</span>
+<span class="gp">... </span>        <span class="p">[</span><span class="s2">&quot;contig5&quot;</span><span class="p">,</span> <span class="mi">22</span><span class="p">,</span> <span class="mi">1385</span><span class="p">,</span> <span class="mi">1499</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+<span class="gp">... </span>    <span class="p">],</span>
+<span class="gp">... </span>    <span class="s2">&quot;scaffold2&quot;</span><span class="p">:</span> <span class="p">[</span>
+<span class="gp">... </span>        <span class="p">[</span><span class="s2">&quot;contig8&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">250</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+<span class="gp">... </span>        <span class="p">[</span><span class="s2">&quot;contig17&quot;</span><span class="p">,</span> <span class="mi">2454</span><span class="p">,</span> <span class="mi">8754</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="c1"># &lt;-- insertion</span>
+<span class="gp">... </span>        <span class="p">[</span><span class="s2">&quot;contig8&quot;</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">320</span><span class="p">,</span> <span class="mi">480</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+<span class="gp">... </span>     <span class="p">],</span>
+<span class="gp">... </span><span class="p">}</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">new_scaffolds</span> <span class="o">=</span> <span class="n">remove_spurious_insertions</span><span class="p">(</span><span class="n">scaffolds</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">my_bin</span> <span class="ow">in</span> <span class="n">new_scaffolds</span><span class="p">[</span><span class="s1">&#39;scaffold1&#39;</span><span class="p">]:</span>
+<span class="gp">... </span>    <span class="nb">print</span><span class="p">(</span><span class="n">my_bin</span><span class="p">)</span>
+<span class="gp">...</span>
+<span class="go">[&#39;contig1&#39;, 0, 0, 100, 1]</span>
+<span class="go">[&#39;contig1&#39;, 1, 100, 200, 1]</span>
+<span class="go">[&#39;contig1&#39;, 4, 254, 408, 1]</span>
+<span class="go">[&#39;contig1&#39;, 7, 805, 1253, 1]</span>
+<span class="go">[&#39;contig5&#39;, 23, 1500, 1605, -1]</span>
+<span class="go">[&#39;contig5&#39;, 22, 1385, 1499, -1]</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">my_bin</span> <span class="ow">in</span> <span class="n">new_scaffolds</span><span class="p">[</span><span class="s1">&#39;scaffold2&#39;</span><span class="p">]:</span>
+<span class="gp">... </span>    <span class="nb">print</span><span class="p">(</span><span class="n">my_bin</span><span class="p">)</span>
+<span class="gp">...</span>
+<span class="go">[&#39;contig8&#39;, 0, 0, 250, 1]</span>
+<span class="go">[&#39;contig8&#39;, 2, 320, 480, 1]</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.parse_info_frags.reorient_consecutive_blocks">
+<span class="sig-prename descclassname"><span class="pre">instagraal.parse_info_frags.</span></span><span class="sig-name descname"><span class="pre">reorient_consecutive_blocks</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scaffolds</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'blocks'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/parse_info_frags.html#reorient_consecutive_blocks"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.parse_info_frags.reorient_consecutive_blocks" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.parse_info_frags.write_fasta">
+<span class="sig-prename descclassname"><span class="pre">instagraal.parse_info_frags.</span></span><span class="sig-name descname"><span class="pre">write_fasta</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">init_fasta</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">info_frags</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'new_genome.fa'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">junction</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/parse_info_frags.html#write_fasta"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.parse_info_frags.write_fasta" title="Link to this definition"></a></dt>
+<dd><p>Convert an info_frags.txt file into a fasta file given a reference.
+Optionally adds junction sequences to reflect the possibly missing base
+pairs between two newly joined scaffolds.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.parse_info_frags.write_info_frags">
+<span class="sig-prename descclassname"><span class="pre">instagraal.parse_info_frags.</span></span><span class="sig-name descname"><span class="pre">write_info_frags</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scaffolds</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'new_info_frags.txt'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/parse_info_frags.html#write_info_frags"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.parse_info_frags.write_info_frags" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</section>
+<section id="module-instagraal.pyramid_sparse">
+<span id="instagraal-pyramid-sparse-module"></span><h2>instagraal.pyramid_sparse module<a class="headerlink" href="#module-instagraal.pyramid_sparse" title="Link to this heading"></a></h2>
+<p>Pyramid library</p>
+<p>Create and handle so-called ‘pyramid’ objects, i.e. a series of
+decreasing-resolution contact maps in hdf5 format.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.pyramid_sparse.abs_contact_2_coo_file">
+<span class="sig-prename descclassname"><span class="pre">instagraal.pyramid_sparse.</span></span><span class="sig-name descname"><span class="pre">abs_contact_2_coo_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">abs_contact_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coo_file</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/pyramid_sparse.html#abs_contact_2_coo_file"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.pyramid_sparse.abs_contact_2_coo_file" title="Link to this definition"></a></dt>
+<dd><p>Convert contact maps between old-style and new-style formats.</p>
+<p>A legacy function that converts contact maps from the older GRAAL format to
+the simpler instaGRAAL format. This is useful with datasets generated by
+Hi-C box.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>abs_contact_file</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>, </em><em>file</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><em>pathlib.Path</em></a>) – The input old-style contact map.</p></li>
+<li><p><strong>coo_file</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>, </em><em>file</em><em>, or </em><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><em>pathlib.Path</em></a>) – The output path to the generated contact map; must be writable.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.pyramid_sparse.build">
+<span class="sig-prename descclassname"><span class="pre">instagraal.pyramid_sparse.</span></span><span class="sig-name descname"><span class="pre">build</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">base_folder</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size_pyramid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">factor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_bin_per_contig</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_folder</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/pyramid_sparse.html#build"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.pyramid_sparse.build" title="Link to this definition"></a></dt>
+<dd><p>Build a pyramid of contact maps</p>
+<p>Build a fragment pyramid for multi-scale analysis</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>base_folder</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><em>pathlib.Path</em></a>) – Where to create the hdf5 files containing the matrices.</p></li>
+<li><p><strong>size_pyramid</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – How many levels (contact maps of decreasing resolution) to generate.</p></li>
+<li><p><strong>factor</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – Subsampling factor (binning) from one level to the next.</p></li>
+<li><p><strong>min_bin_per_contig</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – The minimum number of bins per contig below which binning shall not be
+performed.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.pyramid_sparse.build_and_filter">
+<span class="sig-prename descclassname"><span class="pre">instagraal.pyramid_sparse.</span></span><span class="sig-name descname"><span class="pre">build_and_filter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">base_folder</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size_pyramid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">factor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thresh_factor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_folder</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/pyramid_sparse.html#build_and_filter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.pyramid_sparse.build_and_filter" title="Link to this definition"></a></dt>
+<dd><p>Build a filtered pyramid of contact maps</p>
+<p>Build a fragment pyramid for multi-scale analysis and remove high sparsity
+(i.e. low-coverage) and short fragments.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>base_folder</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><em>pathlib.Path</em></a>) – Where to create the hdf5 files containing the matrices.</p></li>
+<li><p><strong>size_pyramid</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – How many levels (contact maps of decreasing resolution) to generate.</p></li>
+<li><p><strong>factor</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – Subsampling factor (binning) from one level to the next.</p></li>
+<li><p><strong>thresh_factor</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a><em>, </em><em>optional</em>) – Number of standard deviations below the mean coverage beyond which
+lesser covered fragments will be discarded. Default is 1.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>obj_pyramid</strong> – The pyramid object containing all the levels.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Pyramid</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.pyramid_sparse.file_len">
+<span class="sig-prename descclassname"><span class="pre">instagraal.pyramid_sparse.</span></span><span class="sig-name descname"><span class="pre">file_len</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fname</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/pyramid_sparse.html#file_len"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.pyramid_sparse.file_len" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.pyramid_sparse.fill_sparse_pyramid_level">
+<span class="sig-prename descclassname"><span class="pre">instagraal.pyramid_sparse.</span></span><span class="sig-name descname"><span class="pre">fill_sparse_pyramid_level</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pyramid_handle</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">level</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">contact_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nfrags</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/pyramid_sparse.html#fill_sparse_pyramid_level"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.pyramid_sparse.fill_sparse_pyramid_level" title="Link to this definition"></a></dt>
+<dd><p>Fill a level with sparse contact map data</p>
+<p>Fill values from the simple text matrix file to the hdf5-based pyramid
+level with contact data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pyramid_handle</strong> (<em>h5py.File</em>) – The hdf5 file handle containing the whole dataset.</p></li>
+<li><p><strong>level</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – The level (resolution) to be filled with contact data.</p></li>
+<li><p><strong>contact_file</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>, </em><em>file</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><em>pathlib.Path</em></a>) – The binned contact map file to be converted to hdf5 data.</p></li>
+<li><p><strong>nfrags</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – The number of fragments/bins in that specific level.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.pyramid_sparse.get_contig_info_from_file">
+<span class="sig-prename descclassname"><span class="pre">instagraal.pyramid_sparse.</span></span><span class="sig-name descname"><span class="pre">get_contig_info_from_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">contig_info</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/pyramid_sparse.html#get_contig_info_from_file"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.pyramid_sparse.get_contig_info_from_file" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.pyramid_sparse.get_frag_info_from_fil">
+<span class="sig-prename descclassname"><span class="pre">instagraal.pyramid_sparse.</span></span><span class="sig-name descname"><span class="pre">get_frag_info_from_fil</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fragments_list</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/pyramid_sparse.html#get_frag_info_from_fil"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.pyramid_sparse.get_frag_info_from_fil" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.pyramid_sparse.init_frag_list">
+<span class="sig-prename descclassname"><span class="pre">instagraal.pyramid_sparse.</span></span><span class="sig-name descname"><span class="pre">init_frag_list</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fragment_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">new_frag_list</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/pyramid_sparse.html#init_frag_list"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.pyramid_sparse.init_frag_list" title="Link to this definition"></a></dt>
+<dd><p>Adapt the original fragment list to fit the build function requirements</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fragment_list</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>, </em><em>file</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><em>pathlib.Path</em></a>) – The input fragment list.</p></li>
+<li><p><strong>new_frag_list</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>, </em><em>file</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><em>pathlib.Path</em></a>) – The output fragment list to be written.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>i</strong> – The number of records processed this way.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)">int</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="instagraal.pyramid_sparse.level">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">instagraal.pyramid_sparse.</span></span><span class="sig-name descname"><span class="pre">level</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pyramid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">level</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/pyramid_sparse.html#level"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.pyramid_sparse.level" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.pyramid_sparse.level.build_seq_per_bin">
+<span class="sig-name descname"><span class="pre">build_seq_per_bin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">genome_fasta</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/pyramid_sparse.html#level.build_seq_per_bin"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.pyramid_sparse.level.build_seq_per_bin" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.pyramid_sparse.level.define_inter_chrom_coord">
+<span class="sig-name descname"><span class="pre">define_inter_chrom_coord</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/pyramid_sparse.html#level.define_inter_chrom_coord"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.pyramid_sparse.level.define_inter_chrom_coord" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.pyramid_sparse.level.generate_new_fasta">
+<span class="sig-name descname"><span class="pre">generate_new_fasta</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">vect_frags</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">new_fasta</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">info_frags</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/pyramid_sparse.html#level.generate_new_fasta"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.pyramid_sparse.level.generate_new_fasta" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.pyramid_sparse.level.init_data">
+<span class="sig-name descname"><span class="pre">init_data</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/pyramid_sparse.html#level.init_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.pyramid_sparse.level.init_data" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.pyramid_sparse.level.load_data">
+<span class="sig-name descname"><span class="pre">load_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pyramid</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/pyramid_sparse.html#level.load_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.pyramid_sparse.level.load_data" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>pyramid</strong> – hic pyramid</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.pyramid_sparse.main">
+<span class="sig-prename descclassname"><span class="pre">instagraal.pyramid_sparse.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/pyramid_sparse.html#main"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.pyramid_sparse.main" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.pyramid_sparse.new_remove_problematic_fragments">
+<span class="sig-prename descclassname"><span class="pre">instagraal.pyramid_sparse.</span></span><span class="sig-name descname"><span class="pre">new_remove_problematic_fragments</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">contig_info</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fragments_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">abs_fragments_contacts</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">new_contig_list_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">new_fragments_list_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">new_abs_fragments_contacts_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pyramid</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/pyramid_sparse.html#new_remove_problematic_fragments"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.pyramid_sparse.new_remove_problematic_fragments" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="instagraal.pyramid_sparse.pyramid">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">instagraal.pyramid_sparse.</span></span><span class="sig-name descname"><span class="pre">pyramid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pyramid_folder</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_levels</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/pyramid_sparse.html#pyramid"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.pyramid_sparse.pyramid" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.pyramid_sparse.pyramid.build_frag_dictionnary">
+<span class="sig-name descname"><span class="pre">build_frag_dictionnary</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fragments_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">level</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/pyramid_sparse.html#pyramid.build_frag_dictionnary"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.pyramid_sparse.pyramid.build_frag_dictionnary" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.pyramid_sparse.pyramid.close">
+<span class="sig-name descname"><span class="pre">close</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/pyramid_sparse.html#pyramid.close"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.pyramid_sparse.pyramid.close" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.pyramid_sparse.pyramid.full_zoom_in_frag">
+<span class="sig-name descname"><span class="pre">full_zoom_in_frag</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">curr_frag</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/pyramid_sparse.html#pyramid.full_zoom_in_frag"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.pyramid_sparse.pyramid.full_zoom_in_frag" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>curr_frag</strong></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.pyramid_sparse.pyramid.get_level">
+<span class="sig-name descname"><span class="pre">get_level</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">level_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/pyramid_sparse.html#pyramid.get_level"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.pyramid_sparse.pyramid.get_level" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.pyramid_sparse.pyramid.load_reference_sequence">
+<span class="sig-name descname"><span class="pre">load_reference_sequence</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">genome_fasta</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/pyramid_sparse.html#pyramid.load_reference_sequence"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.pyramid_sparse.pyramid.load_reference_sequence" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.pyramid_sparse.pyramid.update_super_index">
+<span class="sig-name descname"><span class="pre">update_super_index</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dict_frag</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">super_index_file</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/pyramid_sparse.html#pyramid.update_super_index"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.pyramid_sparse.pyramid.update_super_index" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.pyramid_sparse.pyramid.update_super_index_in_dict_contig">
+<span class="sig-name descname"><span class="pre">update_super_index_in_dict_contig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dict_frag</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dict_contig</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/pyramid_sparse.html#pyramid.update_super_index_in_dict_contig"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.pyramid_sparse.pyramid.update_super_index_in_dict_contig" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.pyramid_sparse.pyramid.zoom_in_area">
+<span class="sig-name descname"><span class="pre">zoom_in_area</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">area</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/pyramid_sparse.html#pyramid.zoom_in_area"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.pyramid_sparse.pyramid.zoom_in_area" title="Link to this definition"></a></dt>
+<dd><p>zoom in area</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.pyramid_sparse.pyramid.zoom_in_frag">
+<span class="sig-name descname"><span class="pre">zoom_in_frag</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">curr_frag</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/pyramid_sparse.html#pyramid.zoom_in_frag"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.pyramid_sparse.pyramid.zoom_in_frag" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>curr_frag</strong></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.pyramid_sparse.pyramid.zoom_in_pixel">
+<span class="sig-name descname"><span class="pre">zoom_in_pixel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">curr_pixel</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/pyramid_sparse.html#pyramid.zoom_in_pixel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.pyramid_sparse.pyramid.zoom_in_pixel" title="Link to this definition"></a></dt>
+<dd><p>return the curr_frag at a higher resolution</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.pyramid_sparse.pyramid.zoom_out_frag">
+<span class="sig-name descname"><span class="pre">zoom_out_frag</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">curr_frag</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/pyramid_sparse.html#pyramid.zoom_out_frag"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.pyramid_sparse.pyramid.zoom_out_frag" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>curr_frag</strong></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.pyramid_sparse.pyramid.zoom_out_pixel">
+<span class="sig-name descname"><span class="pre">zoom_out_pixel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">curr_pixel</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/pyramid_sparse.html#pyramid.zoom_out_pixel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.pyramid_sparse.pyramid.zoom_out_pixel" title="Link to this definition"></a></dt>
+<dd><p>return the curr_frag at a lower resolution</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.pyramid_sparse.remove_problematic_fragments">
+<span class="sig-prename descclassname"><span class="pre">instagraal.pyramid_sparse.</span></span><span class="sig-name descname"><span class="pre">remove_problematic_fragments</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">contig_info</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fragments_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">abs_fragments_contacts</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">new_contig_list_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">new_fragments_list_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">new_abs_fragments_contacts_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pyramid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thresh_factor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/pyramid_sparse.html#remove_problematic_fragments"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.pyramid_sparse.remove_problematic_fragments" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.pyramid_sparse.subsample_data_set">
+<span class="sig-prename descclassname"><span class="pre">instagraal.pyramid_sparse.</span></span><span class="sig-name descname"><span class="pre">subsample_data_set</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">contig_info</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fragments_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fact_sub_sample</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">abs_fragments_contacts</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">new_abs_fragments_contacts_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_bin_per_contig</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">new_contig_list_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">new_fragments_list_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">old_2_new_file</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/pyramid_sparse.html#subsample_data_set"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.pyramid_sparse.subsample_data_set" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</section>
+<section id="module-instagraal.simu_single">
+<span id="instagraal-simu-single-module"></span><h2>instagraal.simu_single module<a class="headerlink" href="#module-instagraal.simu_single" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="instagraal.simu_single.kth_diag_indices">
+<span class="sig-prename descclassname"><span class="pre">instagraal.simu_single.</span></span><span class="sig-name descname"><span class="pre">kth_diag_indices</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/simu_single.html#kth_diag_indices"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.simu_single.kth_diag_indices" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="instagraal.simu_single.simulation">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">instagraal.simu_single.</span></span><span class="sig-name descname"><span class="pre">simulation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">folder_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fasta</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">level</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_iterations</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_simu</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_rippe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thresh_factor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_folder</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/simu_single.html#simulation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.simu_single.simulation" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.simu_single.simulation.blacklist_contig">
+<span class="sig-name descname"><span class="pre">blacklist_contig</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/simu_single.html#simulation.blacklist_contig"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.simu_single.simulation.blacklist_contig" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.simu_single.simulation.create_new_sub_frags">
+<span class="sig-name descname"><span class="pre">create_new_sub_frags</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/simu_single.html#simulation.create_new_sub_frags"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.simu_single.simulation.create_new_sub_frags" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.simu_single.simulation.create_sub_frags">
+<span class="sig-name descname"><span class="pre">create_sub_frags</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/simu_single.html#simulation.create_sub_frags"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.simu_single.simulation.create_sub_frags" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.simu_single.simulation.discard_low_coverage_frags">
+<span class="sig-name descname"><span class="pre">discard_low_coverage_frags</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/simu_single.html#simulation.discard_low_coverage_frags"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.simu_single.simulation.discard_low_coverage_frags" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.simu_single.simulation.export_new_fasta">
+<span class="sig-name descname"><span class="pre">export_new_fasta</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/simu_single.html#simulation.export_new_fasta"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.simu_single.simulation.export_new_fasta" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.simu_single.simulation.init_gl_image">
+<span class="sig-name descname"><span class="pre">init_gl_image</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/simu_single.html#simulation.init_gl_image"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.simu_single.simulation.init_gl_image" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.simu_single.simulation.load_gl_buffers">
+<span class="sig-name descname"><span class="pre">load_gl_buffers</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/simu_single.html#simulation.load_gl_buffers"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.simu_single.simulation.load_gl_buffers" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.simu_single.simulation.modify_sub_vect_frags">
+<span class="sig-name descname"><span class="pre">modify_sub_vect_frags</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/simu_single.html#simulation.modify_sub_vect_frags"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.simu_single.simulation.modify_sub_vect_frags" title="Link to this definition"></a></dt>
+<dd><p>include repeated frags</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.simu_single.simulation.modify_vect_frags">
+<span class="sig-name descname"><span class="pre">modify_vect_frags</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/simu_single.html#simulation.modify_vect_frags"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.simu_single.simulation.modify_vect_frags" title="Link to this definition"></a></dt>
+<dd><p>include repeated frags</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.simu_single.simulation.plot_info_simu">
+<span class="sig-name descname"><span class="pre">plot_info_simu</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">collect_likelihood_input</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collect_n_contigs_input</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_plot</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title_ax</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/simu_single.html#simulation.plot_info_simu"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.simu_single.simulation.plot_info_simu" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.simu_single.simulation.release">
+<span class="sig-name descname"><span class="pre">release</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/simu_single.html#simulation.release"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.simu_single.simulation.release" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.simu_single.simulation.select_data_set">
+<span class="sig-name descname"><span class="pre">select_data_set</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/simu_single.html#simulation.select_data_set"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.simu_single.simulation.select_data_set" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="instagraal.simu_single.simulation.select_repeated_frags">
+<span class="sig-name descname"><span class="pre">select_repeated_frags</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/simu_single.html#simulation.select_repeated_frags"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.simu_single.simulation.select_repeated_frags" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-instagraal.vector">
+<span id="instagraal-vector-module"></span><h2>instagraal.vector module<a class="headerlink" href="#module-instagraal.vector" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="instagraal.vector.Vec">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">instagraal.vector.</span></span><span class="sig-name descname"><span class="pre">Vec</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_array</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/instagraal/vector.html#Vec"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#instagraal.vector.Vec" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">ndarray</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="instagraal.vector.Vec.props">
+<span class="sig-name descname"><span class="pre">props</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.ClassVar" title="(in Python v3.14)"><span class="pre">ClassVar</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">['x',</span> <span class="pre">'y',</span> <span class="pre">'z',</span> <span class="pre">'w']</span></em><a class="headerlink" href="#instagraal.vector.Vec.props" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-instagraal.version">
+<span id="instagraal-version-module"></span><h2>instagraal.version module<a class="headerlink" href="#module-instagraal.version" title="Link to this heading"></a></h2>
+</section>
+<section id="module-instagraal">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-instagraal" title="Link to this heading"></a></h2>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="modules.html" class="btn btn-neutral float-left" title="instagraal" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2018, Lyam Baudry, Hervé Marie-Nelly.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+</body>
+</html>

@@ -3,6 +3,8 @@ name: Docker
 on:
   push:
     branches: [master]
+    tags:
+      - "v*.*.*"  # Trigger on version tags like v1.2.3
 
 permissions:
   contents: read
@@ -41,7 +43,7 @@ jobs:
       - name: Build CUDA image tag
         id: cuda-tag
         run: |
-          echo "cuda_tag=python3.12-cuda${{ matrix.cuda-version }}-ubuntu${{ matrix.ubuntu-version }}" >> $GITHUB_OUTPUT
+          echo "cuda_tag=cuda${{ matrix.cuda-version }}" >> $GITHUB_OUTPUT
 
       - name: Extract Docker metadata
         id: meta
@@ -51,8 +53,9 @@ jobs:
           tags: |
             type=ref,event=branch,suffix=-${{ steps.cuda-tag.outputs.cuda_tag }}
             type=ref,event=pr,suffix=-${{ steps.cuda-tag.outputs.cuda_tag }}
+            type=ref,event=tag,pattern={{version}}-${{ steps.cuda-tag.outputs.cuda_tag }}
+            type=ref,event=tag,pattern=latest-${{ steps.cuda-tag.outputs.cuda_tag }},if=starts
             type=sha,suffix=-${{ steps.cuda-tag.outputs.cuda_tag }}
-            type=raw,value=latest-${{ steps.cuda-tag.outputs.cuda_tag }}
 
       - name: Build and push
         uses: docker/build-push-action@v5

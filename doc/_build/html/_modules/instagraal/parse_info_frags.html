@@ -1,0 +1,1000 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>instagraal.parse_info_frags &mdash; instagraal 0.1.4 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+
+
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=fd825880"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+</head>
+
+<body class="wy-body-for-nav">
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+
+
+          <a href="../../index.html" class="icon icon-home">
+            instagraal
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../api/modules.html">instagraal</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">instagraal</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">instagraal.parse_info_frags</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+
+  <h1>Source code for instagraal.parse_info_frags</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+<span class="c1"># coding: utf-8</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">A couple of functions to manipulate info_frags.txt files and BED files.</span>
+
+<span class="sd">This module started as a couple scripts to flip back artefact inversions</span>
+<span class="sd">introduced by the GRAAL assembler and its derivatives (see:</span>
+<span class="sd">https://github.com/koszullab/GRAAL, https://github.com/koszullab/instaGRAAL).</span>
+<span class="sd">It has greatly evolved since, and provides a range of functions to polish</span>
+<span class="sd">assemblies and correct potential missassemblies.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">gzip</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">itertools</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">operator</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">Bio</span><span class="w"> </span><span class="kn">import</span> <span class="n">SeqIO</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">Bio.SeqRecord</span><span class="w"> </span><span class="kn">import</span> <span class="n">SeqRecord</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">Bio.Seq</span><span class="w"> </span><span class="kn">import</span> <span class="n">Seq</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">matplotlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">pyplot</span> <span class="k">as</span> <span class="n">plt</span>
+
+<span class="c1"># Defaults:</span>
+<span class="c1"># -Scaffolds below DEFAULT_MIN_SCAFFOLD_SIZE are not considered for polishing</span>
+<span class="c1"># -Defaut names for output files</span>
+<span class="c1"># -Junction sequence between two bins that have been stitched together</span>
+<span class="c1"># in order to reflect that some base pairs may be missing</span>
+<span class="c1"># -Two default schemes (&#39;criteria&#39;) for each inversion corrector</span>
+<span class="n">DEFAULT_MIN_SCAFFOLD_SIZE</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">DEFAULT_NEW_INFO_FRAGS_NAME</span> <span class="o">=</span> <span class="s2">&quot;new_info_frags.txt&quot;</span>
+<span class="n">DEFAULT_NEW_GENOME_NAME</span> <span class="o">=</span> <span class="s2">&quot;new_genome.fa&quot;</span>
+<span class="n">DEFAULT_JUNCTION_SEQUENCE</span> <span class="o">=</span> <span class="n">Seq</span><span class="p">(</span><span class="s2">&quot;NNNNNN&quot;</span><span class="p">)</span>
+<span class="n">DEFAULT_CRITERION</span> <span class="o">=</span> <span class="s2">&quot;colinear&quot;</span>
+<span class="n">DEFAULT_CRITERION_2</span> <span class="o">=</span> <span class="s2">&quot;blocks&quot;</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_parse_fasta</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Yield SeqRecord objects from a FASTA file, transparently handling</span>
+<span class="sd">    gzip-compressed inputs (.gz).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.gz&quot;</span><span class="p">):</span>
+        <span class="k">with</span> <span class="n">gzip</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;rt&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">handle</span><span class="p">:</span>
+            <span class="k">yield from</span> <span class="n">SeqIO</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="s2">&quot;fasta&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">yield from</span> <span class="n">SeqIO</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;fasta&quot;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="parse_info_frags">
+<a class="viewcode-back" href="../../api/instagraal.html#instagraal.parse_info_frags.parse_info_frags">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">parse_info_frags</span><span class="p">(</span><span class="n">info_frags</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Import an info_frags.txt file and return a dictionary where each key</span>
+<span class="sd">    is a newly formed scaffold and each value is the list of bins and their</span>
+<span class="sd">    origin on the initial scaffolding.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">new_scaffolds</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">info_frags</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">info_frags_handle</span><span class="p">:</span>
+        <span class="n">current_new_contig</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">info_frags_handle</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;&gt;&quot;</span><span class="p">):</span>
+                <span class="n">current_new_contig</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">line</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                <span class="n">new_scaffolds</span><span class="p">[</span><span class="n">current_new_contig</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">elif</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;init_contig&quot;</span><span class="p">):</span>
+                <span class="k">pass</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">init_contig</span><span class="p">,</span> <span class="n">id_frag</span><span class="p">,</span> <span class="n">orientation</span><span class="p">,</span> <span class="n">pos_start</span><span class="p">,</span> <span class="n">pos_end</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">line</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">start</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">pos_start</span><span class="p">)</span>
+                <span class="n">end</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">pos_end</span><span class="p">)</span>
+                <span class="n">ori</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">orientation</span><span class="p">)</span>
+                <span class="n">fragid</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">id_frag</span><span class="p">)</span>
+                <span class="k">assert</span> <span class="n">start</span> <span class="o">&lt;</span> <span class="n">end</span>
+                <span class="k">assert</span> <span class="n">ori</span> <span class="ow">in</span> <span class="p">{</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">}</span>
+                <span class="n">new_scaffolds</span><span class="p">[</span><span class="n">current_new_contig</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">init_contig</span><span class="p">,</span> <span class="n">fragid</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">ori</span><span class="p">])</span>
+
+    <span class="k">return</span> <span class="n">new_scaffolds</span></div>
+
+
+
+<span class="c1"># The format of info_frags.txt files looks a lot like the BED format, so this</span>
+<span class="c1"># function may come in handy</span>
+<div class="viewcode-block" id="parse_bed">
+<a class="viewcode-back" href="../../api/instagraal.html#instagraal.parse_info_frags.parse_bed">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">parse_bed</span><span class="p">(</span><span class="n">bed_file</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Import a BED file (where the data entries are analogous to what may be</span>
+<span class="sd">    expected in an info_frags.txt file) and return a scaffold dictionary,</span>
+<span class="sd">    similarly to parse_info_frags.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">new_scaffolds</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">bed_file</span><span class="p">)</span> <span class="k">as</span> <span class="n">bed_handle</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">bed_handle</span><span class="p">:</span>
+            <span class="n">chrom</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">query</span><span class="p">,</span> <span class="n">qual</span><span class="p">,</span> <span class="n">strand</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()[:</span><span class="mi">7</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">strand</span> <span class="o">==</span> <span class="s2">&quot;+&quot;</span><span class="p">:</span>
+                <span class="n">ori</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="k">elif</span> <span class="n">strand</span> <span class="o">==</span> <span class="s2">&quot;-&quot;</span><span class="p">:</span>
+                <span class="n">ori</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Error when parsing strand orientation: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">strand</span><span class="p">))</span>
+
+            <span class="k">if</span> <span class="nb">int</span><span class="p">(</span><span class="n">qual</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">bed_bin</span> <span class="o">=</span> <span class="p">[</span><span class="n">query</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">start</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">end</span><span class="p">),</span> <span class="n">ori</span><span class="p">]</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">new_scaffolds</span><span class="p">[</span><span class="n">chrom</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">bed_bin</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                    <span class="n">new_scaffolds</span><span class="p">[</span><span class="n">chrom</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">bed_bin</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">new_scaffolds</span></div>
+
+
+
+<div class="viewcode-block" id="correct_scaffolds">
+<a class="viewcode-back" href="../../api/instagraal.html#instagraal.parse_info_frags.correct_scaffolds">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">correct_scaffolds</span><span class="p">(</span><span class="n">scaffolds</span><span class="p">,</span> <span class="n">corrector</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Unfinished&quot;&quot;&quot;</span>
+
+    <span class="n">new_scaffolds</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">are_overlapping</span><span class="p">(</span><span class="n">bin1</span><span class="p">,</span> <span class="n">bin2</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check for overlapping regions between two regions - necessary</span>
+<span class="sd">        requirement before potentially merging</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">bin2</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="n">init1</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">start1</span><span class="p">,</span> <span class="n">end1</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">bin1</span>
+        <span class="n">init2</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">start2</span><span class="p">,</span> <span class="n">end2</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">bin2</span>
+
+        <span class="k">if</span> <span class="n">init1</span> <span class="o">!=</span> <span class="n">init2</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span><span class="n">start2</span> <span class="o">&lt;=</span> <span class="n">start1</span> <span class="o">&lt;=</span> <span class="n">end2</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">start1</span> <span class="o">&lt;=</span> <span class="n">start2</span> <span class="o">&lt;=</span> <span class="n">end1</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">merge_bins</span><span class="p">(</span><span class="n">bin1</span><span class="p">,</span> <span class="n">bin2</span><span class="p">,</span> <span class="n">ignore_ori</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Painstakingly check for every edge case in order to properly merge</span>
+<span class="sd">        two overlapping bins.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">init1</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">start1</span><span class="p">,</span> <span class="n">end1</span><span class="p">,</span> <span class="n">ori1</span> <span class="o">=</span> <span class="n">bin1</span>
+        <span class="n">init2</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">start2</span><span class="p">,</span> <span class="n">end2</span><span class="p">,</span> <span class="n">ori2</span> <span class="o">=</span> <span class="n">bin2</span>
+
+        <span class="k">assert</span> <span class="n">init1</span> <span class="o">==</span> <span class="n">init2</span>
+        <span class="n">start</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">start1</span><span class="p">,</span> <span class="n">start2</span><span class="p">)</span>
+        <span class="n">end</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">end1</span><span class="p">,</span> <span class="n">end2</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">ignore_ori</span><span class="p">:</span>
+            <span class="n">ori</span> <span class="o">=</span> <span class="n">ori1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">len1</span> <span class="o">=</span> <span class="n">end1</span> <span class="o">-</span> <span class="n">start1</span>
+            <span class="n">len2</span> <span class="o">=</span> <span class="n">end2</span> <span class="o">-</span> <span class="n">start2</span>
+            <span class="k">if</span> <span class="n">len2</span> <span class="o">&gt;</span> <span class="n">len1</span><span class="p">:</span>
+                <span class="n">ori</span> <span class="o">=</span> <span class="n">ori2</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">ori</span> <span class="o">=</span> <span class="n">ori1</span>
+
+        <span class="n">new_bin</span> <span class="o">=</span> <span class="p">[</span><span class="n">init1</span><span class="p">,</span> <span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">ori</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">new_bin</span>
+
+    <span class="n">corrector_bins</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">corrector</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">scaffold</span> <span class="ow">in</span> <span class="n">scaffolds</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">new_scaffold</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">blocks</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">scaffold</span><span class="p">,</span> <span class="n">operator</span><span class="o">.</span><span class="n">itemgetter</span><span class="p">(</span><span class="mi">0</span><span class="p">)):</span>
+            <span class="n">merged_bin</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">while</span> <span class="s2">&quot;Reading blocks&quot;</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">my_bin</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">blocks</span><span class="p">)</span>  <span class="c1"># noqa: B031</span>
+                    <span class="k">if</span> <span class="n">are_overlapping</span><span class="p">(</span><span class="n">my_bin</span><span class="p">,</span> <span class="n">merged_bin</span><span class="p">):</span>
+                        <span class="n">merged_bin</span> <span class="o">=</span> <span class="n">merge_bins</span><span class="p">(</span><span class="n">my_bin</span><span class="p">,</span> <span class="n">merged_bin</span><span class="p">)</span>
+                        <span class="k">continue</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">merged_bin</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                            <span class="n">new_scaffold</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">merged_bin</span><span class="p">)</span>
+                        <span class="n">merged_bin</span> <span class="o">=</span> <span class="n">my_bin</span>
+                        <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+                        <span class="k">for</span> <span class="n">correct_bin</span> <span class="ow">in</span> <span class="n">corrector_bins</span><span class="p">:</span>
+                            <span class="k">if</span> <span class="n">are_overlapping</span><span class="p">(</span><span class="n">my_bin</span><span class="p">,</span> <span class="n">correct_bin</span><span class="p">):</span>
+                                <span class="n">merged_bin</span> <span class="o">=</span> <span class="n">merge_bins</span><span class="p">(</span><span class="n">my_bin</span><span class="p">,</span> <span class="n">correct_bin</span><span class="p">)</span>
+                                <span class="n">corrector_bins</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+                                <span class="n">i</span> <span class="o">-=</span> <span class="mi">1</span>
+                            <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">except</span> <span class="ne">StopIteration</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">merged_bin</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="n">new_scaffold</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">merged_bin</span><span class="p">)</span>
+                    <span class="k">break</span>
+
+        <span class="n">new_scaffolds</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_scaffold</span>
+
+    <span class="k">return</span> <span class="n">new_scaffolds</span></div>
+
+
+
+<div class="viewcode-block" id="format_info_frags">
+<a class="viewcode-back" href="../../api/instagraal.html#instagraal.parse_info_frags.format_info_frags">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">format_info_frags</span><span class="p">(</span><span class="n">info_frags</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A function to seamlessly run on either scaffold dictionaries or</span>
+<span class="sd">    info_frags.txt files without having to check the input first.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">info_frags</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">info_frags</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">scaffolds</span> <span class="o">=</span> <span class="n">parse_info_frags</span><span class="p">(</span><span class="n">info_frags</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">scaffolds</span>
+        <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Error when opening info_frags.txt&quot;</span><span class="p">)</span>
+            <span class="k">raise</span></div>
+
+
+
+<div class="viewcode-block" id="plot_info_frags">
+<a class="viewcode-back" href="../../api/instagraal.html#instagraal.parse_info_frags.plot_info_frags">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_info_frags</span><span class="p">(</span><span class="n">scaffolds</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A crude way to visualize new scaffolds according to their origin on the</span>
+<span class="sd">    initial scaffolding. Each scaffold spawns a new plot. Orientations are</span>
+<span class="sd">    represented by different colors.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">scaffolds</span> <span class="o">=</span> <span class="n">format_info_frags</span><span class="p">(</span><span class="n">scaffolds</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">scaffold</span> <span class="ow">in</span> <span class="n">scaffolds</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+        <span class="n">xs</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">scaffold</span><span class="p">))</span>
+        <span class="n">color</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">names</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">ys</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">my_bin</span> <span class="ow">in</span> <span class="n">scaffold</span><span class="p">:</span>
+            <span class="n">current_color</span> <span class="o">=</span> <span class="s2">&quot;r&quot;</span> <span class="k">if</span> <span class="n">my_bin</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="s2">&quot;g&quot;</span>
+            <span class="n">color</span> <span class="o">+=</span> <span class="p">[</span><span class="n">current_color</span><span class="p">]</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">my_bin</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">names</span><span class="p">:</span>
+                <span class="n">ys</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">names</span><span class="p">[</span><span class="n">name</span><span class="p">])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">names</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">names</span><span class="p">)</span>
+                <span class="n">ys</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">names</span><span class="p">[</span><span class="n">name</span><span class="p">])</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">xs</span><span class="p">,</span> <span class="n">ys</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="n">color</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span></div>
+
+
+
+<div class="viewcode-block" id="plot_contig_composition">
+<a class="viewcode-back" href="../../api/instagraal.html#instagraal.parse_info_frags.plot_contig_composition">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_contig_composition</span><span class="p">(</span><span class="n">new_info_frags_path</span><span class="p">,</span> <span class="n">output_path</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Plot a stacked barplot of new-contig composition by source contig.</span>
+
+<span class="sd">    For each new contig on the X-axis the bar height (Y-axis, bp) is split</span>
+<span class="sd">    into coloured segments representing the contribution (in bp) of each</span>
+<span class="sd">    original contig.  New contigs are sorted from longest to shortest.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    new_info_frags_path:</span>
+<span class="sd">        Path to ``new_info_frags.txt`` produced by ``instagraal-polish``.</span>
+<span class="sd">    output_path:</span>
+<span class="sd">        Path where the figure is saved.  When ``None`` the figure is shown</span>
+<span class="sd">        interactively.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">scaffolds</span> <span class="o">=</span> <span class="n">parse_info_frags</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">new_info_frags_path</span><span class="p">))</span>
+
+    <span class="c1"># Compute per-source-contig length contribution for each new contig</span>
+    <span class="n">new_names</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">scaffolds</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+    <span class="n">all_src</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">contribs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">new_name</span><span class="p">,</span> <span class="n">frags</span> <span class="ow">in</span> <span class="n">scaffolds</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">contrib</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">frag</span> <span class="ow">in</span> <span class="n">frags</span><span class="p">:</span>
+            <span class="n">src</span> <span class="o">=</span> <span class="n">frag</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">length</span> <span class="o">=</span> <span class="n">frag</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">-</span> <span class="n">frag</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>  <span class="c1"># end - start</span>
+            <span class="n">contrib</span><span class="p">[</span><span class="n">src</span><span class="p">]</span> <span class="o">=</span> <span class="n">contrib</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="n">length</span>
+            <span class="k">if</span> <span class="n">src</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">all_src</span><span class="p">:</span>
+                <span class="n">all_src</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">src</span><span class="p">)</span>
+        <span class="n">contribs</span><span class="p">[</span><span class="n">new_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">contrib</span>
+
+    <span class="n">all_src</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">all_src</span><span class="p">)</span>
+
+    <span class="c1"># Sort new contigs by total length (descending)</span>
+    <span class="n">total_len</span> <span class="o">=</span> <span class="p">{</span><span class="n">n</span><span class="p">:</span> <span class="nb">sum</span><span class="p">(</span><span class="n">contribs</span><span class="p">[</span><span class="n">n</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">())</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">new_names</span><span class="p">}</span>
+    <span class="n">new_names_sorted</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">new_names</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">n</span><span class="p">:</span> <span class="n">total_len</span><span class="p">[</span><span class="n">n</span><span class="p">],</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># Build per-source height matrix (n_src x n_new_contigs)</span>
+    <span class="n">n_new</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">new_names_sorted</span><span class="p">)</span>
+    <span class="n">heights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+        <span class="p">[[</span><span class="n">contribs</span><span class="p">[</span><span class="n">n</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">new_names_sorted</span><span class="p">]</span> <span class="k">for</span> <span class="n">src</span> <span class="ow">in</span> <span class="n">all_src</span><span class="p">],</span>
+        <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Assign colours</span>
+    <span class="n">cmap</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">cm</span><span class="o">.</span><span class="n">get_cmap</span><span class="p">(</span><span class="s2">&quot;tab20&quot;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">all_src</span><span class="p">))</span>
+    <span class="n">colors</span> <span class="o">=</span> <span class="p">[</span><span class="n">cmap</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">all_src</span><span class="p">))]</span>
+
+    <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="n">n_new</span> <span class="o">*</span> <span class="mf">0.25</span><span class="p">),</span> <span class="mi">5</span><span class="p">))</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n_new</span><span class="p">)</span>
+    <span class="n">bottoms</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">n_new</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">src</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">all_src</span><span class="p">):</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">bar</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">heights</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">bottom</span><span class="o">=</span><span class="n">bottoms</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">colors</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="n">src</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mf">0.8</span><span class="p">)</span>
+        <span class="n">bottoms</span> <span class="o">+=</span> <span class="n">heights</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+
+    <span class="c1"># X-axis: strip the common prefix (e.g. &quot;3C-assembly|&quot;) for readability</span>
+    <span class="n">short_labels</span> <span class="o">=</span> <span class="p">[</span><span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;|&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="s2">&quot;|&quot;</span> <span class="ow">in</span> <span class="n">name</span> <span class="k">else</span> <span class="n">name</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">new_names_sorted</span><span class="p">]</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xticks</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xticklabels</span><span class="p">(</span><span class="n">short_labels</span><span class="p">,</span> <span class="n">rotation</span><span class="o">=</span><span class="mi">90</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="nb">max</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">120</span> <span class="o">//</span> <span class="n">n_new</span><span class="p">)))</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;New contigs&quot;</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Contig length (bp)&quot;</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">&quot;Source-contig composition of new assembly contigs&quot;</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span>
+        <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Original contigs&quot;</span><span class="p">,</span>
+        <span class="n">bbox_to_anchor</span><span class="o">=</span><span class="p">(</span><span class="mf">1.01</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+        <span class="n">loc</span><span class="o">=</span><span class="s2">&quot;upper left&quot;</span><span class="p">,</span>
+        <span class="n">fontsize</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span>
+        <span class="n">ncol</span><span class="o">=</span><span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">all_src</span><span class="p">)</span> <span class="o">//</span> <span class="mi">30</span><span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">fig</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">output_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">fig</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">output_path</span><span class="p">),</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">150</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s2">&quot;tight&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="n">fig</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span></div>
+
+
+
+<div class="viewcode-block" id="remove_spurious_insertions">
+<a class="viewcode-back" href="../../api/instagraal.html#instagraal.parse_info_frags.remove_spurious_insertions">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">remove_spurious_insertions</span><span class="p">(</span><span class="n">scaffolds</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Remove all bins whose left and right neighbors belong to the same,</span>
+<span class="sd">    different scaffold.</span>
+
+<span class="sd">    Example with three such insertions in two different scaffolds:</span>
+
+<span class="sd">        &gt;&gt;&gt; scaffolds = {</span>
+<span class="sd">        ...     &quot;scaffold1&quot;: [</span>
+<span class="sd">        ...         [&quot;contig1&quot;, 0, 0, 100, 1],</span>
+<span class="sd">        ...         [&quot;contig1&quot;, 1, 100, 200, 1],</span>
+<span class="sd">        ...         [&quot;contig23&quot;, 53, 1845, 2058, -1], # &lt;-- insertion</span>
+<span class="sd">        ...         [&quot;contig1&quot;, 4, 254, 408, 1],</span>
+<span class="sd">        ...         [&quot;contig1&quot;, 7, 805, 1253, 1],</span>
+<span class="sd">        ...         [&quot;contig5&quot;, 23, 1500, 1605, -1],</span>
+<span class="sd">        ...         [&quot;contig65&quot;, 405, 32145, 45548, -1], # &lt;-- insertion</span>
+<span class="sd">        ...         [&quot;contig5&quot;, 22, 1385, 1499, -1],</span>
+<span class="sd">        ...     ],</span>
+<span class="sd">        ...     &quot;scaffold2&quot;: [</span>
+<span class="sd">        ...         [&quot;contig8&quot;, 0, 0, 250, 1],</span>
+<span class="sd">        ...         [&quot;contig17&quot;, 2454, 8754, -1], # &lt;-- insertion</span>
+<span class="sd">        ...         [&quot;contig8&quot;, 2, 320, 480, 1],</span>
+<span class="sd">        ...      ],</span>
+<span class="sd">        ... }</span>
+
+<span class="sd">        &gt;&gt;&gt; new_scaffolds = remove_spurious_insertions(scaffolds)</span>
+<span class="sd">        &gt;&gt;&gt; for my_bin in new_scaffolds[&#39;scaffold1&#39;]:</span>
+<span class="sd">        ...     print(my_bin)</span>
+<span class="sd">        ...</span>
+<span class="sd">        [&#39;contig1&#39;, 0, 0, 100, 1]</span>
+<span class="sd">        [&#39;contig1&#39;, 1, 100, 200, 1]</span>
+<span class="sd">        [&#39;contig1&#39;, 4, 254, 408, 1]</span>
+<span class="sd">        [&#39;contig1&#39;, 7, 805, 1253, 1]</span>
+<span class="sd">        [&#39;contig5&#39;, 23, 1500, 1605, -1]</span>
+<span class="sd">        [&#39;contig5&#39;, 22, 1385, 1499, -1]</span>
+
+<span class="sd">        &gt;&gt;&gt; for my_bin in new_scaffolds[&#39;scaffold2&#39;]:</span>
+<span class="sd">        ...     print(my_bin)</span>
+<span class="sd">        ...</span>
+<span class="sd">        [&#39;contig8&#39;, 0, 0, 250, 1]</span>
+<span class="sd">        [&#39;contig8&#39;, 2, 320, 480, 1]</span>
+
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">scaffolds</span> <span class="o">=</span> <span class="n">format_info_frags</span><span class="p">(</span><span class="n">scaffolds</span><span class="p">)</span>
+    <span class="n">new_scaffolds</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">scaffold</span> <span class="ow">in</span> <span class="n">scaffolds</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">new_scaffold</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">scaffold</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">scaffold</span><span class="p">)):</span>
+                <span class="c1"># First take care of edge cases: *-- or --*</span>
+                <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">scaffold</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">scaffold</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="ow">and</span> <span class="n">scaffold</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">scaffold</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">2</span><span class="p">][</span><span class="mi">0</span><span class="p">]):</span>
+                        <span class="n">new_scaffold</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">scaffold</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                <span class="k">elif</span> <span class="n">i</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">scaffold</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">scaffold</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">scaffold</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="ow">and</span> <span class="n">scaffold</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">scaffold</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">2</span><span class="p">][</span><span class="mi">0</span><span class="p">]):</span>
+                        <span class="n">new_scaffold</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">scaffold</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                <span class="c1"># Otherwise, looking for -*-</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">scaffold</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">scaffold</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="ow">and</span> <span class="n">scaffold</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">scaffold</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]):</span>
+                        <span class="n">new_scaffold</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">scaffold</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Can&#39;t remove insertions if 2 bins or less</span>
+            <span class="n">new_scaffold</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">scaffold</span><span class="p">)</span>
+
+        <span class="n">new_scaffolds</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_scaffold</span>
+
+    <span class="k">return</span> <span class="n">new_scaffolds</span></div>
+
+
+
+<div class="viewcode-block" id="correct_spurious_inversions">
+<a class="viewcode-back" href="../../api/instagraal.html#instagraal.parse_info_frags.correct_spurious_inversions">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">correct_spurious_inversions</span><span class="p">(</span><span class="n">scaffolds</span><span class="p">,</span> <span class="n">criterion</span><span class="o">=</span><span class="s2">&quot;colinear&quot;</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Invert bins based on orientation neighborhoods. Neighborhoods can be</span>
+<span class="sd">    defined by three criteria:</span>
+
+<span class="sd">    -a &#39;cis&#39; neighborhood is a group of bins belonging to the same initial</span>
+<span class="sd">    contig</span>
+<span class="sd">    -a &#39;colinear&#39; neighborhood is a &#39;cis&#39; neighborhood where bins are</span>
+<span class="sd">    ordered the same way they were on the initial contig</span>
+<span class="sd">    -a &#39;contiguous&#39; neighborhood is a &#39;colinear&#39; neighborhood where all bins</span>
+<span class="sd">    are exactly consecutive, i.e. the end position of each bin matches the</span>
+<span class="sd">    starting position of the next bin</span>
+
+<span class="sd">    This function looks for such neighborhoods and orients all bins in it</span>
+<span class="sd">    according to the majority orientation.</span>
+
+<span class="sd">    An example with three inversions, one for each criterion:</span>
+
+<span class="sd">        &gt;&gt;&gt; scaffolds = {</span>
+<span class="sd">        ...     &quot;scaffold1&quot;: [</span>
+<span class="sd">        ...         [&quot;contig1&quot;, 1, 100, 200, 1],</span>
+<span class="sd">        ...         [&quot;contig1&quot;, 2, 200, 300, 1],</span>
+<span class="sd">        ...         [&quot;contig1&quot;, 3, 300, 400, -1], # &lt;-- inversion (contiguous)</span>
+<span class="sd">        ...         [&quot;contig1&quot;, 4, 400, 500, 1],</span>
+<span class="sd">        ...         [&quot;contig1&quot;, 10, 1500, 1605, 1],</span>
+<span class="sd">        ...         [&quot;contig1&quot;, 12, 1750, 1850, -1], # &lt;-- inversion (colinear)</span>
+<span class="sd">        ...         [&quot;contig1&quot;, 23, 2100, 2499, 1],</span>
+<span class="sd">        ...         [&quot;contig1&quot;, 28, 2850, 3000, 1],</span>
+<span class="sd">        ...         [&quot;contig1&quot;, 0, 0, 100, -1], # &lt;-- inversion (cis)</span>
+<span class="sd">        ...         [&quot;contig2&quot;, 554, 1850, 1900, -1],</span>
+<span class="sd">        ...     ],</span>
+<span class="sd">        ... }</span>
+
+<span class="sd">    With the &#39;cis&#39; criterion, pretty much all bins from &quot;contig1&quot; get inverted</span>
+<span class="sd">    to the majority orientation (+):</span>
+
+<span class="sd">        &gt;&gt;&gt; sc_cis = correct_spurious_inversions(scaffolds, &quot;cis&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; for my_bin in sc_cis[&#39;scaffold1&#39;]:</span>
+<span class="sd">        ...     print(my_bin)</span>
+<span class="sd">        ...</span>
+<span class="sd">        [&#39;contig1&#39;, 1, 100, 200, 1]</span>
+<span class="sd">        [&#39;contig1&#39;, 2, 200, 300, 1]</span>
+<span class="sd">        [&#39;contig1&#39;, 3, 300, 400, 1]</span>
+<span class="sd">        [&#39;contig1&#39;, 4, 400, 500, 1]</span>
+<span class="sd">        [&#39;contig1&#39;, 10, 1500, 1605, 1]</span>
+<span class="sd">        [&#39;contig1&#39;, 12, 1750, 1850, 1]</span>
+<span class="sd">        [&#39;contig1&#39;, 23, 2100, 2499, 1]</span>
+<span class="sd">        [&#39;contig1&#39;, 28, 2850, 3000, 1]</span>
+<span class="sd">        [&#39;contig1&#39;, 0, 0, 100, 1]</span>
+<span class="sd">        [&#39;contig2&#39;, 554, 1850, 1900, -1]</span>
+
+<span class="sd">    With the &#39;colinear&#39; criterion, the bin [&#39;contig1&#39;, 0, 0, 100, -1] is</span>
+<span class="sd">    treated as a different neighborhood from the rest (as it is not colinear</span>
+<span class="sd">    with the other bins from &#39;contig1&#39;) and remains untouched:</span>
+
+<span class="sd">        &gt;&gt;&gt; sc_colinear = correct_spurious_inversions(scaffolds, &quot;colinear&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; for my_bin in sc_colinear[&#39;scaffold1&#39;]:</span>
+<span class="sd">        ...     print(my_bin)</span>
+<span class="sd">        ...</span>
+<span class="sd">        [&#39;contig1&#39;, 1, 100, 200, 1]</span>
+<span class="sd">        [&#39;contig1&#39;, 2, 200, 300, 1]</span>
+<span class="sd">        [&#39;contig1&#39;, 3, 300, 400, 1]</span>
+<span class="sd">        [&#39;contig1&#39;, 4, 400, 500, 1]</span>
+<span class="sd">        [&#39;contig1&#39;, 10, 1500, 1605, 1]</span>
+<span class="sd">        [&#39;contig1&#39;, 12, 1750, 1850, 1]</span>
+<span class="sd">        [&#39;contig1&#39;, 23, 2100, 2499, 1]</span>
+<span class="sd">        [&#39;contig1&#39;, 28, 2850, 3000, 1]</span>
+<span class="sd">        [&#39;contig1&#39;, 0, 0, 100, -1]</span>
+<span class="sd">        [&#39;contig2&#39;, 554, 1850, 1900, -1]</span>
+
+<span class="sd">    With the &#39;contiguous&#39; criterion, the [&#39;contig1&#39;, 12, 1750, 1850, -1] breaks</span>
+<span class="sd">    with the contiguous region spanning from 100 to 400 bp on &#39;contig1&#39; and</span>
+<span class="sd">    so is treated as a different neighborhood as well:</span>
+
+<span class="sd">        &gt;&gt;&gt; sc_cont = correct_spurious_inversions(scaffolds, &quot;contiguous&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; for my_bin in sc_cont[&#39;scaffold1&#39;]:</span>
+<span class="sd">        ...     print(my_bin)</span>
+<span class="sd">        ...</span>
+<span class="sd">        [&#39;contig1&#39;, 1, 100, 200, 1]</span>
+<span class="sd">        [&#39;contig1&#39;, 2, 200, 300, 1]</span>
+<span class="sd">        [&#39;contig1&#39;, 3, 300, 400, 1]</span>
+<span class="sd">        [&#39;contig1&#39;, 4, 400, 500, 1]</span>
+<span class="sd">        [&#39;contig1&#39;, 10, 1500, 1605, 1]</span>
+<span class="sd">        [&#39;contig1&#39;, 12, 1750, 1850, -1]</span>
+<span class="sd">        [&#39;contig1&#39;, 23, 2100, 2499, 1]</span>
+<span class="sd">        [&#39;contig1&#39;, 28, 2850, 3000, 1]</span>
+<span class="sd">        [&#39;contig1&#39;, 0, 0, 100, -1]</span>
+<span class="sd">        [&#39;contig2&#39;, 554, 1850, 1900, -1]</span>
+
+<span class="sd">    Note that &#39;contig2&#39; remains untouched at all times since bins in it are</span>
+<span class="sd">    never in the same neighborhood as those from &#39;contig1&#39;.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">scaffolds</span> <span class="o">=</span> <span class="n">format_info_frags</span><span class="p">(</span><span class="n">scaffolds</span><span class="p">)</span>
+    <span class="n">new_scaffolds</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">is_cis</span><span class="p">(</span><span class="n">bin1</span><span class="p">,</span> <span class="n">bin2</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">bin1</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">bin2</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">is_contiguous</span><span class="p">(</span><span class="n">bin1</span><span class="p">,</span> <span class="n">bin2</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">is_cis</span><span class="p">(</span><span class="n">bin1</span><span class="p">,</span> <span class="n">bin2</span><span class="p">)</span> <span class="ow">and</span> <span class="n">bin1</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">==</span> <span class="n">bin2</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">is_colinear</span><span class="p">(</span><span class="n">bin1</span><span class="p">,</span> <span class="n">bin2</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">is_cis</span><span class="p">(</span><span class="n">bin1</span><span class="p">,</span> <span class="n">bin2</span><span class="p">)</span> <span class="ow">and</span> <span class="n">bin1</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">bin2</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+
+    <span class="n">condition_callables</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;cis&quot;</span><span class="p">:</span> <span class="n">is_cis</span><span class="p">,</span>
+        <span class="s2">&quot;colinear&quot;</span><span class="p">:</span> <span class="n">is_colinear</span><span class="p">,</span>
+        <span class="s2">&quot;contiguous&quot;</span><span class="p">:</span> <span class="n">is_contiguous</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="n">block_test</span> <span class="o">=</span> <span class="n">condition_callables</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">criterion</span><span class="p">,</span> <span class="s2">&quot;colinear&quot;</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">scaffold</span> <span class="ow">in</span> <span class="n">scaffolds</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">new_scaffold</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="n">block_cumulative_ori</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">scaffold</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">current_bin</span> <span class="o">=</span> <span class="n">scaffold</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">block_buffer</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">my_bin</span> <span class="ow">in</span> <span class="n">scaffold</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">block_buffer</span><span class="p">:</span>
+                    <span class="n">new_bin</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">my_bin</span><span class="p">)</span>
+                    <span class="n">block_buffer</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_bin</span><span class="p">)</span>
+                    <span class="n">block_cumulative_ori</span> <span class="o">=</span> <span class="n">my_bin</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                    <span class="k">continue</span>
+
+                <span class="k">elif</span> <span class="ow">not</span> <span class="n">block_test</span><span class="p">(</span><span class="n">current_bin</span><span class="p">,</span> <span class="n">my_bin</span><span class="p">):</span>
+                    <span class="k">for</span> <span class="n">my_buf_bin</span> <span class="ow">in</span> <span class="n">block_buffer</span><span class="p">:</span>
+                        <span class="n">new_bin</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">my_buf_bin</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="n">block_cumulative_ori</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+                            <span class="n">new_bin</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">new_bin</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+                        <span class="n">new_scaffold</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_bin</span><span class="p">)</span>
+                    <span class="n">block_cumulative_ori</span> <span class="o">=</span> <span class="n">my_bin</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                    <span class="n">current_bin</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">my_bin</span><span class="p">)</span>
+                    <span class="n">block_buffer</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">([</span><span class="n">my_bin</span><span class="p">])</span>
+
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">block_cumulative_ori</span> <span class="o">+=</span> <span class="n">my_bin</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                    <span class="n">new_bin</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">my_bin</span><span class="p">)</span>
+                    <span class="n">block_buffer</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_bin</span><span class="p">)</span>
+                    <span class="n">current_bin</span> <span class="o">=</span> <span class="n">my_bin</span>
+
+            <span class="k">for</span> <span class="n">my_bin</span> <span class="ow">in</span> <span class="n">block_buffer</span><span class="p">:</span>
+                <span class="n">new_bin</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">my_bin</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">block_cumulative_ori</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">new_bin</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">new_bin</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+                <span class="n">new_scaffold</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_bin</span><span class="p">)</span>
+            <span class="n">new_scaffolds</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">new_scaffold</span><span class="p">)</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">new_scaffolds</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">scaffold</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">new_scaffolds</span></div>
+
+
+
+<div class="viewcode-block" id="rearrange_intra_scaffolds">
+<a class="viewcode-back" href="../../api/instagraal.html#instagraal.parse_info_frags.rearrange_intra_scaffolds">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">rearrange_intra_scaffolds</span><span class="p">(</span><span class="n">scaffolds</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Rearranges all bins within each scaffold such that all bins belonging</span>
+<span class="sd">    to the same initial contig are grouped together in the same order. When</span>
+<span class="sd">    two such groups are found, the smaller one is moved to the larger one.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">scaffolds</span> <span class="o">=</span> <span class="n">format_info_frags</span><span class="p">(</span><span class="n">scaffolds</span><span class="p">)</span>
+    <span class="n">new_scaffolds</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="n">ordering</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">scaffold</span> <span class="ow">in</span> <span class="n">scaffolds</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">new_scaffold</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="n">ordering</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="n">order</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="n">my_blocks</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">my_block</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">scaffold</span><span class="p">,</span> <span class="n">operator</span><span class="o">.</span><span class="n">itemgetter</span><span class="p">(</span><span class="mi">0</span><span class="p">)):</span>
+            <span class="n">my_bins</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">my_block</span><span class="p">)</span>
+            <span class="n">my_blocks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">my_bins</span><span class="p">)</span>
+            <span class="n">block_length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">my_bins</span><span class="p">)</span>
+            <span class="n">block_name</span> <span class="o">=</span> <span class="n">my_bins</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="n">block_name</span> <span class="ow">in</span> <span class="n">ordering</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">block_length</span> <span class="o">&gt;</span> <span class="n">ordering</span><span class="p">[</span><span class="n">block_name</span><span class="p">][</span><span class="mi">1</span><span class="p">]:</span>
+                    <span class="n">ordering</span><span class="p">[</span><span class="n">block_name</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">order</span><span class="p">,</span> <span class="n">block_length</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">ordering</span><span class="p">[</span><span class="n">block_name</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">order</span><span class="p">,</span> <span class="n">block_length</span><span class="p">)</span>
+            <span class="n">order</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">block_order</span><span class="p">(</span><span class="n">block</span><span class="p">,</span> <span class="n">_ordering</span><span class="o">=</span><span class="n">ordering</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">_ordering</span><span class="p">[</span><span class="n">block</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]][</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="k">for</span> <span class="n">my_block</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">my_blocks</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">block_order</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">my_bin</span> <span class="ow">in</span> <span class="n">my_block</span><span class="p">:</span>
+                <span class="n">new_scaffold</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">my_bin</span><span class="p">)</span>
+
+        <span class="n">new_scaffolds</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">new_scaffold</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">new_scaffolds</span></div>
+
+
+
+<div class="viewcode-block" id="reorient_consecutive_blocks">
+<a class="viewcode-back" href="../../api/instagraal.html#instagraal.parse_info_frags.reorient_consecutive_blocks">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">reorient_consecutive_blocks</span><span class="p">(</span><span class="n">scaffolds</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;blocks&quot;</span><span class="p">):</span>
+
+    <span class="n">scaffolds</span> <span class="o">=</span> <span class="n">format_info_frags</span><span class="p">(</span><span class="n">scaffolds</span><span class="p">)</span>
+    <span class="n">new_scaffolds</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">scaffold</span> <span class="ow">in</span> <span class="n">scaffolds</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="c1"># print(scaffold)</span>
+        <span class="n">new_scaffold</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">my_block</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">scaffold</span><span class="p">,</span> <span class="n">operator</span><span class="o">.</span><span class="n">itemgetter</span><span class="p">(</span><span class="mi">0</span><span class="p">)):</span>
+            <span class="n">my_bins</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">my_block</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;sequences&quot;</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">my_bins</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+                    <span class="n">new_scaffold</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">my_bins</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                    <span class="k">continue</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">previous_bin</span> <span class="o">=</span> <span class="p">[]</span>
+                    <span class="n">end_bin</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">]</span>
+                    <span class="n">current_ori</span> <span class="o">=</span> <span class="mi">0</span>
+                    <span class="c1"># print(my_bins + end_bin)</span>
+                    <span class="k">for</span> <span class="n">my_bin</span> <span class="ow">in</span> <span class="p">[</span><span class="o">*</span><span class="n">my_bins</span><span class="p">,</span> <span class="n">end_bin</span><span class="p">]:</span>
+                        <span class="k">if</span> <span class="ow">not</span> <span class="n">previous_bin</span><span class="p">:</span>
+                            <span class="c1"># print(&quot;début&quot;)</span>
+                            <span class="n">previous_bin</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">my_bin</span><span class="p">)</span>
+                            <span class="k">continue</span>
+                        <span class="k">elif</span> <span class="n">my_bin</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">previous_bin</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:</span>
+                            <span class="n">current_ori</span> <span class="o">=</span> <span class="mi">1</span>
+                            <span class="n">previous_bin</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+                            <span class="n">new_scaffold</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">previous_bin</span><span class="p">)</span>
+                            <span class="n">previous_bin</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">my_bin</span><span class="p">)</span>
+                        <span class="k">elif</span> <span class="n">my_bin</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">previous_bin</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+                            <span class="n">current_ori</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+                            <span class="n">previous_bin</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+                            <span class="n">new_scaffold</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">previous_bin</span><span class="p">)</span>
+                            <span class="n">previous_bin</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">my_bin</span><span class="p">)</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="k">if</span> <span class="n">current_ori</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                                <span class="n">new_scaffold</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">previous_bin</span><span class="p">)</span>
+                            <span class="k">else</span><span class="p">:</span>
+                                <span class="n">previous_bin</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">current_ori</span>
+                                <span class="n">new_scaffold</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">previous_bin</span><span class="p">)</span>
+                                <span class="n">current_ori</span> <span class="o">=</span> <span class="mi">0</span>
+                            <span class="n">previous_bin</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">my_bin</span><span class="p">)</span>
+
+                    <span class="k">assert</span> <span class="n">previous_bin</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="o">-</span><span class="mi">2</span>
+
+            <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;blocks&quot;</span><span class="p">:</span>
+                <span class="n">total_ori</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">([</span><span class="n">my_bin</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">my_bin</span> <span class="ow">in</span> <span class="n">my_bins</span><span class="p">])</span>
+
+                <span class="k">if</span> <span class="n">total_ori</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">block_ori</span> <span class="o">=</span> <span class="mi">1</span>
+                    <span class="n">sorted_block</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">my_bins</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">operator</span><span class="o">.</span><span class="n">itemgetter</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">block_ori</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+                    <span class="n">sorted_block</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">my_bins</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">operator</span><span class="o">.</span><span class="n">itemgetter</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+                <span class="k">for</span> <span class="n">my_bin</span> <span class="ow">in</span> <span class="n">sorted_block</span><span class="p">:</span>
+                    <span class="n">my_bin</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">block_ori</span>
+                    <span class="n">new_scaffold</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">my_bin</span><span class="p">)</span>
+
+        <span class="n">new_scaffolds</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">new_scaffold</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">new_scaffolds</span></div>
+
+
+
+<div class="viewcode-block" id="write_info_frags">
+<a class="viewcode-back" href="../../api/instagraal.html#instagraal.parse_info_frags.write_info_frags">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">write_info_frags</span><span class="p">(</span><span class="n">scaffolds</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="s2">&quot;new_info_frags.txt&quot;</span><span class="p">):</span>
+
+    <span class="n">scaffolds</span> <span class="o">=</span> <span class="n">format_info_frags</span><span class="p">(</span><span class="n">scaffolds</span><span class="p">)</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">info_frags_handle</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">new_name</span><span class="p">,</span> <span class="n">scaffold</span> <span class="ow">in</span> <span class="n">scaffolds</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">info_frags_handle</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;&gt;</span><span class="si">{}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">new_name</span><span class="p">))</span>
+            <span class="n">header_line</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s2">&quot;init_contig&quot;</span><span class="p">,</span> <span class="s2">&quot;id_frag&quot;</span><span class="p">,</span> <span class="s2">&quot;orientation&quot;</span><span class="p">,</span> <span class="s2">&quot;start&quot;</span><span class="p">,</span> <span class="s2">&quot;end&quot;</span><span class="p">])</span>
+            <span class="n">info_frags_handle</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">header_line</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">my_bin</span> <span class="ow">in</span> <span class="n">scaffold</span><span class="p">:</span>
+                <span class="n">init_contig</span><span class="p">,</span> <span class="n">id_frag</span><span class="p">,</span> <span class="n">pos_start</span><span class="p">,</span> <span class="n">pos_end</span><span class="p">,</span> <span class="n">orientation</span> <span class="o">=</span> <span class="n">my_bin</span>
+                <span class="k">assert</span> <span class="n">orientation</span> <span class="ow">in</span> <span class="p">{</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">}</span>
+                <span class="n">my_line</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+                    <span class="p">[</span>
+                        <span class="nb">str</span><span class="p">(</span><span class="n">init_contig</span><span class="p">),</span>
+                        <span class="nb">str</span><span class="p">(</span><span class="n">id_frag</span><span class="p">),</span>
+                        <span class="nb">str</span><span class="p">(</span><span class="n">orientation</span><span class="p">),</span>
+                        <span class="nb">str</span><span class="p">(</span><span class="n">pos_start</span><span class="p">),</span>
+                        <span class="nb">str</span><span class="p">(</span><span class="n">pos_end</span><span class="p">),</span>
+                    <span class="p">]</span>
+                <span class="p">)</span>
+                <span class="n">info_frags_handle</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">my_line</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="write_fasta">
+<a class="viewcode-back" href="../../api/instagraal.html#instagraal.parse_info_frags.write_fasta">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">write_fasta</span><span class="p">(</span><span class="n">init_fasta</span><span class="p">,</span> <span class="n">info_frags</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="n">DEFAULT_NEW_GENOME_NAME</span><span class="p">,</span> <span class="n">junction</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert an info_frags.txt file into a fasta file given a reference.</span>
+<span class="sd">    Optionally adds junction sequences to reflect the possibly missing base</span>
+<span class="sd">    pairs between two newly joined scaffolds.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">init_genome</span> <span class="o">=</span> <span class="p">{</span><span class="n">record</span><span class="o">.</span><span class="n">id</span><span class="p">:</span> <span class="n">record</span><span class="o">.</span><span class="n">seq</span> <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">_parse_fasta</span><span class="p">(</span><span class="n">init_fasta</span><span class="p">)}</span>
+    <span class="n">init_contig</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">my_new_records</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">info_frags</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">info_frags_handle</span><span class="p">:</span>
+        <span class="n">current_seq</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="n">current_id</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">previous_contig</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">info_frags_handle</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;&gt;&quot;</span><span class="p">):</span>
+                <span class="n">previous_contig</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="k">if</span> <span class="n">current_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">new_record</span> <span class="o">=</span> <span class="n">SeqRecord</span><span class="p">(</span><span class="n">current_seq</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">current_id</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+                    <span class="n">my_new_records</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_record</span><span class="p">)</span>
+                <span class="n">current_seq</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+                <span class="n">current_id</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">line</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+            <span class="k">elif</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;init_contig&quot;</span><span class="p">):</span>
+                <span class="n">previous_contig</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">init_contig</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">orientation</span><span class="p">,</span> <span class="n">pos_start</span><span class="p">,</span> <span class="n">pos_end</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">line</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">)</span>
+
+                <span class="n">start</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">pos_start</span><span class="p">)</span>
+                <span class="n">end</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">pos_end</span><span class="p">)</span>
+                <span class="n">ori</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">orientation</span><span class="p">)</span>
+
+                <span class="k">assert</span> <span class="n">start</span> <span class="o">&lt;</span> <span class="n">end</span>
+                <span class="k">assert</span> <span class="n">ori</span> <span class="ow">in</span> <span class="p">{</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">}</span>
+                <span class="k">if</span> <span class="n">junction</span> <span class="ow">and</span> <span class="n">previous_contig</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">{</span><span class="kc">None</span><span class="p">,</span> <span class="n">init_contig</span><span class="p">}:</span>
+                    <span class="n">error_was_raised</span> <span class="o">=</span> <span class="kc">False</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">extra_seq</span> <span class="o">=</span> <span class="n">Seq</span><span class="p">(</span><span class="n">junction</span><span class="p">)</span>
+                        <span class="n">current_seq</span> <span class="o">=</span> <span class="n">current_seq</span> <span class="o">+</span> <span class="n">extra_seq</span>
+                    <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="ow">not</span> <span class="n">error_was_raised</span><span class="p">:</span>
+                            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Invalid junction sequence&quot;</span><span class="p">)</span>
+                            <span class="n">error_was_raised</span> <span class="o">=</span> <span class="kc">True</span>
+
+                <span class="n">seq_to_add</span> <span class="o">=</span> <span class="n">init_genome</span><span class="p">[</span><span class="n">init_contig</span><span class="p">][</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">ori</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">current_seq</span> <span class="o">+=</span> <span class="n">seq_to_add</span>
+                <span class="k">elif</span> <span class="n">ori</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                    <span class="n">current_seq</span> <span class="o">+=</span> <span class="n">seq_to_add</span><span class="o">.</span><span class="n">reverse_complement</span><span class="p">()</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid data in orientation field </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">ori</span><span class="p">))</span>
+
+                <span class="n">previous_contig</span> <span class="o">=</span> <span class="n">init_contig</span>
+
+        <span class="n">new_record</span> <span class="o">=</span> <span class="n">SeqRecord</span><span class="p">(</span><span class="n">current_seq</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">current_id</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="n">my_new_records</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_record</span><span class="p">)</span>
+    <span class="n">SeqIO</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">my_new_records</span><span class="p">,</span> <span class="n">output</span><span class="p">,</span> <span class="s2">&quot;fasta&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="find_lost_dna">
+<a class="viewcode-back" href="../../api/instagraal.html#instagraal.parse_info_frags.find_lost_dna">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">find_lost_dna</span><span class="p">(</span><span class="n">init_fasta</span><span class="p">,</span> <span class="n">scaffolds</span><span class="p">,</span> <span class="n">output_file</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+
+    <span class="n">my_scaffolds</span> <span class="o">=</span> <span class="n">format_info_frags</span><span class="p">(</span><span class="n">scaffolds</span><span class="p">)</span>
+    <span class="n">my_records</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">_parse_fasta</span><span class="p">(</span><span class="n">init_fasta</span><span class="p">),</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="nb">len</span><span class="p">)</span>
+
+    <span class="n">that_which_was_removed</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">fasta_dict</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">consecutiveness</span><span class="p">(</span><span class="n">key_base_tuple</span><span class="p">):</span>
+        <span class="n">key</span><span class="p">,</span> <span class="n">base</span> <span class="o">=</span> <span class="n">key_base_tuple</span>
+        <span class="k">return</span> <span class="n">base</span> <span class="o">-</span> <span class="n">key</span>
+
+    <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">my_records</span><span class="p">:</span>
+        <span class="n">fasta_dict</span><span class="p">[</span><span class="n">record</span><span class="o">.</span><span class="n">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">record</span><span class="o">.</span><span class="n">seq</span>
+
+        <span class="n">remaining_regions_ordered</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">record</span><span class="p">))</span>
+        <span class="n">remaining_regions</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">remaining_regions_ordered</span><span class="p">)</span>
+        <span class="n">regions</span> <span class="o">=</span> <span class="p">[</span><span class="n">my_bin</span> <span class="k">for</span> <span class="n">scaffold</span> <span class="ow">in</span> <span class="n">my_scaffolds</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">for</span> <span class="n">my_bin</span> <span class="ow">in</span> <span class="n">scaffold</span> <span class="k">if</span> <span class="n">my_bin</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">record</span><span class="o">.</span><span class="n">id</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">region</span> <span class="ow">in</span> <span class="n">regions</span><span class="p">:</span>
+            <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="o">=</span> <span class="n">region</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">region</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
+            <span class="n">remaining_regions</span> <span class="o">-=</span> <span class="nb">set</span><span class="p">(</span><span class="n">remaining_regions_ordered</span><span class="p">[</span><span class="n">start</span> <span class="p">:</span> <span class="n">end</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span>
+
+        <span class="n">sorted_regions</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">remaining_regions</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="nb">enumerate</span><span class="p">(</span><span class="n">sorted_regions</span><span class="p">),</span> <span class="n">consecutiveness</span><span class="p">):</span>
+            <span class="n">swath</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">operator</span><span class="o">.</span><span class="n">itemgetter</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">g</span><span class="p">))</span>
+            <span class="n">start</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">swath</span><span class="p">)</span>
+            <span class="n">end</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">swath</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+            <span class="n">ori</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="n">my_bin</span> <span class="o">=</span> <span class="p">[</span><span class="n">record</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">ori</span><span class="p">]</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">that_which_was_removed</span><span class="p">[</span><span class="n">record</span><span class="o">.</span><span class="n">id</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">my_bin</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                <span class="n">that_which_was_removed</span><span class="p">[</span><span class="n">record</span><span class="o">.</span><span class="n">id</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">my_bin</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">output_file</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">output_file</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">output_handle</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">chunks</span> <span class="ow">in</span> <span class="n">that_which_was_removed</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="n">chunks</span><span class="p">:</span>
+                        <span class="k">try</span><span class="p">:</span>
+                            <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="o">=</span> <span class="n">chunk</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">chunk</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
+                        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                            <span class="k">continue</span>
+                        <span class="n">header_line</span> <span class="o">=</span> <span class="s2">&quot;&gt;</span><span class="si">{}</span><span class="s2">_</span><span class="si">{}</span><span class="s2">_</span><span class="si">{}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">)</span>
+                        <span class="n">output_handle</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">header_line</span><span class="p">)</span>
+                        <span class="n">sequence</span> <span class="o">=</span> <span class="n">fasta_dict</span><span class="p">[</span><span class="n">name</span><span class="p">][</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">]</span>
+                        <span class="n">sequence_line</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">sequence</span><span class="p">)</span>
+                        <span class="n">output_handle</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">sequence_line</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Couldn&#39;t write fasta file.&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">that_which_was_removed</span></div>
+
+
+
+<div class="viewcode-block" id="integrate_lost_dna">
+<a class="viewcode-back" href="../../api/instagraal.html#instagraal.parse_info_frags.integrate_lost_dna">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">integrate_lost_dna</span><span class="p">(</span><span class="n">scaffolds</span><span class="p">,</span> <span class="n">lost_dna_positions</span><span class="p">):</span>
+
+    <span class="n">scaffolds</span> <span class="o">=</span> <span class="n">format_info_frags</span><span class="p">(</span><span class="n">scaffolds</span><span class="p">)</span>
+    <span class="n">remaining_dna_positions</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">lost_dna_positions</span><span class="p">)</span>
+    <span class="n">new_scaffolds</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">scaffold</span> <span class="ow">in</span> <span class="n">scaffolds</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">scaffold_to_modify</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">scaffold</span><span class="p">)</span>
+
+        <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">my_bin</span> <span class="ow">in</span> <span class="n">scaffold</span><span class="p">:</span>
+            <span class="n">init_name</span> <span class="o">=</span> <span class="n">my_bin</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">lost_dna_chunk</span> <span class="o">=</span> <span class="n">lost_dna_positions</span><span class="p">[</span><span class="n">init_name</span><span class="p">]</span>
+                <span class="n">start</span> <span class="o">=</span> <span class="n">my_bin</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+                <span class="n">end</span> <span class="o">=</span> <span class="n">my_bin</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
+                <span class="n">ori</span> <span class="o">=</span> <span class="n">my_bin</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span>
+                <span class="k">for</span> <span class="n">lost_bin</span> <span class="ow">in</span> <span class="n">lost_dna_chunk</span><span class="p">:</span>
+                    <span class="n">lost_start</span> <span class="o">=</span> <span class="n">lost_bin</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+                    <span class="n">lost_end</span> <span class="o">=</span> <span class="n">lost_bin</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
+
+                    <span class="k">if</span> <span class="n">end</span> <span class="o">==</span> <span class="n">lost_start</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+                        <span class="c1"># print(</span>
+                        <span class="c1">#     &quot;A bin was reintegrated after position {}&quot;</span>
+                        <span class="c1">#     &quot; in scaffold {}&quot;.format(my_bin[3], init_name)</span>
+                        <span class="c1"># )</span>
+                        <span class="n">bin_to_add</span> <span class="o">=</span> <span class="p">[</span>
+                            <span class="n">init_name</span><span class="p">,</span>
+                            <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+                            <span class="n">lost_start</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span>
+                            <span class="n">lost_end</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+                            <span class="n">ori</span><span class="p">,</span>
+                        <span class="p">]</span>
+                        <span class="n">scaffold_to_modify</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">-</span> <span class="p">(</span><span class="n">ori</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">),</span> <span class="n">bin_to_add</span><span class="p">)</span>
+                        <span class="n">remaining_dna_positions</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">init_name</span><span class="p">)</span>
+                        <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+
+                    <span class="k">elif</span> <span class="n">start</span> <span class="ow">in</span> <span class="p">(</span><span class="n">lost_end</span><span class="p">,</span> <span class="n">lost_end</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">lost_end</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+                        <span class="c1"># print(</span>
+                        <span class="c1">#     &quot;A bin was reintegrated before position {}&quot;</span>
+                        <span class="c1">#     &quot; in scaffold {}&quot;.format(my_bin[3], init_name)</span>
+                        <span class="c1"># )</span>
+                        <span class="n">bin_to_add</span> <span class="o">=</span> <span class="p">[</span><span class="n">init_name</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">lost_start</span><span class="p">,</span> <span class="n">lost_end</span><span class="p">,</span> <span class="n">ori</span><span class="p">]</span>
+                        <span class="n">scaffold_to_modify</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">bin_to_add</span><span class="p">)</span>
+                        <span class="n">remaining_dna_positions</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">init_name</span><span class="p">)</span>
+                        <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">KeyError</span><span class="p">):</span>
+                <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">continue</span>
+
+            <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="n">new_scaffolds</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">scaffold_to_modify</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Appending the rest...&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">remaining_name</span><span class="p">,</span> <span class="n">remaining_bins</span> <span class="ow">in</span> <span class="n">remaining_dna_positions</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">for</span> <span class="n">my_bin</span> <span class="ow">in</span> <span class="n">remaining_bins</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">remaining_bin</span> <span class="o">=</span> <span class="p">[</span><span class="n">remaining_name</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">my_bin</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">my_bin</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="mi">1</span><span class="p">]</span>
+                <span class="n">new_scaffolds</span><span class="p">[</span><span class="n">remaining_name</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">remaining_bin</span><span class="p">]</span>
+            <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+    <span class="k">return</span> <span class="n">new_scaffolds</span></div>
+
+
+
+<div class="viewcode-block" id="is_block">
+<a class="viewcode-back" href="../../api/instagraal.html#instagraal.parse_info_frags.is_block">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">is_block</span><span class="p">(</span><span class="n">bin_list</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Check if a bin list has exclusively consecutive bin ids.&quot;&quot;&quot;</span>
+    <span class="n">id_set</span> <span class="o">=</span> <span class="nb">set</span><span class="p">((</span><span class="n">my_bin</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">my_bin</span> <span class="ow">in</span> <span class="n">bin_list</span><span class="p">))</span>
+    <span class="n">start_id</span><span class="p">,</span> <span class="n">end_id</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">id_set</span><span class="p">),</span> <span class="nb">max</span><span class="p">(</span><span class="n">id_set</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">id_set</span> <span class="o">==</span> <span class="nb">set</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">start_id</span><span class="p">,</span> <span class="n">end_id</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span></div>
+
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">.cli.polish</span><span class="w"> </span><span class="kn">import</span> <span class="n">main</span>
+
+    <span class="n">main</span><span class="p">()</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2018, Lyam Baudry, Hervé Marie-Nelly.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+</body>
+</html>

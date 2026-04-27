@@ -13,9 +13,7 @@ def residuals(p, y, x):
     kuhn, lm, slope, A = p
     # d = 1.5
     # d = 5.0
-    rippe = A * (
-        0.53 * (kuhn**-3.0) * np.power((lm * x / kuhn), slope) * np.exp((d - 2) / ((np.power((lm * x / kuhn), 2) + d)))
-    )
+    rippe = A * (0.53 * (kuhn**-3.0) * np.power((lm * x / kuhn), slope) * np.exp((d - 2) / (np.power((lm * x / kuhn), 2) + d)))
     error = y - rippe
     return error
 
@@ -28,7 +26,7 @@ def peval(x, param):
         0.53
         * (param[0] ** -3.0)
         * np.power((param[1] * x / param[0]), (param[2]))
-        * np.exp((d - 2) / ((np.power((param[1] * x / param[0]), 2) + d)))
+        * np.exp((d - 2) / (np.power((param[1] * x / param[0]), 2) + d))
     )
     return rippe
 
@@ -43,7 +41,7 @@ def log_residuals(p, y, x):
             + np.log(0.53)
             - 3 * np.log(kuhn)
             + slope * (np.log(lm * x / kuhn))
-            + (d - 2) / ((np.power((lm * x / kuhn), 2) + d))
+            + (d - 2) / (np.power((lm * x / kuhn), 2) + d)
         )
     error = y - rippe
 
@@ -58,7 +56,7 @@ def log_peval(x, param):
         + np.log(0.53)
         - 3 * np.log(param[0])
         + param[2] * (np.log(param[1] * x) - np.log(param[0]))
-        + (d - 2) / ((np.power((param[1] * x / param[0]), 2) + d))
+        + (d - 2) / (np.power((param[1] * x / param[0]), 2) + d)
     )
     return rippe
 
@@ -114,9 +112,7 @@ def residual_4_max_dist(x, p):
     x[np.isnan(x)] = 0
     x = np.abs(x)
 
-    rippe = A * (
-        0.53 * (kuhn**-3.0) * np.power((lm * x / kuhn), slope) * np.exp((d - 2) / ((np.power((lm * x / kuhn), 2) + d)))
-    )
+    rippe = A * (0.53 * (kuhn**-3.0) * np.power((lm * x / kuhn), slope) * np.exp((d - 2) / (np.power((lm * x / kuhn), 2) + d)))
     error = y - rippe
     return np.abs(error)
 

@@ -1,0 +1,1004 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>instagraal.simu_single &mdash; instagraal 0.1.4 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+
+
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=fd825880"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+</head>
+
+<body class="wy-body-for-nav">
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+
+
+          <a href="../../index.html" class="icon icon-home">
+            instagraal
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../api/modules.html">instagraal</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">instagraal</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">instagraal.simu_single</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+
+  <h1>Source code for instagraal.simu_single</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+
+<span class="c1"># import pp</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.</span><span class="w"> </span><span class="kn">import</span> <span class="n">pyramid_sparse</span> <span class="k">as</span> <span class="n">pyr</span>
+
+<span class="c1"># import Image</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.cuda_lib_gl_single</span><span class="w"> </span><span class="kn">import</span> <span class="n">sampler</span> <span class="k">as</span> <span class="n">sampler_lib</span>
+
+<span class="c1"># from cuda_lib_gl import sampler as sampler_lib</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.</span><span class="w"> </span><span class="kn">import</span> <span class="n">log</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.log</span><span class="w"> </span><span class="kn">import</span> <span class="n">logger</span>
+
+<span class="n">logger</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">log</span><span class="o">.</span><span class="n">CURRENT_LOG_LEVEL</span><span class="p">)</span>
+
+<span class="c1"># cuda.init()</span>
+
+
+<div class="viewcode-block" id="kth_diag_indices">
+<a class="viewcode-back" href="../../api/instagraal.html#instagraal.simu_single.kth_diag_indices">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">kth_diag_indices</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">k</span><span class="p">):</span>
+    <span class="n">rows</span><span class="p">,</span> <span class="n">cols</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diag_indices_from</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">k</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">rows</span><span class="p">[:</span><span class="n">k</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="o">-</span><span class="n">k</span><span class="p">:]</span>
+    <span class="k">elif</span> <span class="n">k</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">rows</span><span class="p">[</span><span class="n">k</span><span class="p">:],</span> <span class="n">cols</span><span class="p">[:</span><span class="o">-</span><span class="n">k</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">rows</span><span class="p">,</span> <span class="n">cols</span></div>
+
+
+
+<div class="viewcode-block" id="simulation">
+<a class="viewcode-back" href="../../api/instagraal.html#instagraal.simu_single.simulation">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">simulation</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">name</span><span class="p">,</span>
+        <span class="n">folder_path</span><span class="p">,</span>
+        <span class="n">fasta</span><span class="p">,</span>
+        <span class="n">level</span><span class="p">,</span>
+        <span class="n">n_iterations</span><span class="p">,</span>
+        <span class="n">is_simu</span><span class="p">,</span>
+        <span class="n">use_rippe</span><span class="p">,</span>
+        <span class="n">thresh_factor</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">output_folder</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">use_rippe</span> <span class="o">=</span> <span class="n">use_rippe</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">str_sub_level</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">level</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">str_level</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">level</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">thresh_factor</span> <span class="o">=</span> <span class="n">thresh_factor</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_set</span> <span class="o">=</span> <span class="n">name</span>
+
+        <span class="n">toolbox_directory</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="vm">__file__</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_set_root</span> <span class="o">=</span> <span class="n">toolbox_directory</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dir_home</span> <span class="o">=</span> <span class="n">toolbox_directory</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_set_root</span> <span class="o">=</span> <span class="n">toolbox_directory</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">fasta</span> <span class="o">=</span> <span class="n">fasta</span>
+        <span class="c1"># default_level = size_pyramid - 1</span>
+        <span class="c1"># self.base_folder = os.path.join(</span>
+        <span class="c1">#     self.data_set_root, self.data_set</span>
+        <span class="c1"># )</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">base_folder</span> <span class="o">=</span> <span class="n">folder_path</span>
+
+        <span class="k">if</span> <span class="n">output_folder</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">output_folder</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data_set_root</span><span class="p">,</span> <span class="s2">&quot;results&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">output_folder</span> <span class="o">=</span> <span class="n">output_folder</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">select_data_set</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_iterations</span> <span class="o">=</span> <span class="n">n_iterations</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">int4</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span>
+            <span class="p">[</span>
+                <span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">),</span>
+                <span class="p">(</span><span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">),</span>
+                <span class="p">(</span><span class="s2">&quot;z&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">),</span>
+                <span class="p">(</span><span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">),</span>
+            <span class="p">],</span>
+            <span class="n">align</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">float3</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span>
+            <span class="p">[(</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;z&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)],</span>
+            <span class="n">align</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">float4</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span>
+            <span class="p">[</span>
+                <span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span>
+                <span class="p">(</span><span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span>
+                <span class="p">(</span><span class="s2">&quot;z&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span>
+                <span class="p">(</span><span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span>
+            <span class="p">],</span>
+            <span class="n">align</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">int3</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">([(</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;z&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)],</span> <span class="n">align</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">int2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">([(</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)],</span> <span class="n">align</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">level</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">hic_pyr</span><span class="o">.</span><span class="n">get_level</span><span class="p">(</span><span class="n">level</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">level</span><span class="o">.</span><span class="n">build_seq_per_bin</span><span class="p">(</span><span class="n">genome_fasta</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">fasta</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sub_level</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">hic_pyr</span><span class="o">.</span><span class="n">get_level</span><span class="p">(</span><span class="n">level</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_frags</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">level</span><span class="o">.</span><span class="n">n_frags</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">create_sub_frags</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">mean_squared_frags_per_bin</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">collect_accu_frags</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;mean frag area = </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mean_squared_frags_per_bin</span><span class="p">))</span>
+        <span class="c1"># self.gl_window = gl_window</span>
+        <span class="c1"># DEFINE REPEATED SEQ ####</span>
+        <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">candidate_dup</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data_candidate_dup</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sub_candidates_dup</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sub_candidates_output_data</span><span class="p">,</span>
+        <span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">select_repeated_frags</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">modify_vect_frags</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">blacklist_contig</span><span class="p">()</span>
+        <span class="c1"># self.discard_low_coverage_frags()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">load_gl_buffers</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">create_new_sub_frags</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">modify_sub_vect_frags</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">sampler</span> <span class="o">=</span> <span class="n">sampler_lib</span><span class="p">(</span>
+            <span class="n">use_rippe</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">new_S_o_A_frags</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">collector_id_repeats</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">frag_dispatcher</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">candidate_dup</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">frag_blacklisted</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">init_n_frags</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">n_frags</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">init_n_sub_frags</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">n_new_sub_frags</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">rep_sub_frags_id</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">level</span><span class="o">.</span><span class="n">sparse_mat_csr</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">np_sub_frags_len_bp</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">np_sub_frags_id</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">np_sub_frags_accu</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">np_sub_frags_2_frags</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mean_squared_frags_per_bin</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">norm_vect</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sub_candidates_dup</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sub_candidates_output_data</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">new_sub_S_o_A_frags</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sub_collector_id_repeats</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sub_frag_dispatcher</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sub_level</span><span class="o">.</span><span class="n">sparse_mat_csr</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sub_level</span><span class="o">.</span><span class="n">mean_value_trans</span><span class="p">,</span>
+            <span class="n">n_iterations</span><span class="p">,</span>
+            <span class="n">is_simu</span><span class="p">,</span>
+            <span class="c1"># self.pos_vbo,</span>
+            <span class="c1"># self.col_vbo,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">vel</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pos</span><span class="p">,</span>
+            <span class="c1"># self.gl_size_im,</span>
+        <span class="p">)</span>
+
+        <span class="c1"># display_graph = False</span>
+        <span class="n">display_graph</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="n">id_start</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sampler</span><span class="o">.</span><span class="n">gpu_vect_frags</span><span class="o">.</span><span class="n">start_bp</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">max_dist_kb</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sampler</span><span class="o">.</span><span class="n">gpu_vect_frags</span><span class="o">.</span><span class="n">l_cont_bp</span><span class="p">[</span><span class="n">id_start</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">/</span> <span class="mf">1000.0</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;max dist kb = </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">max_dist_kb</span><span class="p">))</span>
+        <span class="c1"># size_bin_kb = self.sampler.gpu_vect_frags.len_bp.mean() / 1000.0</span>
+        <span class="n">mean_size_bin_kb</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">new_sub_S_o_A_frags</span><span class="p">[</span><span class="s2">&quot;len_bp&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">/</span> <span class="mf">1000.0</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;mean size kb = </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mean_size_bin_kb</span><span class="p">))</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;min fragment length =  </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">new_sub_S_o_A_frags</span><span class="p">[</span><span class="s2">&quot;len_bp&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">/</span> <span class="mf">1000.0</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">is_simu</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sampler</span><span class="o">.</span><span class="n">simulate_rippe_contacts</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mf">9.6</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">800</span><span class="p">,</span> <span class="mi">200</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_rippe</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">sampler</span><span class="o">.</span><span class="n">estimate_parameters_rippe</span><span class="p">(</span><span class="n">max_dist_kb</span><span class="p">,</span> <span class="n">mean_size_bin_kb</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">,</span> <span class="n">display_graph</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">sampler</span><span class="o">.</span><span class="n">estimate_parameters</span><span class="p">(</span><span class="n">max_dist_kb</span><span class="p">,</span> <span class="n">mean_size_bin_kb</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">display_graph</span><span class="p">)</span>
+
+        <span class="c1"># self.sampler.setup_texture()</span>
+
+<div class="viewcode-block" id="simulation.blacklist_contig">
+<a class="viewcode-back" href="../../api/instagraal.html#instagraal.simu_single.simulation.blacklist_contig">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">blacklist_contig</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># list_blacklist_manual = raw_input(&quot;ids (separated by space): &quot;)</span>
+        <span class="n">list_blacklist_manual</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">list_blacklist_manual</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+            <span class="n">list_blacklist_manual</span> <span class="o">=</span> <span class="n">list_blacklist_manual</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">)</span>
+            <span class="n">candidates_blacklist</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">list_blacklist_manual</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">candidates_blacklist</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">init_vect_frags</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">level</span><span class="o">.</span><span class="n">S_o_A_frags</span>
+        <span class="n">list_id_c</span> <span class="o">=</span> <span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;id_c&quot;</span><span class="p">]</span>
+
+        <span class="c1"># candidates_blacklist =  []</span>
+
+        <span class="n">frag_blacklisted</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">id_c_black</span> <span class="ow">in</span> <span class="n">candidates_blacklist</span><span class="p">:</span>
+            <span class="n">id_black_list</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">list_id_c</span> <span class="o">==</span> <span class="n">id_c_black</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">init_f</span> <span class="ow">in</span> <span class="n">id_black_list</span><span class="p">:</span>
+                <span class="n">dis</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">frag_dispatcher</span><span class="p">[</span><span class="n">init_f</span><span class="p">]</span>
+                <span class="n">ids</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">collector_id_repeats</span><span class="p">[</span><span class="n">dis</span><span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">]</span> <span class="p">:</span> <span class="n">dis</span><span class="p">[</span><span class="s2">&quot;y&quot;</span><span class="p">]]</span>
+                <span class="n">frag_blacklisted</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">ids</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">frag_blacklisted</span> <span class="o">=</span> <span class="n">frag_blacklisted</span>
+        <span class="k">for</span> <span class="n">id_f_black</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">frag_blacklisted</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">col_vect_frags_4_GL</span><span class="p">[</span><span class="n">id_f_black</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">col_vect_frags_4_GL</span><span class="p">[</span><span class="n">id_f_black</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">col_vect_frags_4_GL</span><span class="p">[</span><span class="n">id_f_black</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">col_vect_frags_4_GL</span><span class="p">[</span><span class="n">id_f_black</span><span class="p">,</span> <span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="simulation.discard_low_coverage_frags">
+<a class="viewcode-back" href="../../api/instagraal.html#instagraal.simu_single.simulation.discard_low_coverage_frags">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">discard_low_coverage_frags</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">mat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">level</span><span class="o">.</span><span class="n">im_curr</span><span class="p">)</span>
+        <span class="n">mat_norm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">norm_vect</span><span class="o">.</span><span class="n">T</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm_vect</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">matrix_normalized</span> <span class="o">=</span> <span class="n">mat</span> <span class="o">/</span> <span class="n">mat_norm</span>
+        <span class="n">coverage</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">matrix_normalized</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">mean_coverage</span> <span class="o">=</span> <span class="n">coverage</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+        <span class="n">std_coverage</span> <span class="o">=</span> <span class="n">coverage</span><span class="o">.</span><span class="n">std</span><span class="p">()</span>
+        <span class="n">mean_coverage_ext</span> <span class="o">=</span> <span class="n">mean_coverage</span> <span class="o">-</span> <span class="mf">0.1</span> <span class="o">*</span> <span class="n">std_coverage</span>
+        <span class="n">candidates_low</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">coverage</span> <span class="o">&lt;</span> <span class="n">mean_coverage_ext</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;n discarded frag of low coverage = </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">candidates_low</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="k">for</span> <span class="n">init_f</span> <span class="ow">in</span> <span class="n">candidates_low</span><span class="p">:</span>
+            <span class="n">dis</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">frag_dispatcher</span><span class="p">[</span><span class="n">init_f</span><span class="p">]</span>
+            <span class="n">ids</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">collector_id_repeats</span><span class="p">[</span><span class="n">dis</span><span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">]</span> <span class="p">:</span> <span class="n">dis</span><span class="p">[</span><span class="s2">&quot;y&quot;</span><span class="p">]]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">frag_blacklisted</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">ids</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="simulation.modify_vect_frags">
+<a class="viewcode-back" href="../../api/instagraal.html#instagraal.simu_single.simulation.modify_vect_frags">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">modify_vect_frags</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="s2">&quot;include repeated frags&quot;</span>
+        <span class="n">modified_vect_frags</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="n">init_vect_frags</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">level</span><span class="o">.</span><span class="n">S_o_A_frags</span>
+
+        <span class="c1"># init_max_id_d = init_vect_frags[&quot;id&quot;].max()</span>
+        <span class="n">max_id_F</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">])</span>
+        <span class="n">max_id_C</span> <span class="o">=</span> <span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;id_c&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">+</span> <span class="mi">1</span>
+
+        <span class="c1"># HSV_tuples = [(x*1.0/(max_id_C - 1), 0.5, 0.5) for x in range(0,</span>
+        <span class="c1"># (max_id_C-1))]</span>
+        <span class="c1"># cmap = plt.cm.gist_ncar</span>
+        <span class="n">cmap</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">cm</span><span class="o">.</span><span class="n">prism</span>
+        <span class="c1"># extract all colors from the .jet map</span>
+        <span class="n">cmaplist</span> <span class="o">=</span> <span class="p">[</span><span class="n">cmap</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">cmap</span><span class="o">.</span><span class="n">N</span><span class="p">)]</span>
+        <span class="n">id_smple</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">cmap</span><span class="o">.</span><span class="n">N</span><span class="p">,</span> <span class="n">num</span><span class="o">=</span><span class="n">max_id_C</span><span class="p">)</span>
+        <span class="n">RGB_tuples</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">max_id_C</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="n">RGB_tuples</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cmaplist</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">id_smple</span><span class="p">[</span><span class="n">i</span><span class="p">])])</span>
+
+        <span class="c1"># RGB_tuples = map(lambda x: colorsys.hsv_to_rgb(*x), HSV_tuples)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">init_n_frags</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">])</span>
+
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;pos&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;pos&quot;</span><span class="p">])</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;sub_pos&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;sub_pos&quot;</span><span class="p">])</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;id_c&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;id_c&quot;</span><span class="p">])</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;start_bp&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;start_bp&quot;</span><span class="p">])</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;len_bp&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;len_bp&quot;</span><span class="p">])</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;sub_len&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;sub_len&quot;</span><span class="p">])</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;circ&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;circ&quot;</span><span class="p">])</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">])</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;prev&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;prev&quot;</span><span class="p">])</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;next&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;next&quot;</span><span class="p">])</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;l_cont&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;l_cont&quot;</span><span class="p">])</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;sub_l_cont&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;sub_l_cont&quot;</span><span class="p">])</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;l_cont_bp&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;l_cont_bp&quot;</span><span class="p">])</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;n_accu&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;n_accu&quot;</span><span class="p">])</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;rep&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">max_id_F</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">))</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;activ&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">max_id_F</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">))</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;id_d&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">])</span>
+
+        <span class="k">for</span> <span class="n">data_dup</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_candidate_dup</span><span class="p">:</span>
+            <span class="n">n_dup</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">data_dup</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">id_f</span> <span class="o">=</span> <span class="n">data_dup</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">_k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">n_dup</span><span class="p">):</span>
+                <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;pos&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+                <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;sub_pos&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+                <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;id_c&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">max_id_C</span><span class="p">)</span>
+                <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;start_bp&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+                <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;len_bp&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;len_bp&quot;</span><span class="p">][</span><span class="n">id_f</span><span class="p">])</span>
+                <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;sub_len&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;sub_len&quot;</span><span class="p">][</span><span class="n">id_f</span><span class="p">])</span>
+                <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;circ&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;circ&quot;</span><span class="p">][</span><span class="n">id_f</span><span class="p">])</span>
+                <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">max_id_F</span><span class="p">)</span>
+                <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;prev&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;next&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;l_cont&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;sub_l_cont&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;sub_len&quot;</span><span class="p">][</span><span class="n">id_f</span><span class="p">])</span>
+                <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;l_cont_bp&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;len_bp&quot;</span><span class="p">][</span><span class="n">id_f</span><span class="p">])</span>
+                <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;n_accu&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;n_accu&quot;</span><span class="p">][</span><span class="n">id_f</span><span class="p">])</span>
+                <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;rep&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;activ&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;id_d&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">][</span><span class="n">id_f</span><span class="p">])</span>
+                <span class="n">max_id_F</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">max_id_C</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;pos&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;pos&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;sub_pos&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;sub_pos&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;id_c&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;id_c&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;start_bp&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;start_bp&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;len_bp&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;len_bp&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;sub_len&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;sub_len&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;circ&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;circ&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;prev&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;prev&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;next&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;next&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;l_cont&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;l_cont&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;sub_l_cont&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;sub_l_cont&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;l_cont_bp&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;l_cont_bp&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;n_accu&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;n_accu&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;rep&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;rep&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;activ&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;activ&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;id_d&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;id_d&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+
+        <span class="n">id_x</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">collector_id_repeats</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">frag_dispatcher</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># BUILD LINK BETWEEN FRAGS AND SUB FRAGS</span>
+        <span class="k">for</span> <span class="n">id_f</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">init_n_frags</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">id_f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">candidate_dup</span><span class="p">:</span>
+                <span class="n">id_start</span> <span class="o">=</span> <span class="n">id_x</span>
+                <span class="n">id_dup</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;id_d&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">id_f</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">collector_id_repeats</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">id_dup</span><span class="p">))</span>
+                <span class="n">n_rep</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">id_dup</span><span class="p">)</span>
+                <span class="n">frag_dispatcher</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">id_start</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">id_start</span> <span class="o">+</span> <span class="n">n_rep</span><span class="p">)))</span>
+                <span class="n">id_x</span> <span class="o">+=</span> <span class="n">n_rep</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">id_start</span> <span class="o">=</span> <span class="n">id_x</span>
+                <span class="n">n_rep</span> <span class="o">=</span> <span class="mi">1</span>
+                <span class="n">frag_dispatcher</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">id_start</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">id_start</span> <span class="o">+</span> <span class="n">n_rep</span><span class="p">)))</span>
+                <span class="n">collector_id_repeats</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">id_f</span><span class="p">)</span>
+                <span class="n">id_x</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">collector_id_repeats</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">collector_id_repeats</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">frag_dispatcher</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">frag_dispatcher</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">int2</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_frags</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">])</span>
+
+        <span class="n">pos_vect_frags_4_GL</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">n_frags</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="n">col_vect_frags_4_GL</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">n_frags</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">id_f_curr</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_frags</span><span class="p">):</span>
+            <span class="n">id_d</span> <span class="o">=</span> <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;id_d&quot;</span><span class="p">][</span><span class="n">id_f_curr</span><span class="p">]</span>
+            <span class="n">id_c</span> <span class="o">=</span> <span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;id_c&quot;</span><span class="p">][</span><span class="n">id_d</span><span class="p">]</span>
+            <span class="n">pos_vect_frags_4_GL</span><span class="p">[</span><span class="n">id_f_curr</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;pos&quot;</span><span class="p">][</span><span class="n">id_f_curr</span><span class="p">]</span>
+            <span class="n">pos_vect_frags_4_GL</span><span class="p">[</span><span class="n">id_f_curr</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;id_c&quot;</span><span class="p">][</span><span class="n">id_f_curr</span><span class="p">]</span>
+            <span class="n">pos_vect_frags_4_GL</span><span class="p">[</span><span class="n">id_f_curr</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
+            <span class="n">pos_vect_frags_4_GL</span><span class="p">[</span><span class="n">id_f_curr</span><span class="p">,</span> <span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="mf">1.0</span><span class="p">)</span>
+
+            <span class="n">col_vect_frags_4_GL</span><span class="p">[</span><span class="n">id_f_curr</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="n">RGB_tuples</span><span class="p">[</span><span class="n">id_c</span> <span class="o">-</span> <span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">col_vect_frags_4_GL</span><span class="p">[</span><span class="n">id_f_curr</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="n">RGB_tuples</span><span class="p">[</span><span class="n">id_c</span> <span class="o">-</span> <span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">col_vect_frags_4_GL</span><span class="p">[</span><span class="n">id_f_curr</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="n">RGB_tuples</span><span class="p">[</span><span class="n">id_c</span> <span class="o">-</span> <span class="mi">1</span><span class="p">][</span><span class="mi">2</span><span class="p">])</span>
+            <span class="n">col_vect_frags_4_GL</span><span class="p">[</span><span class="n">id_f_curr</span><span class="p">,</span> <span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="mf">1.0</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">col_vect_frags_4_GL</span> <span class="o">=</span> <span class="n">col_vect_frags_4_GL</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pos_vect_frags_4_GL</span> <span class="o">=</span> <span class="n">pos_vect_frags_4_GL</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">new_S_o_A_frags</span> <span class="o">=</span> <span class="n">modified_vect_frags</span></div>
+
+
+<div class="viewcode-block" id="simulation.modify_sub_vect_frags">
+<a class="viewcode-back" href="../../api/instagraal.html#instagraal.simu_single.simulation.modify_sub_vect_frags">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">modify_sub_vect_frags</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="s2">&quot;include repeated frags&quot;</span>
+        <span class="n">modified_vect_frags</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="n">init_vect_frags</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sub_level</span><span class="o">.</span><span class="n">S_o_A_frags</span>
+
+        <span class="c1"># init_max_id_d = init_vect_frags[&quot;id&quot;].max()</span>
+        <span class="n">max_id_F</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">])</span>
+        <span class="n">max_id_C</span> <span class="o">=</span> <span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;id_c&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">+</span> <span class="mi">1</span>
+
+        <span class="c1"># HSV_tuples = [(x*1.0/(max_id_C - 1), 0.5, 0.5) for x in range(0,</span>
+        <span class="c1"># (max_id_C-1))]</span>
+        <span class="c1"># cmap = plt.cm.gist_ncar</span>
+        <span class="n">cmap</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">cm</span><span class="o">.</span><span class="n">prism</span>
+        <span class="c1"># extract all colors from the .jet map</span>
+        <span class="n">cmaplist</span> <span class="o">=</span> <span class="p">[</span><span class="n">cmap</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">cmap</span><span class="o">.</span><span class="n">N</span><span class="p">)]</span>
+        <span class="n">id_smple</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">cmap</span><span class="o">.</span><span class="n">N</span><span class="p">,</span> <span class="n">num</span><span class="o">=</span><span class="n">max_id_C</span><span class="p">)</span>
+        <span class="n">RGB_tuples</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">max_id_C</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="n">RGB_tuples</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cmaplist</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">id_smple</span><span class="p">[</span><span class="n">i</span><span class="p">])])</span>
+
+        <span class="c1"># RGB_tuples = map(lambda x: colorsys.hsv_to_rgb(*x), HSV_tuples)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">init_n_sub_frags</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">])</span>
+
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;pos&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;pos&quot;</span><span class="p">])</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;sub_pos&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;sub_pos&quot;</span><span class="p">])</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;id_c&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;id_c&quot;</span><span class="p">])</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;start_bp&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;start_bp&quot;</span><span class="p">])</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;len_bp&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;len_bp&quot;</span><span class="p">])</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;sub_len&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;sub_len&quot;</span><span class="p">])</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;circ&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;circ&quot;</span><span class="p">])</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">])</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;prev&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;prev&quot;</span><span class="p">])</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;next&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;next&quot;</span><span class="p">])</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;l_cont&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;l_cont&quot;</span><span class="p">])</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;sub_l_cont&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;sub_l_cont&quot;</span><span class="p">])</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;l_cont_bp&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;l_cont_bp&quot;</span><span class="p">])</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;n_accu&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;n_accu&quot;</span><span class="p">])</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;rep&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">max_id_F</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">))</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;activ&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">max_id_F</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">))</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;id_d&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">])</span>
+        <span class="c1"># WARNING IMPLICT BREAKING OF THE CONTIGS</span>
+        <span class="k">for</span> <span class="n">data_dup</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">sub_candidates_output_data</span><span class="p">:</span>
+            <span class="n">n_dup</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">data_dup</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">id_f</span> <span class="o">=</span> <span class="n">data_dup</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">_k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">n_dup</span><span class="p">):</span>
+                <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;pos&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+                <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;sub_pos&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+                <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;id_c&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">max_id_C</span><span class="p">)</span>
+                <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;start_bp&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+                <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;len_bp&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;len_bp&quot;</span><span class="p">][</span><span class="n">id_f</span><span class="p">])</span>
+                <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;sub_len&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;sub_len&quot;</span><span class="p">][</span><span class="n">id_f</span><span class="p">])</span>
+                <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;circ&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;circ&quot;</span><span class="p">][</span><span class="n">id_f</span><span class="p">])</span>
+                <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">max_id_F</span><span class="p">)</span>
+                <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;prev&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;next&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;l_cont&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;sub_l_cont&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;sub_len&quot;</span><span class="p">][</span><span class="n">id_f</span><span class="p">])</span>
+                <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;l_cont_bp&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;len_bp&quot;</span><span class="p">][</span><span class="n">id_f</span><span class="p">])</span>
+                <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;n_accu&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;n_accu&quot;</span><span class="p">][</span><span class="n">id_f</span><span class="p">])</span>
+                <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;rep&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;activ&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;id_d&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">init_vect_frags</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">][</span><span class="n">id_f</span><span class="p">])</span>
+                <span class="n">max_id_F</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">max_id_C</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;MAX ID CONTIG = </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">max_id_C</span><span class="p">))</span>
+
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;pos&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;pos&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;sub_pos&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;sub_pos&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;id_c&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;id_c&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;start_bp&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;start_bp&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;len_bp&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;len_bp&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;sub_len&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;sub_len&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;circ&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;circ&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;prev&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;prev&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;next&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;next&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;l_cont&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;l_cont&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;sub_l_cont&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;sub_l_cont&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;l_cont_bp&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;l_cont_bp&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;n_accu&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;n_accu&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;rep&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;rep&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;activ&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;activ&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;id_d&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;id_d&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+
+        <span class="n">id_x</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">collector_id_repeats</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">frag_dispatcher</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">id_f</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">init_n_sub_frags</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">id_f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">sub_candidates_dup</span><span class="p">:</span>
+                <span class="n">id_start</span> <span class="o">=</span> <span class="n">id_x</span>
+                <span class="n">id_dup</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;id_d&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">id_f</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">collector_id_repeats</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">id_dup</span><span class="p">))</span>
+                <span class="n">n_rep</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">id_dup</span><span class="p">)</span>
+                <span class="n">frag_dispatcher</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">id_start</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">id_start</span> <span class="o">+</span> <span class="n">n_rep</span><span class="p">)))</span>
+                <span class="n">id_x</span> <span class="o">+=</span> <span class="n">n_rep</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">id_start</span> <span class="o">=</span> <span class="n">id_x</span>
+                <span class="n">n_rep</span> <span class="o">=</span> <span class="mi">1</span>
+                <span class="n">frag_dispatcher</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">id_start</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">id_start</span> <span class="o">+</span> <span class="n">n_rep</span><span class="p">)))</span>
+                <span class="n">collector_id_repeats</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">id_f</span><span class="p">)</span>
+                <span class="n">id_x</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">sub_collector_id_repeats</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">collector_id_repeats</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sub_frag_dispatcher</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">frag_dispatcher</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">int2</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">sub_n_frags</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">modified_vect_frags</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">])</span>
+
+        <span class="c1"># pos_vect_frags_4_GL = np.ndarray((self.n_frags, 4), dtype=np.float32)</span>
+        <span class="c1"># col_vect_frags_4_GL = np.ndarray((self.n_frags, 4), dtype=np.float32)</span>
+        <span class="c1">#</span>
+        <span class="c1"># for id_f_curr in xrange(0 , self.sub_n_frags):</span>
+        <span class="c1">#     id_d = modified_vect_frags[&#39;id_d&#39;][id_f_curr]</span>
+        <span class="c1">#     id_c = init_vect_frags[&#39;id_c&#39;][id_d]</span>
+        <span class="c1">#     pos_vect_frags_4_GL[id_f_curr, 0] =</span>
+        <span class="c1">#     modified_vect_frags[&#39;pos&#39;][id_f_curr]</span>
+        <span class="c1">#     pos_vect_frags_4_GL[id_f_curr, 1] =</span>
+        <span class="c1">#     modified_vect_frags[&#39;id_c&#39;][id_f_curr]</span>
+        <span class="c1">#     pos_vect_frags_4_GL[id_f_curr, 2] = 0.</span>
+        <span class="c1">#     pos_vect_frags_4_GL[id_f_curr, 3] = np.float32(1.0)</span>
+        <span class="c1">#</span>
+        <span class="c1">#     col_vect_frags_4_GL[id_f_curr, 0] =</span>
+        <span class="c1">#     np.float32(RGB_tuples[id_c - 1][0])</span>
+        <span class="c1">#     col_vect_frags_4_GL[id_f_curr, 1] =</span>
+        <span class="c1">#     np.float32(RGB_tuples[id_c - 1][1])</span>
+        <span class="c1">#     col_vect_frags_4_GL[id_f_curr, 2] =</span>
+        <span class="c1">#     np.float32(RGB_tuples[id_c - 1][2])</span>
+        <span class="c1">#     col_vect_frags_4_GL[id_f_curr, 3] =</span>
+        <span class="c1">#     np.float32(1.0)</span>
+        <span class="c1">#</span>
+        <span class="c1"># self.sub_col_vect_frags_4_GL = col_vect_frags_4_GL</span>
+        <span class="c1"># self.sub_pos_vect_frags_4_GL = pos_vect_frags_4_GL</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">new_sub_S_o_A_frags</span> <span class="o">=</span> <span class="n">modified_vect_frags</span></div>
+
+
+<div class="viewcode-block" id="simulation.select_repeated_frags">
+<a class="viewcode-back" href="../../api/instagraal.html#instagraal.simu_single.simulation.select_repeated_frags">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">select_repeated_frags</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>  <span class="c1">#</span>
+
+        <span class="c1"># collect_cov = []</span>
+        <span class="c1"># step = 0</span>
+        <span class="c1"># p = ProgressBar(&#39;green&#39;, width=20, block=&#39;▣&#39;, empty=&#39;□&#39;)</span>
+        <span class="c1"># for i in range(0, self.level.n_frags):</span>
+        <span class="c1">#     v_r = self.level.sparse_mat_csr[i, :]</span>
+        <span class="c1">#     v_c = self.level.sparse_mat_csc[:, i]</span>
+        <span class="c1">#     non_zeros = v_c.nnz + v_r.nnz</span>
+        <span class="c1">#     collect_cov.append(non_zeros)</span>
+        <span class="c1">#     step += 1</span>
+        <span class="c1">#     if step%1000 == 0:</span>
+        <span class="c1">#         pt = step * 100 / self.level.n_frags</span>
+        <span class="c1">#         p.render(pt, &#39;step %s\nProcessing...\nDescription: computing</span>
+        <span class="c1">#         coverage per frag.&#39; % step)</span>
+
+        <span class="n">coverage</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">level</span><span class="o">.</span><span class="n">sparse_mat_csr</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">coverage</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">level</span><span class="o">.</span><span class="n">sparse_mat_csr</span><span class="o">.</span><span class="n">transpose</span><span class="p">()</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">mean_coverage</span> <span class="o">=</span> <span class="n">coverage</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+
+        <span class="n">std_coverage</span> <span class="o">=</span> <span class="n">coverage</span><span class="o">.</span><span class="n">std</span><span class="p">()</span>
+        <span class="n">mean_coverage_ext</span> <span class="o">=</span> <span class="n">mean_coverage</span> <span class="o">+</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">std_coverage</span>
+        <span class="n">candidates_dup</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">coverage</span> <span class="o">&gt;</span> <span class="n">mean_coverage_ext</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="c1"># plt.figure()</span>
+        <span class="c1"># plt.hist(coverage, 100)</span>
+        <span class="c1"># plt.figure()</span>
+        <span class="c1"># plt.plot(coverage)</span>
+        <span class="c1"># plt.axhline(mean_coverage_ext, color=&#39;g&#39;)</span>
+        <span class="c1"># # plt.show()</span>
+        <span class="c1"># plt.figure()</span>
+        <span class="c1"># n, bins, patches = plt.hist(coverage, 10000, normed=1,</span>
+        <span class="c1"># facecolor=&#39;blue&#39;, alpha=0.75)</span>
+        <span class="c1"># # add a &#39;best fit&#39; line</span>
+        <span class="c1"># (mu, sigma) = norm.fit(coverage)</span>
+        <span class="c1"># y = mlab.normpdf( bins, mu, sigma)</span>
+        <span class="c1"># l = plt.plot(bins, y, &#39;r--&#39;, linewidth=2)</span>
+        <span class="c1"># plt.axvline(mean_coverage_ext, color=&#39;g&#39;, linewidth=2)</span>
+        <span class="c1"># #plot</span>
+        <span class="c1"># plt.xlabel(&#39;Raw contacts frequency&#39;)</span>
+        <span class="c1"># plt.ylabel(&#39;Probability&#39;)</span>
+        <span class="c1"># plt.title(r&#39;$\mathrm{Histogram\ of\ HiC\ contact\ (data\ %s):}\</span>
+        <span class="c1"># \mu=%.3f,\ \sigma=%.3f$&#39; %(self.name, mu, sigma))</span>
+        <span class="c1"># plt.legend([&quot;gaussian fit&quot;,&quot;duplication limit&quot;,&quot;exp distribution&quot;],</span>
+        <span class="c1"># prop={&#39;size&#39;:15})</span>
+        <span class="c1"># plt.grid(True)</span>
+        <span class="c1">#</span>
+        <span class="c1"># plt.show()</span>
+        <span class="c1"># DEBUGGGG ###############s##########</span>
+        <span class="c1"># candidates_dup = []</span>
+        <span class="c1"># print &quot;candidate frags for duplication = &quot;, candidates_dup</span>
+        <span class="n">test</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="c1"># test = raw_input(&quot;ok?&quot;)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">test</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span><span class="p">):</span>
+            <span class="c1"># print &quot;---enter id duplicated frags--&quot;</span>
+            <span class="n">list_dup_manual</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s2">&quot;ids (separated by space): &quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">list_dup_manual</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+                <span class="n">list_dup_manual</span> <span class="o">=</span> <span class="n">list_dup_manual</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">)</span>
+                <span class="n">candidates_dup</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">list_dup_manual</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">candidates_dup</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># DEBUGGGG #########################</span>
+        <span class="c1"># candidates_dup = range(880, 890)</span>
+        <span class="c1"># candidates_dup = range(663, 674)</span>
+        <span class="c1"># candidates_dup = range(0, 800)</span>
+        <span class="c1"># candidates_dup = range(1204, 1217)</span>
+
+        <span class="n">candidates_dup</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># candidates_dup = range(1978, 2009)</span>
+        <span class="c1"># print &quot;you have selected: &quot;, candidates_dup</span>
+        <span class="n">output_data</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">sub_candidates_dup</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">sub_candidates_output_data</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">ele</span> <span class="ow">in</span> <span class="n">candidates_dup</span><span class="p">:</span>
+            <span class="n">cov_ele</span> <span class="o">=</span> <span class="n">coverage</span><span class="p">[</span><span class="n">ele</span><span class="p">]</span>
+            <span class="n">estim_n_dup</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">cov_ele</span> <span class="o">/</span> <span class="n">mean_coverage_ext</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">])</span>
+            <span class="c1"># estim_n_dup = np.max([1, np.ceil(cov_ele / mean_coverage_ext) -</span>
+            <span class="c1"># 1])</span>
+            <span class="n">output_data</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">ele</span><span class="p">,</span> <span class="n">estim_n_dup</span><span class="p">))</span>
+            <span class="c1"># print &quot;duplicated data = &quot;, output_data</span>
+            <span class="n">tmp_sub_ids</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">np_sub_frags_id</span><span class="p">[</span><span class="n">ele</span><span class="p">]</span>
+            <span class="n">n_subs</span> <span class="o">=</span> <span class="n">tmp_sub_ids</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">n_subs</span><span class="p">):</span>
+                <span class="n">sub_candidates_dup</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tmp_sub_ids</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                <span class="n">sub_candidates_output_data</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">tmp_sub_ids</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">estim_n_dup</span><span class="p">))</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;N frag duplicated = </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">candidates_dup</span><span class="p">)))</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="n">candidates_dup</span><span class="p">,</span>
+            <span class="n">output_data</span><span class="p">,</span>
+            <span class="n">sub_candidates_dup</span><span class="p">,</span>
+            <span class="n">sub_candidates_output_data</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="simulation.select_data_set">
+<a class="viewcode-back" href="../../api/instagraal.html#instagraal.simu_single.simulation.select_data_set">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">select_data_set</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+
+        <span class="n">size_pyramid</span> <span class="o">=</span> <span class="mi">9</span>
+        <span class="n">factor</span> <span class="o">=</span> <span class="mi">3</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_folder</span><span class="p">)):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_folder</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">hic_pyr</span> <span class="o">=</span> <span class="n">pyr</span><span class="o">.</span><span class="n">build_and_filter</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">base_folder</span><span class="p">,</span>
+            <span class="n">size_pyramid</span><span class="p">,</span>
+            <span class="n">factor</span><span class="p">,</span>
+            <span class="n">thresh_factor</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">thresh_factor</span><span class="p">,</span>
+            <span class="n">output_folder</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">output_folder</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;pyramid loaded&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_folder</span><span class="p">)):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_folder</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_folder</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_folder</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_set</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_folder</span><span class="p">)):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_folder</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_folder</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_folder</span><span class="p">,</span> <span class="s2">&quot;test_mcmc_&quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">str_level</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_folder</span><span class="p">)):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_folder</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">new_fasta</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_folder</span><span class="p">,</span> <span class="s2">&quot;genome.fasta&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">info_frags</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_folder</span><span class="p">,</span> <span class="s2">&quot;info_frags.txt&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_matrix_em</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_folder</span><span class="p">,</span> <span class="s2">&quot;post_em.tiff&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_matrix_mcmc</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_folder</span><span class="p">,</span> <span class="s2">&quot;post_mcmc.tiff&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">input_matrix</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_folder</span><span class="p">,</span> <span class="s2">&quot;pre_simu.tiff&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scrambled_input_matrix</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_folder</span><span class="p">,</span> <span class="s2">&quot;scrambled_simu.tiff&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="simulation.load_gl_buffers">
+<a class="viewcode-back" href="../../api/instagraal.html#instagraal.simu_single.simulation.load_gl_buffers">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">load_gl_buffers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">num</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_frags</span>
+        <span class="n">pos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">((</span><span class="n">num</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="n">seed</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">num</span><span class="p">)</span>
+        <span class="n">pos</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">seed</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:]</span>
+        <span class="n">pos</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="n">pos</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">seed</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span>  <span class="c1"># z pos</span>
+        <span class="n">pos</span><span class="p">[:,</span> <span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>  <span class="c1"># velocity</span>
+
+        <span class="c1"># num = self.n_frags</span>
+        <span class="c1"># pos = np.ndarray((num, 4), dtype=np.float32)</span>
+        <span class="c1"># pos[:,1] = np.sin(np.arange(0., num) * 2.001 * np.pi / (10*num))</span>
+        <span class="c1"># pos[:,1] *= np.random.random_sample((num,)) / 3. - 0.2</span>
+        <span class="c1"># pos[:,2] = np.cos(np.arange(0., num) * 2.001 * np.pi /(10* num))</span>
+        <span class="c1"># pos[:,2] *= np.random.random_sample((num,)) / 3. - 0.2</span>
+        <span class="c1"># pos[:,0] = 0. # z pos</span>
+        <span class="c1"># pos[:,3] = 1. # velocity</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pos</span> <span class="o">=</span> <span class="n">pos</span>
+        <span class="c1"># self.pos_vbo = vbo.VBO(</span>
+        <span class="c1">#     data=self.pos,</span>
+        <span class="c1">#     usage=OpenGL.GL.GL_DYNAMIC_DRAW,</span>
+        <span class="c1">#     target=OpenGL.GL.GL_ARRAY_BUFFER,</span>
+        <span class="c1"># )</span>
+
+        <span class="c1"># self.pos_vbo = vbo.VBO(data=self.pos_vect_frags_4_GL,</span>
+        <span class="c1"># usage=GL_DYNAMIC_DRAW, target=GL_ARRAY_BUFFER)</span>
+        <span class="c1"># self.pos_vbo.bind()</span>
+
+        <span class="c1"># self.col_vbo = vbo.VBO(</span>
+        <span class="c1">#     data=self.col_vect_frags_4_GL,</span>
+        <span class="c1">#     usage=OpenGL.GL.GL_DYNAMIC_DRAW,</span>
+        <span class="c1">#     target=OpenGL.GL.GL_ARRAY_BUFFER,</span>
+        <span class="c1"># )</span>
+
+        <span class="c1"># self.col_vbo.bind()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">vel</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">n_frags</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vel</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pos</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">*</span> <span class="mf">2.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vel</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pos</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="mf">2.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vel</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">3.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vel</span><span class="p">[:,</span> <span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">random_sample</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">n_frags</span><span class="p">,))</span></div>
+
+
+<div class="viewcode-block" id="simulation.init_gl_image">
+<a class="viewcode-back" href="../../api/instagraal.html#instagraal.simu_single.simulation.init_gl_image">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">init_gl_image</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">OpenGL.GL</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">texid</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pbo_im_buffer</span> <span class="o">=</span> <span class="n">OpenGL</span><span class="o">.</span><span class="n">GL</span><span class="o">.</span><span class="n">glGenBuffers</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># generate 1 buffer reference</span>
+
+        <span class="n">OpenGL</span><span class="o">.</span><span class="n">GL</span><span class="o">.</span><span class="n">glBindBuffer</span><span class="p">(</span><span class="n">OpenGL</span><span class="o">.</span><span class="n">GL</span><span class="o">.</span><span class="n">GL_PIXEL_UNPACK_BUFFER</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">pbo_im_buffer</span><span class="p">)</span>  <span class="c1"># binding to this buffer</span>
+
+        <span class="c1"># self.raw_im_init = np.uint8(np.random.rand(self.gl_size_im,</span>
+        <span class="c1"># self.gl_size_im))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">raw_im_init</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">gl_size_im</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">gl_size_im</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+
+        <span class="n">OpenGL</span><span class="o">.</span><span class="n">GL</span><span class="o">.</span><span class="n">glBufferData</span><span class="p">(</span>
+            <span class="n">OpenGL</span><span class="o">.</span><span class="n">GL</span><span class="o">.</span><span class="n">GL_PIXEL_UNPACK_BUFFER</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">gl_size_im</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">gl_size_im</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">raw_im_init</span><span class="p">,</span>
+            <span class="n">OpenGL</span><span class="o">.</span><span class="n">GL</span><span class="o">.</span><span class="n">GL_STREAM_DRAW</span><span class="p">,</span>
+        <span class="p">)</span>  <span class="c1"># Allocate the buffer</span>
+
+        <span class="n">OpenGL</span><span class="o">.</span><span class="n">GL</span><span class="o">.</span><span class="n">glGetBufferParameteriv</span><span class="p">(</span>
+            <span class="n">OpenGL</span><span class="o">.</span><span class="n">GL</span><span class="o">.</span><span class="n">GL_PIXEL_UNPACK_BUFFER</span><span class="p">,</span> <span class="n">OpenGL</span><span class="o">.</span><span class="n">GL</span><span class="o">.</span><span class="n">GL_BUFFER_SIZE</span>
+        <span class="p">)</span>  <span class="c1"># Check allocated buffer size</span>
+
+        <span class="c1">#        try:</span>
+        <span class="c1">#            assert(bsize == self.gl_size_im * self.gl_size_im)</span>
+        <span class="c1">#        except AssertionError as e:</span>
+        <span class="c1">#            print str(e)</span>
+        <span class="n">OpenGL</span><span class="o">.</span><span class="n">GL</span><span class="o">.</span><span class="n">glBindBuffer</span><span class="p">(</span><span class="n">OpenGL</span><span class="o">.</span><span class="n">GL</span><span class="o">.</span><span class="n">GL_PIXEL_UNPACK_BUFFER</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>  <span class="c1"># Unbind</span>
+
+        <span class="n">OpenGL</span><span class="o">.</span><span class="n">GL</span><span class="o">.</span><span class="n">glGenTextures</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">texid</span><span class="p">)</span>  <span class="c1"># generate 1 texture reference</span>
+
+        <span class="n">OpenGL</span><span class="o">.</span><span class="n">GL</span><span class="o">.</span><span class="n">glBindTexture</span><span class="p">(</span><span class="n">OpenGL</span><span class="o">.</span><span class="n">GL</span><span class="o">.</span><span class="n">GL_TEXTURE_2D</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">texid</span><span class="p">)</span>  <span class="c1"># binding to this texture</span>
+
+        <span class="n">OpenGL</span><span class="o">.</span><span class="n">GL</span><span class="o">.</span><span class="n">glTexParameteri</span><span class="p">(</span>
+            <span class="n">OpenGL</span><span class="o">.</span><span class="n">GL</span><span class="o">.</span><span class="n">GL_TEXTURE_2D</span><span class="p">,</span>
+            <span class="n">OpenGL</span><span class="o">.</span><span class="n">GL</span><span class="o">.</span><span class="n">GL_TEXTURE_MAG_FILTER</span><span class="p">,</span>
+            <span class="n">OpenGL</span><span class="o">.</span><span class="n">GL</span><span class="o">.</span><span class="n">GL_LINEAR</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">OpenGL</span><span class="o">.</span><span class="n">GL</span><span class="o">.</span><span class="n">glTexParameteri</span><span class="p">(</span>
+            <span class="n">OpenGL</span><span class="o">.</span><span class="n">GL</span><span class="o">.</span><span class="n">GL_TEXTURE_2D</span><span class="p">,</span>
+            <span class="n">OpenGL</span><span class="o">.</span><span class="n">GL</span><span class="o">.</span><span class="n">GL_TEXTURE_MIN_FILTER</span><span class="p">,</span>
+            <span class="n">OpenGL</span><span class="o">.</span><span class="n">GL</span><span class="o">.</span><span class="n">GL_LINEAR</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="c1"># glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, self.gl_size_im,</span>
+        <span class="c1"># self.gl_size_im,  0, GL_LUMINANCE, GL_FLOAT, self.raw_im_init) #</span>
+        <span class="c1"># Allocate the texture</span>
+        <span class="n">OpenGL</span><span class="o">.</span><span class="n">GL</span><span class="o">.</span><span class="n">glTexImage2D</span><span class="p">(</span>
+            <span class="n">OpenGL</span><span class="o">.</span><span class="n">GL</span><span class="o">.</span><span class="n">GL_TEXTURE_2D</span><span class="p">,</span>
+            <span class="mi">0</span><span class="p">,</span>
+            <span class="n">OpenGL</span><span class="o">.</span><span class="n">GL</span><span class="o">.</span><span class="n">GL_LUMINANCE</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">gl_size_im</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">gl_size_im</span><span class="p">,</span>
+            <span class="mi">0</span><span class="p">,</span>
+            <span class="n">OpenGL</span><span class="o">.</span><span class="n">GL</span><span class="o">.</span><span class="n">GL_LUMINANCE</span><span class="p">,</span>
+            <span class="n">OpenGL</span><span class="o">.</span><span class="n">GL</span><span class="o">.</span><span class="n">GL_UNSIGNED_BYTE</span><span class="p">,</span>
+            <span class="kc">None</span><span class="p">,</span>
+        <span class="p">)</span>  <span class="c1"># Allocate the texture</span>
+
+        <span class="n">OpenGL</span><span class="o">.</span><span class="n">GL</span><span class="o">.</span><span class="n">glBindTexture</span><span class="p">(</span><span class="n">OpenGL</span><span class="o">.</span><span class="n">GL</span><span class="o">.</span><span class="n">GL_TEXTURE_2D</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>  <span class="c1"># Unbind</span>
+
+        <span class="n">OpenGL</span><span class="o">.</span><span class="n">GL</span><span class="o">.</span><span class="n">glPixelStorei</span><span class="p">(</span><span class="n">OpenGL</span><span class="o">.</span><span class="n">GL</span><span class="o">.</span><span class="n">GL_UNPACK_ALIGNMENT</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># 1-byte row alignment</span>
+        <span class="n">OpenGL</span><span class="o">.</span><span class="n">GL</span><span class="o">.</span><span class="n">glPixelStorei</span><span class="p">(</span><span class="n">OpenGL</span><span class="o">.</span><span class="n">GL</span><span class="o">.</span><span class="n">GL_PACK_ALIGNMENT</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># 1-byte row alignment</span></div>
+
+
+<div class="viewcode-block" id="simulation.create_sub_frags">
+<a class="viewcode-back" href="../../api/instagraal.html#instagraal.simu_single.simulation.create_sub_frags">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_sub_frags</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sub_frags_len_bp</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sub_frags_id</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sub_frags_accu</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">unkb</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="mf">1000.0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">collect_accu_frags</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">norm_vect</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">n_sub_frags</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sub_frags_2_frags</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_frags</span><span class="p">):</span>
+            <span class="n">tmp</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">hic_pyr</span><span class="o">.</span><span class="n">spec_level</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">str_level</span><span class="p">][</span><span class="s2">&quot;fragments_dict&quot;</span><span class="p">][</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">][</span><span class="s2">&quot;sub_low_index&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">hic_pyr</span><span class="o">.</span><span class="n">spec_level</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">str_level</span><span class="p">][</span><span class="s2">&quot;fragments_dict&quot;</span><span class="p">][</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">][</span><span class="s2">&quot;sub_high_index&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span>
+            <span class="p">]</span>
+
+            <span class="c1"># !!! warning!!! m</span>
+            <span class="n">n_sub</span> <span class="o">=</span> <span class="n">tmp</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">tmp</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span>
+            <span class="n">v_len</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+            <span class="n">v_accu</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+            <span class="n">v_id</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">n_sub</span><span class="p">]</span>
+            <span class="n">n_sub_frags</span> <span class="o">+=</span> <span class="n">n_sub</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">n_sub</span><span class="p">):</span>
+                <span class="n">v_len</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sub_level</span><span class="o">.</span><span class="n">vect_frag_np</span><span class="p">[</span><span class="n">tmp</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">j</span><span class="p">][</span><span class="s2">&quot;len_bp&quot;</span><span class="p">])</span> <span class="o">/</span> <span class="n">unkb</span>
+                <span class="n">v_id</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">tmp</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">j</span><span class="p">)</span>
+                <span class="n">v_accu</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sub_level</span><span class="o">.</span><span class="n">vect_frag_np</span><span class="p">[</span><span class="n">tmp</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">j</span><span class="p">][</span><span class="s2">&quot;n_accu&quot;</span><span class="p">])</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">collect_accu_frags</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">v_accu</span><span class="p">[</span><span class="n">j</span><span class="p">])</span>
+
+            <span class="c1"># create index to go from high res frags to low res frags</span>
+            <span class="n">tmp_len</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">v_len</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">n_sub</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">n_sub</span><span class="p">):</span>
+                <span class="n">w_d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">tmp_len</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">j</span><span class="p">])</span> <span class="o">+</span> <span class="n">tmp_len</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">/</span> <span class="mf">2.0</span>  <span class="c1"># watson distance</span>
+                <span class="n">c_d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">tmp_len</span><span class="p">[</span><span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">n_sub</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))])</span> <span class="o">+</span> <span class="n">tmp_len</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">/</span> <span class="mf">2.0</span>  <span class="c1"># crick distance</span>
+                <span class="c1"># dat = (i, w_d, c_d)</span>
+                <span class="n">dat</span> <span class="o">=</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">w_d</span><span class="p">,</span> <span class="n">c_d</span><span class="p">,</span> <span class="n">j</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">sub_frags_2_frags</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dat</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">norm_vect</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">v_accu</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sub_frags_len_bp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">v_len</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sub_frags_id</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">v_id</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sub_frags_accu</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">v_accu</span><span class="p">))</span>
+
+        <span class="c1"># self.np_sub_frags_2_frags = np.array(self.sub_frags_2_frags,</span>
+        <span class="c1"># dtype=self.float3)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">np_sub_frags_2_frags</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sub_frags_2_frags</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">float4</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">np_sub_frags_len_bp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sub_frags_len_bp</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">float3</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">np_sub_frags_accu</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sub_frags_accu</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">int3</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">np_sub_frags_id</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sub_frags_id</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">int4</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">collect_accu_frags</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">collect_accu_frags</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">norm_vect</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asmatrix</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">norm_vect</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">init_n_sub_frags</span> <span class="o">=</span> <span class="n">n_sub_frags</span></div>
+
+
+<div class="viewcode-block" id="simulation.create_new_sub_frags">
+<a class="viewcode-back" href="../../api/instagraal.html#instagraal.simu_single.simulation.create_new_sub_frags">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_new_sub_frags</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">rep_sub_frags_id</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_frags</span><span class="p">):</span>
+            <span class="n">id_d</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">new_S_o_A_frags</span><span class="p">[</span><span class="s2">&quot;id_d&quot;</span><span class="p">][</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">n_sub</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">np_sub_frags_id</span><span class="p">[</span><span class="n">id_d</span><span class="p">][</span><span class="s2">&quot;w&quot;</span><span class="p">]</span>
+            <span class="n">v_id</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">n_sub</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">n_sub</span><span class="p">):</span>
+                <span class="n">v_id</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span>
+                <span class="n">idx</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">rep_sub_frags_id</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">v_id</span><span class="p">))</span>
+            <span class="n">out</span> <span class="o">+=</span> <span class="n">n_sub</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_new_sub_frags</span> <span class="o">=</span> <span class="n">out</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rep_sub_frags_id</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">rep_sub_frags_id</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">int4</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="simulation.plot_info_simu">
+<a class="viewcode-back" href="../../api/instagraal.html#instagraal.simu_single.simulation.plot_info_simu">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">plot_info_simu</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">collect_likelihood_input</span><span class="p">,</span>
+        <span class="n">collect_n_contigs_input</span><span class="p">,</span>
+        <span class="n">file_plot</span><span class="p">,</span>
+        <span class="n">title_ax</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="n">collect_likelihood</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">collect_likelihood_input</span><span class="p">)</span>
+        <span class="n">collect_n_contigs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">collect_n_contigs_input</span><span class="p">)</span>
+        <span class="n">len_collect</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">collect_likelihood</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">len_collect</span> <span class="o">&gt;</span> <span class="mi">1000</span><span class="p">:</span>
+            <span class="n">idx_2_plot</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1000</span><span class="p">,</span> <span class="n">len_collect</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">idx_2_plot</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">len_collect</span><span class="p">)</span>
+
+        <span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+        <span class="n">ax1</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">111</span><span class="p">)</span>
+        <span class="n">ax1</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">collect_likelihood</span><span class="p">[</span><span class="n">idx_2_plot</span><span class="p">],</span> <span class="s2">&quot;r-&quot;</span><span class="p">)</span>
+        <span class="n">ax1</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;iterations&quot;</span><span class="p">)</span>
+        <span class="c1"># Make the y-axis label and tick labels match the line color.</span>
+        <span class="n">ax1</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;likelihood&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;r&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">tl</span> <span class="ow">in</span> <span class="n">ax1</span><span class="o">.</span><span class="n">get_yticklabels</span><span class="p">():</span>
+            <span class="n">tl</span><span class="o">.</span><span class="n">set_color</span><span class="p">(</span><span class="s2">&quot;r&quot;</span><span class="p">)</span>
+        <span class="n">ax2</span> <span class="o">=</span> <span class="n">ax1</span><span class="o">.</span><span class="n">twinx</span><span class="p">()</span>
+        <span class="c1"># if title_ax == &quot;distance from init genome&quot;:</span>
+        <span class="c1">#     ax2.semilogy(collect_n_contigs, &#39;b-&#39;)</span>
+        <span class="c1"># else:</span>
+        <span class="n">ax2</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">collect_n_contigs</span><span class="p">[</span><span class="n">idx_2_plot</span><span class="p">],</span> <span class="s2">&quot;b-&quot;</span><span class="p">)</span>
+        <span class="n">ax2</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="n">title_ax</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;b&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">tl</span> <span class="ow">in</span> <span class="n">ax2</span><span class="o">.</span><span class="n">get_yticklabels</span><span class="p">():</span>
+            <span class="n">tl</span><span class="o">.</span><span class="n">set_color</span><span class="p">(</span><span class="s2">&quot;b&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+        <span class="n">fig</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">file_plot</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">len_collect</span> <span class="o">&gt;</span> <span class="mi">1000</span><span class="p">:</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="n">collect_n_contigs</span><span class="p">[</span><span class="n">idx_2_plot</span><span class="p">],</span> <span class="mi">100</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;histogram &quot;</span> <span class="o">+</span> <span class="n">title_ax</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="n">title_ax</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;counts&quot;</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span></div>
+
+
+    <span class="c1"># def plot_all_info_simu(self, all_data, headers):</span>
+    <span class="c1">#     print &quot;here we go!!&quot;</span>
+    <span class="c1">#     folder = self.output_folder</span>
+    <span class="c1">#     ## generate files ##</span>
+    <span class="c1">#     n_vals =</span>
+    <span class="c1">#     # the main axes is subplot(111) by default</span>
+    <span class="c1">#     plt.plot(t, s)</span>
+    <span class="c1">#     plt.axis([0, 1, 1.1*amin(s), 2*amax(s) ])</span>
+    <span class="c1">#     plt.xlabel(&#39;time (s)&#39;)</span>
+    <span class="c1">#     plt.ylabel(&#39;current (nA)&#39;)</span>
+    <span class="c1">#     plt.title(&#39;Gaussian colored noise&#39;)</span>
+    <span class="c1">#</span>
+    <span class="c1">#     # this is an inset axes over the main axes</span>
+    <span class="c1">#     a = plt.axes([.65, .6, .2, .2], axisbg=&#39;w&#39;)</span>
+    <span class="c1">#     n, bins, patches = plt.hist(s, 400, normed=1)</span>
+    <span class="c1">#     plt.title(&#39;Counts&#39;)</span>
+    <span class="c1">#     plt.setp(a, xticks=[], yticks=[])</span>
+    <span class="c1">#     plt.show()</span>
+
+<div class="viewcode-block" id="simulation.export_new_fasta">
+<a class="viewcode-back" href="../../api/instagraal.html#instagraal.simu_single.simulation.export_new_fasta">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">export_new_fasta</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sampler</span><span class="o">.</span><span class="n">gpu_vect_frags</span><span class="o">.</span><span class="n">copy_from_gpu</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">level</span><span class="o">.</span><span class="n">generate_new_fasta</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sampler</span><span class="o">.</span><span class="n">gpu_vect_frags</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">new_fasta</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">info_frags</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="simulation.release">
+<a class="viewcode-back" href="../../api/instagraal.html#instagraal.simu_single.simulation.release">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">release</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sampler</span><span class="o">.</span><span class="n">free_gpu</span><span class="p">()</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2018, Lyam Baudry, Hervé Marie-Nelly.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+</body>
+</html>

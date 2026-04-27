@@ -1,0 +1,345 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>instagraal.gpustruct &mdash; instagraal 0.1.4 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+
+
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=fd825880"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+</head>
+
+<body class="wy-body-for-nav">
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+
+
+          <a href="../../index.html" class="icon icon-home">
+            instagraal
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../api/modules.html">instagraal</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">instagraal</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">instagraal.gpustruct</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+
+  <h1>Source code for instagraal.gpustruct</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">struct</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pycuda.driver</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">cuda</span>
+
+
+<div class="viewcode-block" id="GPUStruct">
+<a class="viewcode-back" href="../../api/instagraal.html#instagraal.gpustruct.GPUStruct">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">GPUStruct</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">objs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize the link to the struct on the GPU device.</span>
+
+<span class="sd">        objs - must be a list of variable in the order they are in the</span>
+<span class="sd">        C struct.  Pointers are indicated with a * as in C.</span>
+<span class="sd">        kwargs - sets the values of this struct.</span>
+
+<span class="sd">        For example, if the struct is like this:</span>
+
+<span class="sd">        struct Results</span>
+<span class="sd">        {</span>
+<span class="sd">        unsigned int n; //, __padding;</span>
+<span class="sd">        float k;</span>
+<span class="sd">        float *A;</span>
+<span class="sd">        float *B;</span>
+<span class="sd">        };</span>
+
+<span class="sd">        your initialization could look like this:</span>
+
+<span class="sd">        res = GPUStruct([(np.uint32,&#39;n&#39;, 10),</span>
+<span class="sd">                         (np.float32,&#39;k&#39;, 0),</span>
+<span class="sd">                         (np.float32,&#39;*A&#39;, np.zeros(10,dtype=np.float32)),</span>
+<span class="sd">                         (np.float32,&#39;*B&#39;, np.ones(10,dtype=np.float32))])</span>
+
+<span class="sd">        You can then use it like this:</span>
+
+<span class="sd">        func(res.get_ptr(),block=(1,1,1))</span>
+
+<span class="sd">        And get data like this:</span>
+
+<span class="sd">        res.copy_from_gpu()</span>
+<span class="sd">        res.A</span>
+<span class="sd">        res.B</span>
+<span class="sd">        res.n</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># set the objs</span>
+        <span class="c1"># self.__formats,self.__objs = zip(*[(obj[0],obj[1]) for obj in objs])</span>
+        <span class="c1"># make them tuples to prevent modification</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__objs</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__objnames</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">inits</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="n">objs</span><span class="p">:</span>
+            <span class="n">oname</span> <span class="o">=</span> <span class="n">obj</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;*&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__objs</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">obj</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">obj</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__objnames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">oname</span><span class="p">)</span>
+            <span class="n">inits</span><span class="p">[</span><span class="n">oname</span><span class="p">]</span> <span class="o">=</span> <span class="n">obj</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+
+        <span class="c1"># make them both tuples</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__objs</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__objs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__objnames</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__objnames</span><span class="p">)</span>
+        <span class="c1"># self.__objs = tuple(objs)</span>
+        <span class="c1"># self.__objnames = tuple([obj.replace(&#39;*&#39;,&#39;&#39;) for fmt,obj in self.__objs])</span>
+
+        <span class="c1"># set a dict for holding nbytes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__nbytes</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__ptrs</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="c1"># loop over objs, setting attributes from kwargs</span>
+        <span class="k">for</span> <span class="n">_fmt</span><span class="p">,</span> <span class="n">obj</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__objs</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">obj</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;*&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="c1"># set the obj name without the *</span>
+                <span class="n">obj</span> <span class="o">=</span> <span class="n">obj</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+                <span class="c1"># it&#39;s a pointer</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">__ptrs</span><span class="p">[</span><span class="n">obj</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
+            <span class="c1"># also save the data</span>
+            <span class="c1"># setattr(self,obj,kwargs[obj])</span>
+            <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">inits</span><span class="p">[</span><span class="n">obj</span><span class="p">])</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">__ptr</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__fromstr</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># loop and delete non-none pointers</span>
+        <span class="k">for</span> <span class="n">ptr</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__ptrs</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__ptrs</span><span class="p">[</span><span class="n">ptr</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="c1"># free it</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">__ptrs</span><span class="p">[</span><span class="n">ptr</span><span class="p">]</span><span class="o">.</span><span class="n">free</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">__ptrs</span><span class="p">[</span><span class="n">ptr</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__ptr</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># free the main pointer struct</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__ptr</span><span class="o">.</span><span class="n">free</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__ptr</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">ostring</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">oname</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__objnames</span><span class="p">:</span>
+            <span class="n">ostring</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">oname</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">oname</span><span class="p">)))</span>
+        <span class="k">return</span> <span class="n">ostring</span>
+
+<div class="viewcode-block" id="GPUStruct.copy_to_gpu">
+<a class="viewcode-back" href="../../api/instagraal.html#instagraal.gpustruct.GPUStruct.copy_to_gpu">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">copy_to_gpu</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">skip</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="c1"># get skip list</span>
+        <span class="k">if</span> <span class="n">skip</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">skip</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># loop over obj and send the data for the pointers</span>
+        <span class="k">for</span> <span class="n">fmt</span><span class="p">,</span> <span class="n">obj</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__objs</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">obj</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;*&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="c1"># set the obj name without the *</span>
+                <span class="n">obj</span> <span class="o">=</span> <span class="n">obj</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+                <span class="c1"># verify the nbytes did not change, if so, free old</span>
+                <span class="c1"># ptr and allocate for new one.</span>
+                <span class="c1"># get the current bytes</span>
+                <span class="n">dat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ascontiguousarray</span><span class="p">(</span><span class="n">fmt</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">)))</span>
+                <span class="n">cur_nbytes</span> <span class="o">=</span> <span class="n">dat</span><span class="o">.</span><span class="n">nbytes</span>
+                <span class="k">if</span> <span class="n">obj</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__nbytes</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">__nbytes</span><span class="p">[</span><span class="n">obj</span><span class="p">]</span> <span class="o">!=</span> <span class="n">cur_nbytes</span><span class="p">:</span>
+                    <span class="c1"># free it</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">__ptrs</span><span class="p">[</span><span class="n">obj</span><span class="p">]</span><span class="o">.</span><span class="n">free</span><span class="p">()</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">__ptrs</span><span class="p">[</span><span class="n">obj</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
+                <span class="c1"># see if we need to reallocate</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__ptrs</span><span class="p">[</span><span class="n">obj</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="c1"># create mem for the pointer</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">__nbytes</span><span class="p">[</span><span class="n">obj</span><span class="p">]</span> <span class="o">=</span> <span class="n">cur_nbytes</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">__ptrs</span><span class="p">[</span><span class="n">obj</span><span class="p">]</span> <span class="o">=</span> <span class="n">cuda</span><span class="o">.</span><span class="n">mem_alloc</span><span class="p">(</span><span class="n">cur_nbytes</span><span class="p">)</span>
+
+                <span class="c1"># send the data to the memory space</span>
+                <span class="k">if</span> <span class="n">obj</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">skip</span><span class="p">:</span>
+                    <span class="n">cuda</span><span class="o">.</span><span class="n">memcpy_htod</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__ptrs</span><span class="p">[</span><span class="n">obj</span><span class="p">],</span> <span class="n">dat</span><span class="p">)</span>
+
+        <span class="c1"># pack everything and send struct to device</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__packstr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pack</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__ptr</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># send it for the first time</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__ptr</span> <span class="o">=</span> <span class="n">cuda</span><span class="o">.</span><span class="n">to_device</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__packstr</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># copy out to the existing pointer</span>
+            <span class="n">cuda</span><span class="o">.</span><span class="n">memcpy_htod</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__ptr</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__packstr</span><span class="p">)</span>
+
+        <span class="c1"># create a fromstring to get data back</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__fromstr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="sa">b</span><span class="s2">&quot; &quot;</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__packstr</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="GPUStruct.get_ptr">
+<a class="viewcode-back" href="../../api/instagraal.html#instagraal.gpustruct.GPUStruct.get_ptr">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_ptr</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__ptr</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;You never called copy_to_gpu.&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__ptr</span></div>
+
+
+<div class="viewcode-block" id="GPUStruct.get_packed">
+<a class="viewcode-back" href="../../api/instagraal.html#instagraal.gpustruct.GPUStruct.get_packed">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_packed</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__packstr</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_pack</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__fmt</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="n">topack</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">fmt</span><span class="p">,</span> <span class="n">obj</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__objs</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">obj</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;*&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="c1"># set the obj name without the *</span>
+                <span class="n">obj</span> <span class="o">=</span> <span class="n">obj</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+                <span class="c1"># is pointer</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">__fmt</span> <span class="o">+=</span> <span class="s2">&quot;P&quot;</span>
+                <span class="n">topack</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">intp</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__ptrs</span><span class="p">[</span><span class="n">obj</span><span class="p">])))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># is normal, so just get it</span>
+                <span class="n">toadd</span> <span class="o">=</span> <span class="n">fmt</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">__fmt</span> <span class="o">+=</span> <span class="n">toadd</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">char</span>
+                <span class="n">topack</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">toadd</span><span class="p">)</span>
+        <span class="c1"># pack it up</span>
+        <span class="k">return</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__fmt</span><span class="p">,</span> <span class="o">*</span><span class="n">topack</span><span class="p">)</span>
+
+<div class="viewcode-block" id="GPUStruct.copy_from_gpu">
+<a class="viewcode-back" href="../../api/instagraal.html#instagraal.gpustruct.GPUStruct.copy_from_gpu">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">copy_from_gpu</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">skip</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="c1">#         try:</span>
+        <span class="c1">#             # try and get the passed struct back</span>
+        <span class="c1">#             cuda.memcpy_dtoh(self.__fromstr, self.__ptr)</span>
+        <span class="c1">#             self.__unpacked = struct.unpack(self.__fmt, self.__fromstr)</span>
+        <span class="c1">#         except:</span>
+        <span class="c1">#             # just use the original packstr</span>
+        <span class="c1">#             self.__unpacked = struct.unpack(self.__fmt, self.__packstr)</span>
+
+        <span class="c1"># get skip list</span>
+        <span class="k">if</span> <span class="n">skip</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">skip</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># makre sure we&#39;ve sent there</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__fromstr</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;You never called copy_to_gpu.&quot;</span><span class="p">)</span>
+
+        <span class="c1"># try and get the passed struct back</span>
+        <span class="n">cuda</span><span class="o">.</span><span class="n">memcpy_dtoh</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__fromstr</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__ptr</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__unpacked</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__fmt</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__fromstr</span><span class="p">)</span>
+
+        <span class="c1"># now fill the attributes from the unpacked data</span>
+        <span class="k">for</span> <span class="n">ind</span><span class="p">,</span> <span class="p">(</span><span class="n">fmt</span><span class="p">,</span> <span class="n">obj</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__objs</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">obj</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;*&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="c1"># set the obj name without the *</span>
+                <span class="n">obj</span> <span class="o">=</span> <span class="n">obj</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+                <span class="c1"># is a pointer, so retrieve from card</span>
+                <span class="k">if</span> <span class="n">obj</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">skip</span><span class="p">:</span>
+                    <span class="c1"># first make sure dest is correct datatype</span>
+                    <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">fmt</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">)))</span>
+                    <span class="n">cuda</span><span class="o">.</span><span class="n">memcpy_dtoh</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">__ptrs</span><span class="p">[</span><span class="n">obj</span><span class="p">])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># get it from the unpacked values</span>
+                <span class="c1"># trying to keep the dtype with a hack</span>
+                <span class="c1"># setattr(self, obj,</span>
+                <span class="c1">#        getattr(np,str(getattr(self,obj).dtype))(self.__unpacked[ind]))</span>
+                <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">fmt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__unpacked</span><span class="p">[</span><span class="n">ind</span><span class="p">]))</span></div>
+</div>
+
+
+
+<span class="c1">#     def __getattr__(self, attr):</span>
+
+<span class="c1">#         if attr in self.__objnames:</span>
+<span class="c1">#             if self.__unpacked is None:</span>
+<span class="c1">#                 # must retrieve first</span>
+<span class="c1">#                 self.retrieve()</span>
+<span class="c1">#             # get the index</span>
+<span class="c1">#             ind = self.__objnames.index(attr)</span>
+<span class="c1">#             if &#39;*&#39;+attr == self.__objs[ind]:</span>
+<span class="c1">#                 # is pointer, so retrieve from card</span>
+<span class="c1">#                 data = getattr(self, self.__objnames[ind]+&#39;_data&#39;)</span>
+<span class="c1">#                 cuda.memcpy_dtoh(data,getattr(self,self.__objnames[ind]))</span>
+<span class="c1">#                 return data</span>
+<span class="c1">#                 #return cuda.from_device(getattr(self,self.__objnames[ind]),</span>
+<span class="c1">#                 #                        data.shape,</span>
+<span class="c1">#                 #                        data.dtype)</span>
+<span class="c1">#             else:</span>
+<span class="c1">#                 # just lookup in unpacked</span>
+<span class="c1">#                 return self.__unpacked[ind]</span>
+<span class="c1">#         else:</span>
+<span class="c1">#             raise AttributeError(&quot;Attribute not found %s.&quot; % (attr))</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2018, Lyam Baudry, Hervé Marie-Nelly.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+</body>
+</html>

@@ -8,7 +8,7 @@ version = "0.1.6"
 description = "Large genome reassembly based on Hi-C data"
 readme = "README.md"
 license = "GPL-3.0-only"
-requires-python = ">=3.8"
+requires-python = ">=3.10,<3.13"
 authors = [
     { name = "Lyam Baudry", email = "lyam.baudry@pasteur.fr" },
     { name = "Hervé Marie-Nelly" },
@@ -20,6 +20,9 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Topic :: Scientific/Engineering :: Visualization",
@@ -84,7 +87,9 @@ Repository = "https://github.com/koszullab/instagraal"
 
 [project.scripts]
 instagraal = "instagraal.cli.main:main"
+instagraal-endtoend = "instagraal.cli.endtoend:main"
 instagraal-polish = "instagraal.cli.polish:main"
+instagraal-post = "instagraal.cli.post:main"
 instagraal-pre = "instagraal.cli.pre:main"
 instagraal-stats = "instagraal.cli.stats:main"
 instagraal-test = "instagraal.cli.test:main"

@@ -1,6 +1,5 @@
 """Stub pycuda.driver - raises RuntimeError on any actual use."""
 
-
 STUB_ERROR = "pycuda stub: no CUDA available"
 
 

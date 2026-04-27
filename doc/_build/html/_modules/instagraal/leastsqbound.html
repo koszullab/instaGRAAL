@@ -1,0 +1,303 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>instagraal.leastsqbound &mdash; instagraal 0.1.4 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+
+
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=fd825880"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+</head>
+
+<body class="wy-body-for-nav">
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+
+
+          <a href="../../index.html" class="icon icon-home">
+            instagraal
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../api/modules.html">instagraal</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">instagraal</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">instagraal.leastsqbound</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+
+  <h1>Source code for instagraal.leastsqbound</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Constrained multivariate Levenberg-Marquardt optimization</span>
+
+<span class="sd">An updated version of this file can be found at</span>
+<span class="sd">https://github.com/jjhelmus/leastsqbound-scipy</span>
+
+<span class="sd">The version here has known bugs which have been</span>
+<span class="sd">fixed above, proceed at your own risk.</span>
+
+<span class="sd">- Jonathan J. Helmus (jjhelmus@gmail.com)</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.optimize</span><span class="w"> </span><span class="kn">import</span> <span class="n">leastsq</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">numpy.linalg</span><span class="w"> </span><span class="kn">import</span> <span class="n">LinAlgError</span>
+
+
+<div class="viewcode-block" id="internal2external_grad">
+<a class="viewcode-back" href="../../api/instagraal.html#instagraal.leastsqbound.internal2external_grad">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">internal2external_grad</span><span class="p">(</span><span class="n">xi</span><span class="p">,</span> <span class="n">bounds</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate the internal to external gradiant</span>
+
+<span class="sd">    Calculates the partial of external over internal</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">ge</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty_like</span><span class="p">(</span><span class="n">xi</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">bound</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">xi</span><span class="p">,</span> <span class="n">bounds</span><span class="p">)):</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="n">bound</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># minimum</span>
+        <span class="n">b</span> <span class="o">=</span> <span class="n">bound</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>  <span class="c1"># maximum</span>
+
+        <span class="k">if</span> <span class="n">a</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">b</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># No constraints</span>
+            <span class="n">ge</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
+
+        <span class="k">elif</span> <span class="n">b</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># only min</span>
+            <span class="n">ge</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">v</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="n">a</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># only max</span>
+            <span class="n">ge</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="n">v</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">v</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="k">else</span><span class="p">:</span>  <span class="c1"># both min and max</span>
+            <span class="n">ge</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">b</span> <span class="o">-</span> <span class="n">a</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.0</span>
+
+    <span class="k">return</span> <span class="n">ge</span></div>
+
+
+
+<div class="viewcode-block" id="i2e_cov_x">
+<a class="viewcode-back" href="../../api/instagraal.html#instagraal.leastsqbound.i2e_cov_x">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">i2e_cov_x</span><span class="p">(</span><span class="n">xi</span><span class="p">,</span> <span class="n">bounds</span><span class="p">,</span> <span class="n">cov_x</span><span class="p">):</span>
+
+    <span class="n">grad</span> <span class="o">=</span> <span class="n">internal2external_grad</span><span class="p">(</span><span class="n">xi</span><span class="p">,</span> <span class="n">bounds</span><span class="p">)</span>
+    <span class="n">grad</span> <span class="o">=</span> <span class="n">grad</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">grad</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">grad</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">grad</span><span class="p">)</span> <span class="o">*</span> <span class="n">cov_x</span></div>
+
+
+
+<div class="viewcode-block" id="internal2external">
+<a class="viewcode-back" href="../../api/instagraal.html#instagraal.leastsqbound.internal2external">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">internal2external</span><span class="p">(</span><span class="n">xi</span><span class="p">,</span> <span class="n">bounds</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert a series of internal variables to external variables&quot;&quot;&quot;</span>
+
+    <span class="n">xe</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty_like</span><span class="p">(</span><span class="n">xi</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">bound</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">xi</span><span class="p">,</span> <span class="n">bounds</span><span class="p">)):</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="n">bound</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># minimum</span>
+        <span class="n">b</span> <span class="o">=</span> <span class="n">bound</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>  <span class="c1"># maximum</span>
+
+        <span class="k">if</span> <span class="n">a</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">b</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># No constraints</span>
+            <span class="n">xe</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
+
+        <span class="k">elif</span> <span class="n">b</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># only min</span>
+            <span class="n">xe</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">a</span> <span class="o">-</span> <span class="mf">1.0</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">v</span><span class="o">**</span><span class="mf">2.0</span> <span class="o">+</span> <span class="mf">1.0</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="n">a</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># only max</span>
+            <span class="n">xe</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">b</span> <span class="o">+</span> <span class="mf">1.0</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">v</span><span class="o">**</span><span class="mf">2.0</span> <span class="o">+</span> <span class="mf">1.0</span><span class="p">)</span>
+
+        <span class="k">else</span><span class="p">:</span>  <span class="c1"># both min and max</span>
+            <span class="n">xe</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">a</span> <span class="o">+</span> <span class="p">((</span><span class="n">b</span> <span class="o">-</span> <span class="n">a</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">+</span> <span class="mf">1.0</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">xe</span></div>
+
+
+
+<div class="viewcode-block" id="external2internal">
+<a class="viewcode-back" href="../../api/instagraal.html#instagraal.leastsqbound.external2internal">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">external2internal</span><span class="p">(</span><span class="n">xe</span><span class="p">,</span> <span class="n">bounds</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert a series of external variables to internal variables&quot;&quot;&quot;</span>
+
+    <span class="n">xi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty_like</span><span class="p">(</span><span class="n">xe</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">bound</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">xe</span><span class="p">,</span> <span class="n">bounds</span><span class="p">)):</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="n">bound</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># minimum</span>
+        <span class="n">b</span> <span class="o">=</span> <span class="n">bound</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>  <span class="c1"># maximum</span>
+
+        <span class="k">if</span> <span class="n">a</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">b</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># No constraints</span>
+            <span class="n">xi</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
+
+        <span class="k">elif</span> <span class="n">b</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># only min</span>
+            <span class="n">xi</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">v</span> <span class="o">-</span> <span class="n">a</span> <span class="o">+</span> <span class="mf">1.0</span><span class="p">)</span> <span class="o">**</span> <span class="mf">2.0</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="n">a</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># only max</span>
+            <span class="n">xi</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">b</span> <span class="o">-</span> <span class="n">v</span> <span class="o">+</span> <span class="mf">1.0</span><span class="p">)</span> <span class="o">**</span> <span class="mf">2.0</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="k">else</span><span class="p">:</span>  <span class="c1"># both min and max</span>
+            <span class="n">xi</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arcsin</span><span class="p">((</span><span class="mf">2.0</span> <span class="o">*</span> <span class="p">(</span><span class="n">v</span> <span class="o">-</span> <span class="n">a</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">b</span> <span class="o">-</span> <span class="n">a</span><span class="p">))</span> <span class="o">-</span> <span class="mf">1.0</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">xi</span></div>
+
+
+
+<div class="viewcode-block" id="err">
+<a class="viewcode-back" href="../../api/instagraal.html#instagraal.leastsqbound.err">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">err</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">bounds</span><span class="p">,</span> <span class="n">efunc</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+
+    <span class="n">pe</span> <span class="o">=</span> <span class="n">internal2external</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">bounds</span><span class="p">)</span>  <span class="c1"># convert to external variables</span>
+    <span class="k">return</span> <span class="n">efunc</span><span class="p">(</span><span class="n">pe</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="calc_cov_x">
+<a class="viewcode-back" href="../../api/instagraal.html#instagraal.leastsqbound.calc_cov_x">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">calc_cov_x</span><span class="p">(</span><span class="n">infodic</span><span class="p">,</span> <span class="n">p</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate cov_x from fjac, ipvt and p as is done in leastsq</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">fjac</span> <span class="o">=</span> <span class="n">infodic</span><span class="p">[</span><span class="s2">&quot;fjac&quot;</span><span class="p">]</span>
+    <span class="n">ipvt</span> <span class="o">=</span> <span class="n">infodic</span><span class="p">[</span><span class="s2">&quot;ipvt&quot;</span><span class="p">]</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+
+    <span class="c1"># adapted from leastsq function in scipy/optimize/minpack.py</span>
+    <span class="n">perm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">take</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">n</span><span class="p">),</span> <span class="n">ipvt</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">triu</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">fjac</span><span class="p">)[:</span><span class="n">n</span><span class="p">,</span> <span class="p">:])</span>
+    <span class="n">R</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">perm</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">cov_x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">R</span><span class="p">),</span> <span class="n">R</span><span class="p">))</span>
+    <span class="k">except</span> <span class="n">LinAlgError</span><span class="p">:</span>
+        <span class="n">cov_x</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="n">cov_x</span></div>
+
+
+
+<div class="viewcode-block" id="leastsqbound">
+<a class="viewcode-back" href="../../api/instagraal.html#instagraal.leastsqbound.leastsqbound">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">leastsqbound</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">x0</span><span class="p">,</span> <span class="n">bounds</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(),</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Constrained multivariant Levenberg-Marquard optimization</span>
+
+<span class="sd">    Minimize the sum of squares of a given function using the</span>
+<span class="sd">    Levenberg-Marquard algorithm. Contraints on parameters are inforced using</span>
+<span class="sd">    variable transformations as described in the MINUIT User&#39;s Guide by</span>
+<span class="sd">    Fred James and Matthias Winkler.</span>
+
+<span class="sd">    Parameters:</span>
+
+<span class="sd">    * func      functions to call for optimization.</span>
+<span class="sd">    * x0        Starting estimate for the minimization.</span>
+<span class="sd">    * bounds    (min,max) pair for each element of x, defining the bounds on</span>
+<span class="sd">                that parameter.  Use None for one of min or max when there is</span>
+<span class="sd">                no bound in that direction.</span>
+<span class="sd">    * args      Any extra arguments to func are places in this tuple.</span>
+
+<span class="sd">    Returns: (x,{cov_x,infodict,mesg},ier)</span>
+
+<span class="sd">    Return is described in the scipy.optimize.leastsq function.  x and con_v</span>
+<span class="sd">    are corrected to take into account the parameter transformation, infodic</span>
+<span class="sd">    is not corrected.</span>
+
+<span class="sd">    Additional keyword arguments are passed directly to the</span>
+<span class="sd">    scipy.optimize.leastsq algorithm.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># check for full output</span>
+    <span class="k">if</span> <span class="n">kw</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;full_output&quot;</span><span class="p">):</span>
+        <span class="n">full</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">full</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="c1"># convert x0 to internal variables</span>
+    <span class="n">i0</span> <span class="o">=</span> <span class="n">external2internal</span><span class="p">(</span><span class="n">x0</span><span class="p">,</span> <span class="n">bounds</span><span class="p">)</span>
+
+    <span class="c1"># perfrom unconstrained optimization using internal variables</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">leastsq</span><span class="p">(</span><span class="n">err</span><span class="p">,</span> <span class="n">i0</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">bounds</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="n">args</span><span class="p">),</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+
+    <span class="c1"># unpack return convert to external variables and return</span>
+    <span class="k">if</span> <span class="n">full</span><span class="p">:</span>
+        <span class="n">xi</span><span class="p">,</span> <span class="n">cov_xi</span><span class="p">,</span> <span class="n">infodic</span><span class="p">,</span> <span class="n">mesg</span><span class="p">,</span> <span class="n">ier</span> <span class="o">=</span> <span class="n">r</span>
+        <span class="n">xe</span> <span class="o">=</span> <span class="n">internal2external</span><span class="p">(</span><span class="n">xi</span><span class="p">,</span> <span class="n">bounds</span><span class="p">)</span>
+        <span class="n">cov_xe</span> <span class="o">=</span> <span class="n">i2e_cov_x</span><span class="p">(</span><span class="n">xi</span><span class="p">,</span> <span class="n">bounds</span><span class="p">,</span> <span class="n">cov_xi</span><span class="p">)</span>
+        <span class="c1"># XXX correct infodic &#39;fjac&#39;,&#39;ipvt&#39;, and &#39;qtf&#39;</span>
+        <span class="k">return</span> <span class="n">xe</span><span class="p">,</span> <span class="n">cov_xe</span><span class="p">,</span> <span class="n">infodic</span><span class="p">,</span> <span class="n">mesg</span><span class="p">,</span> <span class="n">ier</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">xi</span><span class="p">,</span> <span class="n">ier</span> <span class="o">=</span> <span class="n">r</span>
+        <span class="n">xe</span> <span class="o">=</span> <span class="n">internal2external</span><span class="p">(</span><span class="n">xi</span><span class="p">,</span> <span class="n">bounds</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">xe</span><span class="p">,</span> <span class="n">ier</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2018, Lyam Baudry, Hervé Marie-Nelly.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+</body>
+</html>

@@ -235,7 +235,6 @@ def build(base_folder, size_pyramid, factor, min_bin_per_contig, output_folder=N
             )
 
         else:
-
             new_contig_list_file = os.path.join(pyramid_level_folder, level_pyramid + "contig_info.txt")
             new_fragments_list_file = os.path.join(pyramid_level_folder, level_pyramid + "fragments_list.txt")
             new_abs_fragments_contacts_file = os.path.join(pyramid_level_folder, level_pyramid + "abs_frag_contacts.txt")
@@ -298,7 +297,6 @@ def abs_contact_2_coo_file(abs_contact_file, coo_file):
     all_lines = h.readlines()
     n_lines = len(all_lines)
     for i in range(1, n_lines):
-
         line = all_lines[i]
         dat = line.split()
         mates = [int(dat[0]), int(dat[1])]
@@ -353,7 +351,6 @@ def fill_sparse_pyramid_level(pyramid_handle, level, contact_file, nfrags):
         all_lines = h.readlines()
     n_lines = len(all_lines)
     for i in range(1, n_lines):
-
         line = all_lines[i]
         dat = line.split()
         mates = [int(dat[0]), int(dat[1])]
@@ -554,7 +551,6 @@ def subsample_data_set(
 
             else:
                 for _arbind in range(0, id_frag_end):
-
                     id_frag_abs += 1
                     new_abs_id_frag += 1
                     new_rel_id_frag += 1
