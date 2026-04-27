@@ -3,8 +3,6 @@
 from scipy.optimize import minimize
 import numpy as np
 from scipy.optimize import fsolve
-
-# from scipy.optimize import minimize
 from scipy.optimize import leastsq
 from .leastsqbound import *  # noqa: F403
 

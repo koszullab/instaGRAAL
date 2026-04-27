@@ -529,7 +529,6 @@ def subsample_data_set(
             sum_length_contigs += id_frag_end
             if condition_sub_sample:
                 for _arbind in range(0, id_frag_end):
-                    #            for id_frag_rel in range(1,id_frag_end+1 ):
                     id_frag_rel += 1
                     id_frag_abs += 1
                     if id_frag_rel % fact_sub_sample == 1:
@@ -773,26 +772,15 @@ def remove_problematic_fragments(
 
     # SENSITIVE PARAMETER ########
 
-    # print(collect_sparsity)
-    # thresh = np.percentile(collect_sparsity,25)
-    # thresh = max_spars + std_spars
     thresh_max = mean_spars + 50 * std_spars
-    # thresh_max = np.percentile(collect_sparsity,np.float64(99.9))
-    # thresh = mean_spars - 1.01 * std_spars # para g1
 
     thresh = mean_spars - thresh_factor * std_spars
-    # thresh = 0.01 *mean_spars # for human data chr14 4 and de novo chr14
-    # thresh = 0.0015 # for human data chr14 4 and de novo chr14
-    # thresh = 0.001 *mean_spars # dde novo s1
-    # thresh = max(mean_spars - 0.9 * std_spars,0) # para g1
     # SENSITIVE PARAMETER ########
     list_fragments_problem = list(np.nonzero(collect_sparsity == 0)[0])
     logger.info("thresh sparsity = {}".format(thresh))
-    # plt.show()
     list_fragments_problem = list(np.nonzero(collect_sparsity <= thresh)[0])
     list_fragments_problem_too_large = list(np.nonzero(collect_sparsity > thresh_max)[0])
     list_fragments_problem.extend(list_fragments_problem_too_large)
-    # print(np.array(list_fragments_problem))
 
     logger.info("cleaning : start")
     import numpy as np
@@ -998,8 +986,6 @@ def remove_problematic_fragments(
         else:
             logger.info(contig + " has been deleted...")
     logger.info("update contacts files...")
-    # write new contacts file
-    # n_total_contacts = file_len(abs_fragments_contacts)
     handle_new_abs_fragments_contacts = open(new_abs_fragments_contacts_file, "w")
     handle_new_abs_fragments_contacts.write("%s\t%s\t%s\n" % ("id_frag_a", "id_frag_b", "n_contact"))
     with open(abs_fragments_contacts, "r") as handle_abs_fragments_contacts:
@@ -1007,24 +993,6 @@ def remove_problematic_fragments(
 
     #     for id_line_contacts in xrange(1, len(all_lines_contact)):
     #         line_contacts = all_lines_contact[id_line_contacts]
-    #         data = line_contacts.split()
-    #         w_size = data[2]
-    #         w_gc = data[3]
-    #         abs_id_frag_a = int(data[0])
-    #         abs_id_frag_b = int(data[1])
-    #         new_abs_id_frag_a = old_2_new_frags[abs_id_frag_a]
-    #         new_abs_id_frag_b = old_2_new_frags[abs_id_frag_b]
-    # #        step += 1
-    # #        pt = np.int32(step)/n_total_contacts
-    # p.render(pt * 100, 'step %s\nProcessing...\nDescription: updating
-    # contacts file.' % step) if not(new_abs_id_frag_a == 'destroyed' or
-    # new_abs_id_frag_b == 'destroyed'):
-    # w_sub_sample = (spec_new_frags[new_abs_id_frag_a]['accu_frag']*
-    # spec_new_frags[new_abs_id_frag_b]['accu_frag'])
-    # handle_new_abs_fragments_contacts.write("%s\t%s\t%s\t%s\t%s\n"
-    # %(str(new_abs_id_frag_a),str(new_abs_id_frag_b),
-    # w_size, w_gc, str(w_sub_sample)))
-
     sparse_dict = dict()
     for id_line in range(1, len(all_lines)):
         line = all_lines[id_line]
@@ -1924,14 +1892,6 @@ class level:
             # sub_sp_mat_tmp_intra.shape[0]*sub_sp_mat_tmp_intra.shape[1]
             n_tot_intra += shape_test[0] * (shape_test[0] - 1) / 2
 
-        # for id_cont in xrange(1, len(self.dict_contigs)+1):
-        #    full = self.im_init[coord_cont[id_cont], :]
-        #    intra = self.im_init[np.ix_(coord_cont[id_cont],
-        #    coord_cont[id_cont])]
-        #    total_trans += full.sum()
-        #    total_trans -= intra.sum()
-        #    n_tot += (full.shape[0]*full.shape[1]) -
-        #    intra.shape[0]*intra.shape[1]
         n_tot = self.sparse_mat_csr.shape[0] * (self.sparse_mat_csr.shape[0] - 1) / 2 - n_tot_intra
         self.mean_value_trans = total_trans / np.float32(n_tot)
         if np.isnan(self.mean_value_trans):

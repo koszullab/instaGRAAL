@@ -2,7 +2,6 @@
 
 import numpy as np
 
-# import pyopencl as cl
 import pycuda.tools
 from pycuda import characterize
 import pycuda.driver as cuda
@@ -10,17 +9,12 @@ import pycuda.compiler
 from .gpustruct import GPUStruct
 from pycuda import gpuarray as ga
 
-# from pycuda.scan import InclusiveScanKernel
-
-
 import time
 import matplotlib.pyplot as plt
 
-# import optim_rippe_curve as opti1
 from . import optim_rippe_curve_update as opti
 from . import init_nuisance as nuis
 
-# from OpenGL.arrays import vbo
 import scipy as scp
 
 from importlib.resources import files as _pkg_files
@@ -29,10 +23,6 @@ from . import log
 from .log import logger
 
 logger.setLevel(log.CURRENT_LOG_LEVEL)
-
-# from scipy import ndimage as ndi
-# from scipy import stats
-# import Image
 
 
 class _NumpyThrustModule:
@@ -690,8 +680,6 @@ class sampler:
                 swap = 1
                 if ((prev_t1 == prev_t0) and (next_t1 == next_t0)) or ((prev_t1 == next_t0) and (next_t1 == prev_t0)):
                     d -= 1
-                    # if not(self.np_init_orientable[id_f]):
-                    #     d -= 2
                 if self.np_init_orientable[id_f]:
                     if ori_t0 != ori_t1:
                         tmp = prev_t1
@@ -1304,10 +1292,6 @@ class sampler:
         end.synchronize()
         # likelihood_on_nz = self.gpu_curr_likelihood_nz.get()
         # self.curr_likelihood_on_nz = likelihood_on_nz
-        # self.curr_likelihood = likelihood_on_nz + self.curr_likelihood_on_z
-        # print "GPU time likelihood ALL = ", time.time() - t1
-        # print "likelihood on nz= ", likelihood_on_nz
-        # return self.curr_likelihood_on_nz, self.curr_likelihood_on_z
 
     def eval_likelihood_4_nuisance(
         self,
@@ -1430,7 +1414,7 @@ class sampler:
         self.all_scores = np.zeros((self.n_tmp_struct * n), dtype=np.float64)
         max_id = self.modify_gl_cuda_buffer(id_frag, dt)
         flip_eject = 1
-        for id_cand, i in zip(self.candidates, list(range(0, n))):
+        for id_cand, i in zip(self.candidates, list(range(0, n)), strict=False):
             # self.gl_window.remote_update()
             self.extract_uniq_mutations(id_frag, id_cand, flip_eject)
             self.perform_mutations(id_frag, id_cand, max_id, 1 == 0)
@@ -1498,7 +1482,7 @@ class sampler:
         self.all_scores = np.zeros((self.n_tmp_struct * n), dtype=np.float64)
         max_id = self.modify_gl_cuda_buffer(id_frag, self.dt)
         flip_eject = 1
-        for id_cand, i in zip(self.candidates, list(range(0, n))):
+        for id_cand, i in zip(self.candidates, list(range(0, n)), strict=False):
             # self.gl_window.remote_update()
             self.extract_uniq_mutations(id_frag, id_cand, flip_eject)
             self.perform_mutations(id_frag, id_cand, max_id, 1 == 0)
@@ -1938,13 +1922,6 @@ class sampler:
         if self.active_insert_blocks:
             self.insert_blocks(id_fA, id_fB, max_id)
 
-        # for mode in xrange(14, self.n_tmp_struct):
-        #     self.local_flip(id_fA, mode, max_id)
-        # self.all_pop_out_pop_in(id_fA, id_fB, max_id, is_first)
-        # tic_fillB = time.time()
-        # self.all_transloc(id_fA, id_fB, max_id, is_first)
-        # print "all_pop out time execution  = ", time.time() - tic_fillB
-
     def bomb_the_genome(
         self,
     ):
@@ -2292,31 +2269,13 @@ class sampler:
             # + size_bin_kb, size_bin_kb) local_storage =
             # np.zeros_like(local_bins, dtype=np.int32)
             #
-            # for fj, dj in zip(id_j, data):
-            #     info_j = self.np_sub_frags_2_frags[fj]
-            #     init_id_fj = info_j[0]
-            #     id_c_j = self.S_o_A_frags['id_c'][init_id_fj]
-            #     if id_c_i == id_c_j:
-            #         pos_j = self.S_o_A_frags['pos'][init_id_fj]
-            #         s_j = self.S_o_A_frags['start_bp'][init_id_fj]/1000.0 +
-            #         self.np_sub_frags_2_frags[fj][1]
-            #         d = np.abs(s_i - s_j)
-            #         if d < max_dist_kb:
-            #             id_bin = d / size_bin_kb
-            #             local_storage[id_bin] += dj
-            #             # self.dict_collect[self.bins[id_bin]].append(dj)
-            # # we have to add also the zeros
-            # for bin, val in zip(local_bins, local_storage):
-            #     # print "bin = ", bin
-            #     self.dict_collect[bin].append(val)
-
             if size_bin_kb < len_kb_c_i:
                 # local_bins = np.arange(size_bin_kb, min(len_kb_c_i,
                 # max_dist_kb) + size_bin_kb, size_bin_kb)
                 local_bins = np.arange(size_bin_kb, max_dist_kb + size_bin_kb, size_bin_kb)
                 local_storage = np.zeros_like(local_bins, dtype=np.int32)
 
-                for fj, dj in zip(id_j, data):
+                for fj, dj in zip(id_j, data, strict=False):
                     info_j = self.np_sub_frags_2_frags[fj]
                     init_id_fj = int(info_j[0])
                     id_c_j = self.S_o_A_frags["id_c"][init_id_fj]
@@ -2329,7 +2288,7 @@ class sampler:
                             local_storage[id_bin] += dj
                             # self.dict_collect[self.bins[id_bin]].append(dj)
                 # we have to add also the zeros
-                for bin, val in zip(local_bins, local_storage):
+                for bin, val in zip(local_bins, local_storage, strict=False):
                     # print "bin = ", bin
                     self.dict_collect[bin].append(val)
 
@@ -2341,9 +2300,6 @@ class sampler:
             k = self.bins[id_bin]
             tmp = np.mean(self.dict_collect[k])
             if np.isnan(tmp) or tmp == 0:
-                # if np.isnan(tmp):
-                # if np.isnan(tmp):
-                #     print "removing nan"
                 self.mean_contacts[id_bin] = np.nan
             else:
                 self.mean_contacts[id_bin] = tmp + epsi
@@ -2351,7 +2307,7 @@ class sampler:
         self.mean_contacts_upd = []
         self.bins_upd = []
 
-        for count, ele in zip(self.mean_contacts, self.bins):
+        for count, ele in zip(self.mean_contacts, self.bins, strict=False):
             if not np.isnan(count):
                 self.bins_upd.append(ele)
                 self.mean_contacts_upd.append(count)
@@ -2451,7 +2407,7 @@ class sampler:
             )
             local_storage = np.zeros_like(local_bins, dtype=np.int32)
 
-            for fj, dj in zip(id_j, data):
+            for fj, dj in zip(id_j, data, strict=False):
                 info_j = self.np_sub_frags_2_frags[fj]
                 init_id_fj = info_j[0]
                 id_c_j = self.S_o_A_frags["id_c"][init_id_fj]
@@ -2464,7 +2420,7 @@ class sampler:
                         local_storage[id_bin] += dj
                         # self.dict_collect[self.bins[id_bin]].append(dj)
             # we have to add also the zeros
-            for my_bin, val in zip(local_bins, local_storage):
+            for my_bin, val in zip(local_bins, local_storage, strict=False):
                 # print "bin = ", bin
                 self.dict_collect[my_bin].append(val)
 
@@ -2476,9 +2432,6 @@ class sampler:
             k = self.bins[id_bin]
             tmp = np.mean(self.dict_collect[k])
             if np.isnan(tmp) or tmp == 0:
-                # if np.isnan(tmp):
-                # if np.isnan(tmp):
-                #     print "removing nan"
                 self.mean_contacts[id_bin] = np.nan
             else:
                 self.mean_contacts[id_bin] = tmp + epsi
@@ -2486,7 +2439,7 @@ class sampler:
         self.mean_contacts_upd = []
         self.bins_upd = []
 
-        for count, ele in zip(self.mean_contacts, self.bins):
+        for count, ele in zip(self.mean_contacts, self.bins, strict=False):
             if not np.isnan(count):
                 self.bins_upd.append(ele)
                 self.mean_contacts_upd.append(count)
@@ -2591,17 +2544,6 @@ class sampler:
         logger.info("max id = {}".format(max_id))
 
     def apply_replay_simu(self, id_fA, id_fB, op_sampled, dt):
-
-        # n_modif = len(op_sampled)
-        # for i in xrange(0, n_modif):
-        #     self.modify_gl_cuda_buffer(i, dt)
-        #     self.gpu_vect_frags.copy_from_gpu()
-        #     max_id = self.gpu_vect_frags.id_c.max()
-        #     self.test_copy_struct(id_fA[i], id_fB[i], op_sampled[i], max_id)
-        #     self.gpu_vect_frags.copy_from_gpu()
-        #     c = self.gpu_vect_frags
-        #      # self.gl_window.remote_update()
-
         self.modify_gl_cuda_buffer(id_fA, dt)
         self.gpu_vect_frags.copy_from_gpu()
         max_id = self.gpu_vect_frags.id_c.max()
@@ -3166,16 +3108,7 @@ class sampler:
         # self.n_neighbours = 10
 
         ori_id = self.gpu_vect_frags.id_d[id_fA]
-        # delta = min(self.n_neighbours, delta0)
         delta = delta0
-
-        # DEBUG
-        # if ori_id in self.id_frag_duplicated:
-        #     delta = max(self.n_neighbors, delta)
-
-        # fact = 3
-        # pk = self.distri_frags[ori_id]['pk']**fact
-        # distri = pk / pk.sum()
 
         if self.distri_frags[ori_id]["distri"] is not None:
             distri = self.distri_frags[ori_id]["pk"]
@@ -3226,26 +3159,8 @@ class sampler:
                 self.jump_dictionnary[i]["set_frags"].add(id_frag)
                 proba = self.jump_dictionnary[i]["proba"][k]
                 self.jump_dictionnary[i]["distri"][id_frag] = proba
-        # test = True
-        # while test:
-        #     id = raw_input(" give a frag id ?")
-        #     id = int(id)
-        #     print self.jump_dictionnary[id]
-        #     test = raw_input(" keep on ? ")
-        #     test = int(test) != 0
 
     def temperature(self, t, n_step):
-        # T0 = np.float32(6 * 10 ** 3)
-        # Tf = np.float32(6*10 ** 2)
-        #
-        # n_step = n_step
-        # limit_rejection = 0.5
-        # if t <= n_step * limit_rejection:
-        #     val = T0 * (Tf / T0)**(t / (n_step* limit_rejection))
-        # else:
-        #     val = T0 * (Tf / T0)**(limit_rejection)
-        #     # val = Tf
-        # # print "temperature = ", val
         val = 1.0
         return val
 

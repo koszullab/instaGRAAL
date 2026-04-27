@@ -15,6 +15,7 @@ fixed above, proceed at your own risk.
 from scipy.optimize import leastsq
 import numpy as np
 from numpy.linalg import LinAlgError
+from scipy.linalg import cholesky as _cholesky
 
 
 def internal2external_grad(xi, bounds):
@@ -27,7 +28,7 @@ def internal2external_grad(xi, bounds):
 
     ge = np.empty_like(xi)
 
-    for i, (v, bound) in enumerate(zip(xi, bounds)):
+    for i, (v, bound) in enumerate(zip(xi, bounds, strict=False)):
         a = bound[0]  # minimum
         b = bound[1]  # maximum
 
@@ -47,9 +48,10 @@ def internal2external_grad(xi, bounds):
 
 
 def i2e_cov_x(xi, bounds, cov_x):
-
+    if cov_x is None:
+        return None
     grad = internal2external_grad(xi, bounds)
-    grad = grad = np.atleast_2d(grad)
+    grad = np.atleast_2d(grad)
     return np.dot(grad.T, grad) * cov_x
 
 
@@ -58,7 +60,7 @@ def internal2external(xi, bounds):
 
     xe = np.empty_like(xi)
 
-    for i, (v, bound) in enumerate(zip(xi, bounds)):
+    for i, (v, bound) in enumerate(zip(xi, bounds, strict=False)):
         a = bound[0]  # minimum
         b = bound[1]  # maximum
 
@@ -82,7 +84,7 @@ def external2internal(xe, bounds):
 
     xi = np.empty_like(xe)
 
-    for i, (v, bound) in enumerate(zip(xe, bounds)):
+    for i, (v, bound) in enumerate(zip(xe, bounds, strict=False)):
         a = bound[0]  # minimum
         b = bound[1]  # maximum
 
@@ -172,7 +174,32 @@ def leastsqbound(func, x0, bounds, args=(), **kw):
         xi, cov_xi, infodic, mesg, ier = r
         xe = internal2external(xi, bounds)
         cov_xe = i2e_cov_x(xi, bounds, cov_xi)
-        # XXX correct infodic 'fjac','ipvt', and 'qtf'
+
+        # Correct fjac, ipvt, and qtf to external (bounded) parameter space.
+        #
+        # The internal-to-external transform is diagonal with gradient
+        # ge[i] = d(xe_i)/d(xi_i).  The external covariance cov_xe is already
+        # correct.  We rebuild fjac and ipvt from the Cholesky factor of
+        # inv(cov_xe) so that calc_cov_x(corrected_infodic, xe) recovers
+        # cov_xe exactly.  qtf (= Q^T @ fvec) is corrected to first order via
+        # the chain rule for the diagonal transform: qtf_ext ≈ qtf_int / ge.
+        if cov_xe is not None:
+            ge = internal2external_grad(xi, bounds)
+            n = len(xi)
+            try:
+                # R_ext upper-triangular: R_ext.T @ R_ext = inv(cov_xe)
+                R_ext = _cholesky(np.linalg.inv(cov_xe))
+                # Store R_ext in scipy's fjac convention: fjac is (n, m) and
+                # fjac.T[:n, :] must equal R_ext so that calc_cov_x works.
+                fjac_ext = np.zeros_like(infodic["fjac"])
+                fjac_ext[:, :n] = R_ext.T
+                infodic = dict(infodic)
+                infodic["fjac"] = fjac_ext
+                infodic["ipvt"] = np.arange(1, n + 1, dtype=np.int32)
+                infodic["qtf"] = infodic["qtf"] / ge
+            except (LinAlgError, ValueError):
+                pass  # Leave infodic unchanged if covariance is singular
+
         return xe, cov_xe, infodic, mesg, ier
 
     else:

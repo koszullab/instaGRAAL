@@ -223,7 +223,7 @@ def _pairs_to_pixels(pairs_path: pathlib.Path, bins: pd.DataFrame) -> tuple[pd.D
         pixels = pd.DataFrame(columns=["bin1_id", "bin2_id", "count"])
     else:
         keys = sorted(counts.keys())
-        bin1_ids, bin2_ids = zip(*keys)
+        bin1_ids, bin2_ids = zip(*keys, strict=False)
         pixel_counts = [counts[k] for k in keys]
         pixels = pd.DataFrame(
             {

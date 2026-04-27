@@ -312,7 +312,7 @@ def _pairs_to_lifted_pixels(
         pixels = pd.DataFrame(columns=["bin1_id", "bin2_id", "count"])
     else:
         keys = sorted(counts.keys())
-        b1s, b2s = zip(*keys)
+        b1s, b2s = zip(*keys, strict=False)
         pixels = pd.DataFrame(
             {
                 "bin1_id": np.array(b1s, dtype=np.int32),
@@ -966,7 +966,7 @@ def _plot_ps_curves(
     df_new = _compute_ps(new_pairs)
 
     fig, axes = plt.subplots(1, 2, figsize=(10, 4), sharey=True)
-    for ax, df, title in zip(axes, [df_orig, df_new], ["Original", "New assembly"]):
+    for ax, df, title in zip(axes, [df_orig, df_new], ["Original", "New assembly"], strict=False):
         if df.empty:
             ax.set_title(f"{title} (no data)")
             continue
@@ -1216,7 +1216,7 @@ def _pairs_to_contig_pixels(
         pixels = pd.DataFrame(columns=["bin1_id", "bin2_id", "count"])
     else:
         keys = sorted(counts.keys())
-        b1s, b2s = zip(*keys)
+        b1s, b2s = zip(*keys, strict=False)
         pixels = pd.DataFrame(
             {
                 "bin1_id": np.array(b1s, dtype=np.int32),
@@ -1420,7 +1420,7 @@ def _pairs_to_fixed_bin_pixels(
         pixels = pd.DataFrame(columns=["bin1_id", "bin2_id", "count"])
     else:
         keys = sorted(counts.keys())
-        b1s, b2s = zip(*keys)
+        b1s, b2s = zip(*keys, strict=False)
         pixels = pd.DataFrame(
             {
                 "bin1_id": np.array(b1s, dtype=np.int32),

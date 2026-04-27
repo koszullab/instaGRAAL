@@ -43,9 +43,6 @@ class GPUStruct(object):
         res.n
 
         """
-        # set the objs
-        # self.__formats,self.__objs = zip(*[(obj[0],obj[1]) for obj in objs])
-        # make them tuples to prevent modification
         self.__objs = []
         self.__objnames = []
         inits = {}
@@ -55,11 +52,8 @@ class GPUStruct(object):
             self.__objnames.append(oname)
             inits[oname] = obj[2]
 
-        # make them both tuples
         self.__objs = tuple(self.__objs)
         self.__objnames = tuple(self.__objnames)
-        # self.__objs = tuple(objs)
-        # self.__objnames = tuple([obj.replace('*','') for fmt,obj in self.__objs])
 
         # set a dict for holding nbytes
         self.__nbytes = {}
@@ -73,8 +67,6 @@ class GPUStruct(object):
                 # it's a pointer
                 self.__ptrs[obj] = None
 
-            # also save the data
-            # setattr(self,obj,kwargs[obj])
             setattr(self, obj, inits[obj])
 
         self.__ptr = None
@@ -168,19 +160,10 @@ class GPUStruct(object):
         return struct.pack(self.__fmt, *topack)
 
     def copy_from_gpu(self, skip=None):
-        #         try:
-        #             # try and get the passed struct back
-        #             cuda.memcpy_dtoh(self.__fromstr, self.__ptr)
-        #             self.__unpacked = struct.unpack(self.__fmt, self.__fromstr)
-        #         except:
-        #             # just use the original packstr
-        #             self.__unpacked = struct.unpack(self.__fmt, self.__packstr)
-
         # get skip list
         if skip is None:
             skip = []
 
-        # makre sure we've sent there
         if self.__fromstr is None:
             raise RuntimeError("You never called copy_to_gpu.")
 
@@ -199,31 +182,5 @@ class GPUStruct(object):
                     setattr(self, obj, fmt(getattr(self, obj)))
                     cuda.memcpy_dtoh(getattr(self, obj), self.__ptrs[obj])
             else:
-                # get it from the unpacked values
-                # trying to keep the dtype with a hack
-                # setattr(self, obj,
-                #        getattr(np,str(getattr(self,obj).dtype))(self.__unpacked[ind]))
+                # Restore scalar attributes using the declared dtype format.
                 setattr(self, obj, fmt(self.__unpacked[ind]))
-
-
-#     def __getattr__(self, attr):
-
-#         if attr in self.__objnames:
-#             if self.__unpacked is None:
-#                 # must retrieve first
-#                 self.retrieve()
-#             # get the index
-#             ind = self.__objnames.index(attr)
-#             if '*'+attr == self.__objs[ind]:
-#                 # is pointer, so retrieve from card
-#                 data = getattr(self, self.__objnames[ind]+'_data')
-#                 cuda.memcpy_dtoh(data,getattr(self,self.__objnames[ind]))
-#                 return data
-#                 #return cuda.from_device(getattr(self,self.__objnames[ind]),
-#                 #                        data.shape,
-#                 #                        data.dtype)
-#             else:
-#                 # just lookup in unpacked
-#                 return self.__unpacked[ind]
-#         else:
-#             raise AttributeError("Attribute not found %s." % (attr))

@@ -64,7 +64,7 @@ def fragment_genome(
                 boundaries = [(0, chrom_len)]
             else:
                 positions = sorted(rng.integers(1, chrom_len, n_breaks).tolist())
-                boundaries = list(zip([0, *positions], [*positions, chrom_len]))
+                boundaries = list(zip([0, *positions], [*positions, chrom_len], strict=False))
 
             for start, end in boundaries:
                 if end - start < min_len:

@@ -56,7 +56,7 @@ def main(
         label_list = [f.name for f in fasta_files]
 
     results = {}
-    for path, label in zip(fasta_files, label_list):
+    for path, label in zip(fasta_files, label_list, strict=False):
         results[label] = compute_assembly_stats(str(path))
 
     if len(fasta_files) == 1:

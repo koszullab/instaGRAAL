@@ -1,5 +1,6 @@
 """Click CLI for the ``instagraal-endtoend`` full pipeline command."""
 
+import contextlib
 import pathlib
 import shlex
 import shutil
@@ -86,12 +87,25 @@ def _cmd_echo(cmd: list) -> None:
     click.echo("  $ " + " ".join(shlex.quote(str(a)) for a in cmd))
 
 
-def _run_cmd(cmd: list, _record: list | None = None) -> None:
-    """Print then execute a CLI command, streaming its output to the console."""
+def _run_cmd(cmd: list, _record: list | None = None, dry_run: bool = False) -> None:
+    """Print then optionally execute a CLI command, streaming output to the console.
+
+    When *dry_run* is ``True`` the command is printed but not executed.
+    """
     _cmd_echo(cmd)
     if _record is not None:
         _record.append(" ".join(shlex.quote(str(a)) for a in cmd))
-    subprocess.run([str(a) for a in cmd], check=True)
+    if not dry_run:
+        subprocess.run([str(a) for a in cmd], check=True)
+
+
+@contextlib.contextmanager
+def _step(label: str):
+    """Context manager that prints a step header and elapsed time on exit."""
+    click.echo(f"\n{label}")
+    t0 = time.monotonic()
+    yield
+    click.echo(f"  Done. ({time.monotonic() - t0:.1f}s)")
 
 
 # ---------------------------------------------------------------------------
@@ -124,10 +138,12 @@ def _run_endtoend(
     junction: str,
     criterion: str | None,
     cool_name: str | None,
+    dry_run: bool = False,
 ) -> list[str]:
     """Execute the full instaGRAAL pipeline on user-supplied data.
 
-    Returns a list of shell-quoted commands that were executed, for the recap.
+    Returns a list of shell-quoted commands that were executed (or would be
+    executed when *dry_run* is ``True``), for the recap.
     """
     ran_cmds: list[str] = []
 
@@ -140,128 +156,132 @@ def _run_endtoend(
         return bin_dir / name
 
     # -- 1. GPU check --------------------------------------------------------
-    click.echo("\n[1/6] Checking GPU …")
-    _check_gpu(device)
+    with _step("[1/6] Checking GPU …"):
+        if not dry_run:
+            _check_gpu(device)
+        else:
+            click.echo("  (skipped — dry run)")
 
     # -- 2. instagraal-pre ---------------------------------------------------
-    click.echo("\n[2/6] Running instagraal-pre …")
-    pre_dir = output_dir / "pre"
-    pre_dir.mkdir(exist_ok=True)
-    pre_cmd = [
-        cmd("instagraal-pre"),
-        fasta,
-        pairs,
-        "--enzyme",
-        ",".join(enzymes),
-        "--output-dir",
-        pre_dir,
-    ]
-    if cool_name is not None:
-        pre_cmd += ["--cool-name", cool_name]
-    _run_cmd(pre_cmd, _record=ran_cmds)
+    with _step("[2/6] Running instagraal-pre …"):
+        pre_dir = output_dir / "pre"
+        pre_dir.mkdir(exist_ok=True)
+        pre_cmd = [
+            cmd("instagraal-pre"),
+            fasta,
+            pairs,
+            "--enzyme",
+            ",".join(enzymes),
+            "--output-dir",
+            pre_dir,
+        ]
+        if cool_name is not None:
+            pre_cmd += ["--cool-name", cool_name]
+        _run_cmd(pre_cmd, _record=ran_cmds, dry_run=dry_run)
 
     # -- 3. instagraal (MCMC scaffolding) ------------------------------------
-    click.echo("\n[3/6] Running instagraal …")
-    mcmc_base_dir = output_dir / "mcmc"
-    mcmc_base_dir.mkdir(exist_ok=True)
-    mcmc_cmd = [
-        cmd("instagraal"),
-        pre_dir,
-        fasta,
-        "--output-dir",
-        mcmc_base_dir,
-        "--level",
-        level,
-        "--cycles",
-        cycles,
-        "--device",
-        device,
-        "--coverage-std",
-        coverage_std,
-        "--neighborhood",
-        neighborhood,
-    ]
-    if bomb:
-        mcmc_cmd.append("--bomb")
-    if circular:
-        mcmc_cmd.append("--circular")
-    if save_matrix:
-        mcmc_cmd.append("--save-matrix")
-    if save_pickle:
-        mcmc_cmd.append("--save-pickle")
-    if simple:
-        mcmc_cmd.append("--simple")
-    if quiet:
-        mcmc_cmd.append("--quiet")
-    if debug:
-        mcmc_cmd.append("--debug")
-    _run_cmd(mcmc_cmd, _record=ran_cmds)
+    with _step("[3/6] Running instagraal …"):
+        mcmc_base_dir = output_dir / "mcmc"
+        mcmc_base_dir.mkdir(exist_ok=True)
+        mcmc_cmd = [
+            cmd("instagraal"),
+            pre_dir,
+            fasta,
+            "--output-dir",
+            mcmc_base_dir,
+            "--level",
+            level,
+            "--cycles",
+            cycles,
+            "--device",
+            device,
+            "--coverage-std",
+            coverage_std,
+            "--neighborhood",
+            neighborhood,
+        ]
+        if bomb:
+            mcmc_cmd.append("--bomb")
+        if circular:
+            mcmc_cmd.append("--circular")
+        if save_matrix:
+            mcmc_cmd.append("--save-matrix")
+        if save_pickle:
+            mcmc_cmd.append("--save-pickle")
+        if simple:
+            mcmc_cmd.append("--simple")
+        if quiet:
+            mcmc_cmd.append("--quiet")
+        if debug:
+            mcmc_cmd.append("--debug")
+        _run_cmd(mcmc_cmd, _record=ran_cmds, dry_run=dry_run)
 
     mcmc_out = mcmc_base_dir / pre_dir.name / f"test_mcmc_{level}"
     info_frags = mcmc_out / "info_frags.txt"
-    if not info_frags.exists():
+    if not dry_run and not info_frags.exists():
         raise click.ClickException(f"instagraal did not produce info_frags.txt at expected path:\n  {info_frags}")
 
     # -- 4. instagraal-polish ------------------------------------------------
-    click.echo("\n[4/6] Running instagraal-polish …")
-    polish_dir = output_dir / "polished"
-    polish_dir.mkdir(exist_ok=True)
-    polish_cmd = [
-        cmd("instagraal-polish"),
-        "--input",
-        info_frags,
-        "--fasta",
-        fasta,
-        "--output-dir",
-        polish_dir,
-        "--min-scaffold-size",
-        min_scaffold_size,
-        "--min-scaffold-length",
-        min_scaffold_length,
-    ]
-    if junction:
-        polish_cmd += ["--junction", junction]
-    if criterion is not None:
-        polish_cmd += ["--criterion", criterion]
-    _run_cmd(polish_cmd, _record=ran_cmds)
+    with _step("[4/6] Running instagraal-polish …"):
+        polish_dir = output_dir / "polished"
+        polish_dir.mkdir(exist_ok=True)
+        polish_cmd = [
+            cmd("instagraal-polish"),
+            "--input",
+            info_frags,
+            "--fasta",
+            fasta,
+            "--output-dir",
+            polish_dir,
+            "--min-scaffold-size",
+            min_scaffold_size,
+            "--min-scaffold-length",
+            min_scaffold_length,
+        ]
+        if junction:
+            polish_cmd += ["--junction", junction]
+        if criterion is not None:
+            polish_cmd += ["--criterion", criterion]
+        _run_cmd(polish_cmd, _record=ran_cmds, dry_run=dry_run)
     polished_fa = polish_dir / "polished_genome.fa"
     new_info_frags = polish_dir / "new_info_frags.txt"
 
     # -- 5. instagraal-post --------------------------------------------------
-    click.echo("\n[5/6] Running instagraal-post …")
-    post_dir = output_dir / "post"
-    post_dir.mkdir(exist_ok=True)
-    post_cmd = [
-        cmd("instagraal-post"),
-        pairs,
-        new_info_frags,
-        "--resolutions",
-        resolutions,
-        "--output-dir",
-        post_dir,
-        "--junction",
-        len(junction) if junction else 6,
-    ]
-    if not balance:
-        post_cmd.append("--no-balance")
-    if balance_args is not None:
-        post_cmd += ["--balance-args", balance_args]
-    if cool_name is not None:
-        post_cmd += ["--cool-name", cool_name]
-    _run_cmd(post_cmd, _record=ran_cmds)
+    with _step("[5/6] Running instagraal-post …"):
+        post_dir = output_dir / "post"
+        post_dir.mkdir(exist_ok=True)
+        post_cmd = [
+            cmd("instagraal-post"),
+            pairs,
+            new_info_frags,
+            "--resolutions",
+            resolutions,
+            "--output-dir",
+            post_dir,
+            "--junction",
+            len(junction) if junction else 6,
+        ]
+        if not balance:
+            post_cmd.append("--no-balance")
+        if balance_args is not None:
+            post_cmd += ["--balance-args", balance_args]
+        if cool_name is not None:
+            post_cmd += ["--cool-name", cool_name]
+        _run_cmd(post_cmd, _record=ran_cmds, dry_run=dry_run)
 
     # -- 6. instagraal-stats -------------------------------------------------
-    click.echo("\n[6/6] Running instagraal-stats …")
-    _run_cmd(
-        [
-            cmd("instagraal-stats"),
-            fasta,
-            polished_fa,
-            "--labels",
-            "Input assembly,Polished assembly",
-        ],
-        _record=ran_cmds,
-    )
+    with _step("[6/6] Running instagraal-stats …"):
+        _run_cmd(
+            [
+                cmd("instagraal-stats"),
+                fasta,
+                polished_fa,
+                "--labels",
+                "Input assembly,Polished assembly",
+            ],
+            _record=ran_cmds,
+            dry_run=dry_run,
+        )
 
     return ran_cmds
 
@@ -447,6 +467,16 @@ def _run_endtoend(
     default=False,
     help="Display debug information from instagraal. Overrides --quiet.",
 )
+@click.option(
+    "--dry-run",
+    "dry_run",
+    is_flag=True,
+    default=False,
+    help=(
+        "Print the commands that would be executed without running them. "
+        "Useful for inspecting the full pipeline before committing to a long run."
+    ),
+)
 def main(
     fasta: pathlib.Path,
     pairs: pathlib.Path,
@@ -465,6 +495,7 @@ def main(
     simple: bool,
     quiet: bool,
     debug: bool,
+    dry_run: bool,
     balance: bool,
     balance_args: str | None,
     min_scaffold_size: int,
@@ -501,6 +532,8 @@ def main(
     click.echo(f"FASTA            : {fasta.resolve()}")
     click.echo(f"Pairs            : {pairs.resolve()}")
     click.echo(f"Enzyme(s)        : {', '.join(enzymes)}")
+    if dry_run:
+        click.echo("(dry run — commands will be printed but not executed)")
 
     _start = time.monotonic()
     ran_cmds = _run_endtoend(
@@ -528,10 +561,15 @@ def main(
         junction=junction,
         criterion=criterion,
         cool_name=cool_name,
+        dry_run=dry_run,
     )
     _elapsed = time.monotonic() - _start
-    click.echo(f"\n[instagraal-endtoend] ALL STEPS COMPLETED  (total time: {_elapsed:.1f}s).")
-    click.echo("\nCommands executed (for reproducibility):")
+    if dry_run:
+        click.echo(f"\n[instagraal-endtoend] DRY RUN completed  (total time: {_elapsed:.1f}s).")
+        click.echo("\nCommands that would be executed:")
+    else:
+        click.echo(f"\n[instagraal-endtoend] ALL STEPS COMPLETED  (total time: {_elapsed:.1f}s).")
+        click.echo("\nCommands executed (for reproducibility):")
     click.echo("\n```")
     for c in ran_cmds:
         click.echo(c)
