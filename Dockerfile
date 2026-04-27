@@ -4,7 +4,7 @@
 ARG CUDA_IMAGE=nvidia/cuda:12.4.1-devel-ubuntu22.04
 FROM ${CUDA_IMAGE}
 
-LABEL Name=instagraal Version=0.1.6
+LABEL Name=instagraal Version=0.2.0
 
 ENV DEBIAN_FRONTEND=noninteractive
 
