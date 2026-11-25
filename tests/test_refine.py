@@ -5,6 +5,8 @@ reverse-complemented in the assembly) and Hi-C contacts are simulated with three
 components: decay with distance along the circle, a strong stripe between mirror
 loci of the two replication arms (the X that makes instaGRAAL fold chromosomes),
 and background. The input layout handed to refine is folded on purpose.
+A second, linear chromosome has a contig too short to be joined, which refine must
+place from its contacts, wherever the input layout put it.
 """
 
 import cooler
@@ -16,7 +18,7 @@ from click.testing import CliRunner
 
 from instagraal.cli.refine import main as refine_main
 from instagraal.parse_info_frags import parse_info_frags, write_info_frags
-from instagraal.refine import build_scaffolds, gc_skew_summary, run_refine
+from instagraal.refine import EndScores, build_scaffolds, gc_skew_summary, place_short_contigs, run_refine
 
 GENOME_KB = 300
 FRAG_KB = 1
@@ -29,29 +31,34 @@ def _revcomp(seq):
     return seq.translate(RC)[::-1]
 
 
-@pytest.fixture(scope="module")
-def synthetic(tmp_path_factory):
-    rng = np.random.default_rng(1)
-    d = tmp_path_factory.mktemp("refine_synthetic")
-    chrom = "".join(rng.choice(list("ACGT"), size=GENOME_KB * 1000))
-    names = [f"ctg{k}" for k in range(len(CUTS_KB) - 1)]
+def _make_genome(d, cuts_kb, reversed_contigs, circular=True, mirror=2.0, seed=1):
+    """Random chromosome cut into contigs (some reverse-complemented), with simulated contacts.
+
+    Contacts between 1 kb fragments decay with distance (along the circle if
+    ``circular``), plus a stripe of strength ``mirror`` between mirror loci of the two
+    replication arms, plus background.
+    """
+    rng = np.random.default_rng(seed)
+    genome_kb = cuts_kb[-1]
+    chrom = "".join(rng.choice(list("ACGT"), size=genome_kb * 1000))
+    names = [f"ctg{k}" for k in range(len(cuts_kb) - 1)]
     seqs = {}
     for k, name in enumerate(names):
-        s = chrom[CUTS_KB[k] * 1000 : CUTS_KB[k + 1] * 1000]
-        seqs[name] = _revcomp(s) if k in REVERSED else s
+        s = chrom[cuts_kb[k] * 1000 : cuts_kb[k + 1] * 1000]
+        seqs[name] = _revcomp(s) if k in reversed_contigs else s
     fasta = d / "assembly.fa"
     fasta.write_text("".join(f">{n}\n{seqs[n]}\n" for n in names))
 
     # fragments of FRAG_KB, placed in contig coordinates (mirrored for reversed contigs)
-    n_frag = GENOME_KB // FRAG_KB
+    n_frag = genome_kb // FRAG_KB
     frag_contig, frag_start = [], []
     for f in range(n_frag):
         x = f * FRAG_KB
-        k = max(i for i in range(len(names)) if CUTS_KB[i] <= x)
-        rel = x - CUTS_KB[k]
-        length = CUTS_KB[k + 1] - CUTS_KB[k]
+        k = max(i for i in range(len(names)) if cuts_kb[i] <= x)
+        rel = x - cuts_kb[k]
+        length = cuts_kb[k + 1] - cuts_kb[k]
         frag_contig.append(k)
-        frag_start.append((length - rel - FRAG_KB) if k in REVERSED else rel)
+        frag_start.append((length - rel - FRAG_KB) if k in reversed_contigs else rel)
     order = sorted(range(n_frag), key=lambda f: (frag_contig[f], frag_start[f]))
     bin_of = np.empty(n_frag, dtype=int)
     bin_of[order] = np.arange(n_frag)
@@ -64,10 +71,11 @@ def synthetic(tmp_path_factory):
     )
     pos = (np.arange(n_frag) + 0.5) * FRAG_KB
     dist = np.abs(pos[:, None] - pos[None, :])
-    dist = np.minimum(dist, GENOME_KB - dist)
-    mirror = np.abs(pos[:, None] - (GENOME_KB - pos[None, :]) % GENOME_KB)
-    mirror = np.minimum(mirror, GENOME_KB - mirror)
-    lam = 40.0 / np.maximum(dist, 1.0) + 2.0 * np.exp(-mirror / 15.0) + 0.05
+    if circular:
+        dist = np.minimum(dist, genome_kb - dist)
+    mirror_dist = np.abs(pos[:, None] - (genome_kb - pos[None, :]) % genome_kb)
+    mirror_dist = np.minimum(mirror_dist, genome_kb - mirror_dist)
+    lam = 40.0 / np.maximum(dist, 1.0) + mirror * np.exp(-mirror_dist / 15.0) + 0.05
     counts = rng.poisson(np.triu(lam, 1))
     i, j = np.nonzero(counts)
     b1, b2 = bin_of[i], bin_of[j]
@@ -75,21 +83,36 @@ def synthetic(tmp_path_factory):
     pixels = pixels.sort_values(["bin1_id", "bin2_id"]).reset_index(drop=True)
     cool = d / "contacts.cool"
     cooler.create_cooler(str(cool), bins, pixels, ordered=True, symmetric_upper=True, dtypes={"count": np.int32})
+    lengths = {n: (cuts_kb[k + 1] - cuts_kb[k]) * 1000 for k, n in enumerate(names)}
+    return {"dir": d, "fasta": fasta, "cool": cool, "chrom": chrom, "lengths": lengths}
 
+
+def _write_layout(path, scaffolds, lengths):
+    """info_frags with whole contigs: ``scaffolds`` maps names to [(contig, orientation), ...]."""
+    layout = {name: [[c, 0, 0, lengths[c], o] for c, o in entries] for name, entries in scaffolds.items()}
+    write_info_frags(layout, output=str(path))
+    return path
+
+
+@pytest.fixture(scope="module")
+def synthetic(tmp_path_factory):
+    data = _make_genome(tmp_path_factory.mktemp("refine_synthetic"), CUTS_KB, REVERSED)
     # folded layout: the two arms interleaved, as instaGRAAL produces
-    folded = {
-        "scaffold1": [
-            ["ctg0", 0, 0, 60_000, -1],
-            ["ctg5", 0, 0, 40_000, 1],
-            ["ctg1", 0, 0, 50_000, 1],
-            ["ctg4", 0, 0, 40_000, -1],
-            ["ctg2", 0, 0, 60_000, -1],
-            ["ctg3", 0, 0, 50_000, 1],
-        ]
-    }
-    layout = d / "new_info_frags.txt"
-    write_info_frags(folded, output=str(layout))
-    return {"dir": d, "fasta": fasta, "cool": cool, "layout": layout, "chrom": chrom}
+    folded = {"scaffold1": [("ctg0", -1), ("ctg5", 1), ("ctg1", 1), ("ctg4", -1), ("ctg2", -1), ("ctg3", 1)]}
+    data["layout"] = _write_layout(data["dir"] / "new_info_frags.txt", folded, data["lengths"])
+    return data
+
+
+# a linear chromosome with a 5 kb contig (ctg2, given reverse-complemented) between two long ones;
+# 1 kb bins give ctg2 five bins, enough to orient it
+SHORT_CUTS_KB = [0, 60, 110, 115, 170, 220, 260, 300]
+SHORT_REVERSED = {1, 2, 5}
+TRUE_ORDER = [("ctg0", 1), ("ctg1", -1), ("ctg2", -1), ("ctg3", 1), ("ctg4", 1), ("ctg5", -1), ("ctg6", 1)]
+
+
+@pytest.fixture(scope="module")
+def with_short_contig(tmp_path_factory):
+    return _make_genome(tmp_path_factory.mktemp("refine_short"), SHORT_CUTS_KB, SHORT_REVERSED, circular=False, mirror=0.0)
 
 
 def _refine(synthetic, out, **kwargs):
@@ -191,3 +214,83 @@ def test_gc_skew_summary_on_two_replichores():
     assert changes == 1
     share_folded, changes_folded = gc_skew_summary(first + first)
     assert share_folded > 0.95 and changes_folded == 0
+
+
+# folded on purpose: ctg2 sits between ctg1 and ctg4, a wrong join; ctg3 is alone
+WRONG_ORDER = {
+    "scaffold1": [("ctg0", 1), ("ctg1", -1), ("ctg2", -1), ("ctg4", 1), ("ctg5", -1), ("ctg6", 1)],
+    "scaffold2": [("ctg3", 1)],
+}
+
+
+def _refine_short(data, tmp_path, layout, cool=None, **kwargs):
+    path = _write_layout(tmp_path / "layout.txt", layout, data["lengths"])
+    kwargs = {"window": 30_000, "min_contig_length": 10_000, "binsize": 1_000, **kwargs}
+    return run_refine(path, cool or data["cool"], data["fasta"], tmp_path / "out", **kwargs)
+
+
+@pytest.mark.parametrize("layout", [{"scaffold1": TRUE_ORDER}, WRONG_ORDER], ids=["true-order", "wrong-order"])
+def test_refine_places_short_contigs_from_their_contacts(with_short_contig, tmp_path, layout):
+    """ctg2 (5 kb, too short to be joined) goes back between ctg1 and ctg3, in the right orientation."""
+    data = with_short_contig
+    summary = _refine_short(data, tmp_path, layout)
+    assert summary["refined_joins"] == 5
+    assert summary["short_placed"] == 1
+    records = list(SeqIO.parse(str(tmp_path / "out" / "refined_genome.fa"), "fasta"))
+    assert len(records) == 1
+    seq = str(records[0].seq)
+    assert seq == data["chrom"] or _revcomp(seq) == data["chrom"]
+    table = pd.read_csv(tmp_path / "out" / "junctions.tsv", sep="\t")
+    refined = table[table["layout"] == "refined"]
+    assert (refined["status"] == "joined").sum() == 5
+    placed = refined[refined["status"] == "placed"]
+    assert len(placed) == 2
+    assert (placed["end_a"].str.startswith("ctg2:") | placed["end_b"].str.startswith("ctg2:")).all()
+
+
+def test_refine_leaves_short_contigs_without_contacts_alone(with_short_contig, tmp_path):
+    data = with_short_contig
+    clr = cooler.Cooler(str(data["cool"]))
+    bins = clr.bins()[["chrom", "start", "end"]][:]
+    pixels = clr.pixels()[:]
+    ctg2 = set(np.nonzero((bins["chrom"] == "ctg2").to_numpy())[0])
+    pixels = pixels[~pixels["bin1_id"].isin(ctg2) & ~pixels["bin2_id"].isin(ctg2)]
+    cool = tmp_path / "no_ctg2_contacts.cool"
+    cooler.create_cooler(str(cool), bins, pixels, ordered=True, symmetric_upper=True, dtypes={"count": np.int32})
+    summary = _refine_short(data, tmp_path, {"scaffold1": TRUE_ORDER}, cool=cool)
+    assert summary["short_placed"] == 0
+    scaffolds = parse_info_frags(str(tmp_path / "out" / "refined_info_frags.txt"))
+    assert [["ctg2"]] == [[b[0] for b in bins] for bins in scaffolds.values() if any(b[0] == "ctg2" for b in bins)]
+
+
+def test_refine_no_place_short(with_short_contig, tmp_path):
+    summary = _refine_short(with_short_contig, tmp_path, {"scaffold1": TRUE_ORDER}, place_short=False)
+    assert summary["short_placed"] == 0
+    assert summary["scaffolds"] == 2
+    assert "each a scaffold of its own" in summary["report"]
+
+
+def _scores(pairs):
+    """EndScores over long contigs A, B and short ones s1, s2, s3, with the given symmetric scores."""
+    ends = [(c, side) for c in ("A", "B", "s1", "s2", "s3") for side in ("L", "R")]
+    index = {e: k for k, e in enumerate(ends)}
+    score = np.zeros((len(ends), len(ends)))
+    for (e1, e2), v in pairs.items():
+        score[index[e1], index[e2]] = score[index[e2], index[e1]] = v
+    return EndScores(ends, index, score, np.zeros_like(score), np.zeros_like(score), -1.0, 1.0)
+
+
+def test_place_short_contigs_orders_and_orients_within_a_slot():
+    es = _scores(
+        {
+            (("A", "R"), ("s1", "L")): 50.0,  # s1 right after A, forward
+            (("s1", "R"), ("B", "L")): 5.0,
+            (("s2", "L"), ("B", "L")): 40.0,  # s2 right before B, reversed
+            (("A", "R"), ("s2", "R")): 5.0,
+            (("B", "R"), ("s3", "L")): 30.0,  # s3 fits after B as well as before A: ambiguous
+            (("s3", "R"), ("A", "L")): 30.0,
+        }
+    )
+    chains, placed = place_short_contigs([[("A", 1), ("B", 1)]], es, ["s1", "s2", "s3"], {"A", "B"}, 10.0, 10.0)
+    assert chains == [[("A", 1), ("s1", 1), ("s2", -1), ("B", 1)]]
+    assert placed == {"s1": 55.0, "s2": 45.0}

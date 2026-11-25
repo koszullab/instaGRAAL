@@ -9,6 +9,7 @@ from ..refine import (
     DEFAULT_MIN_CONTIG_LENGTH,
     DEFAULT_MIN_MARGIN,
     DEFAULT_MIN_SCORE,
+    DEFAULT_SHORT_MARGIN,
     DEFAULT_WINDOW,
     run_refine,
 )
@@ -64,7 +65,7 @@ from ..version import __version__ as VERSION_NUMBER
     default=DEFAULT_MIN_CONTIG_LENGTH,
     show_default=True,
     type=int,
-    help="Shorter contigs are not joined and are output as their own scaffolds.",
+    help="Shorter contigs are not joined to each other; see --place-short.",
 )
 @click.option(
     "--min-score",
@@ -79,6 +80,22 @@ from ..version import __version__ as VERSION_NUMBER
     show_default=True,
     type=float,
     help="Minimum lead of a join over each end's next best candidate (higher: fewer, more reliable joins).",
+)
+@click.option(
+    "--place-short/--no-place-short",
+    default=True,
+    show_default=True,
+    help=(
+        "Place each contig shorter than --min-contig-length, whole, between the two contigs (or at the scaffold end) "
+        "its contacts fit best; otherwise output it as its own scaffold."
+    ),
+)
+@click.option(
+    "--short-margin",
+    default=DEFAULT_SHORT_MARGIN,
+    show_default=True,
+    type=float,
+    help="Minimum lead of a short contig's best place over its next best (higher: fewer, more reliable placements).",
 )
 @click.option(
     "-j",
@@ -109,6 +126,8 @@ def main(
     min_score: float,
     min_margin: float,
     junction: str,
+    place_short: bool,
+    short_margin: float,
     keep_unresolved: bool,
     qc_only: bool,
 ) -> None:
@@ -118,7 +137,8 @@ def main(
     aligned (an X in the contact map), interleaving the arms. This command scores
     every contig junction from the contacts next to the two contig ends only, flags
     the input layout's unsupported or contradicted joins, and re-joins whole contigs
-    whose ends are each other's clear best partner.
+    whose ends are each other's clear best partner, then places the contigs too short
+    to be joined where their contacts clearly fit.
 
     \b
     Outputs (in OUTPUT_DIR):
@@ -143,6 +163,8 @@ def main(
             junction=junction,
             keep_unresolved=keep_unresolved,
             qc_only=qc_only,
+            place_short=place_short,
+            short_margin=short_margin,
         )
     except ValueError as exc:
         raise click.ClickException(str(exc)) from exc
