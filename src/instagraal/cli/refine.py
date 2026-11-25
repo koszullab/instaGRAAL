@@ -128,16 +128,6 @@ from ..version import __version__ as VERSION_NUMBER
     help="With --recenter, start circular scaffolds at the origin instead.",
 )
 @click.option(
-    "--orient/--no-orient",
-    default=True,
-    show_default=True,
-    help=(
-        "Reverse-complement each scaffold whose first 100 kb (ten 10 kb windows) have a negative mean GC skew, so "
-        "that every scaffold starts with a positive skew. Recentered chromosomes keep their strand: the skew at their "
-        "start is set by the cut (negative after the terminus, positive after the origin), not by the strand."
-    ),
-)
-@click.option(
     "-j",
     "--junction",
     default="",
@@ -171,7 +161,6 @@ def main(
     extend: str,
     recenter: bool,
     origin_first: bool,
-    orient: bool,
     keep_unresolved: bool,
     qc_only: bool,
 ) -> None:
@@ -218,7 +207,6 @@ def main(
             recenter=recenter,
             origin_first=origin_first,
             extend=extend,
-            orient=orient,
         )
     except ValueError as exc:
         raise click.ClickException(str(exc)) from exc

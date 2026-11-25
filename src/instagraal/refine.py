@@ -86,8 +86,6 @@ EXTEND_MIN_LENGTH = 100_000  # second pass: shorter scaffolds are left out
 EXTEND_MIN_AGREEMENT = 0.3  # --extend auto: share of the input layout's joins refine must confirm
 RECENTER_MIN_FIT = 0.75  # share of skew windows that must fit the two-replichore pattern
 RECENTER_ARMS = (0.25, 0.75)  # allowed share of the scaffold from origin to terminus
-ORIENT_WINDOW = 10_000  # scaffolds are oriented to start with a positive mean GC skew
-ORIENT_WINDOWS = 10  # over their first ORIENT_WINDOWS windows of ORIENT_WINDOW bp
 
 
 # ---------------------------------------------------------------------------
@@ -719,26 +717,6 @@ def gc_skew_summary(seq: str, window: int = 10_000, smooth: int = 10) -> tuple[f
     return float((sm > 0).mean()), int(np.sum(signs[1:] != signs[:-1]))
 
 
-def start_skew(seq: str, window: int = ORIENT_WINDOW, windows: int = ORIENT_WINDOWS) -> float:
-    """Mean GC skew (G - C) / (G + C) of the first ``windows`` windows of ``window`` bp.
-
-    A sequence shorter than one window counts as a single window.
-    """
-    arr = np.frombuffer(seq[: window * windows].upper().encode(), dtype=np.uint8)
-    width = min(window, len(arr))
-    if width == 0:
-        return 0.0
-    n = len(arr) // width
-    g = (arr[: n * width] == ord("G")).reshape(n, width).sum(1)
-    c = (arr[: n * width] == ord("C")).reshape(n, width).sum(1)
-    return float(np.mean((g - c) / np.maximum(g + c, 1)))
-
-
-def reverse_entries(entries: list[Entry]) -> list[Entry]:
-    """The scaffold ``entries`` read on the other strand (its reverse complement)."""
-    return [(c, -o, s, e) for c, o, s, e in reversed(entries)]
-
-
 def _scaffold_sequence(genome: dict[str, str], pieces: Iterable[tuple[str, int, int, int]]) -> str:
     out = []
     for contig, ori, start, end in pieces:
@@ -780,7 +758,6 @@ def run_refine(
     recenter: bool = True,
     origin_first: bool = False,
     extend: str = "auto",
-    orient: bool = True,
 ) -> dict[str, Any]:
     """Score the input layout's joins and, unless ``qc_only``, re-scaffold the contigs.
 
@@ -789,11 +766,6 @@ def run_refine(
     confirms at least ``EXTEND_MIN_AGREEMENT`` of the input layout's joins
     (``extend="on"``: always, ``"off"``: never). The input layout (``info_frags``,
     optional unless ``qc_only`` or ``keep_unresolved``) is also scored for QC.
-
-    With ``orient``, every scaffold is read on the strand that makes it start with a
-    positive mean GC skew (``start_skew``), except recentered circular chromosomes: their
-    start skew is set by where they are cut (negative after the terminus, positive after
-    the origin) and is the same on both strands.
 
     Writes ``junctions.tsv`` and ``refine_report.txt`` and, unless ``qc_only``,
     ``refined_info_frags.txt`` and ``refined_genome.fa`` (whole contigs, joined with
@@ -946,22 +918,6 @@ def run_refine(
                     f"{(terminus - cut) % len(seq):,} bp (replichores {arm:.0%} / {1 - arm:.0%}, skew fits {fit:.0%})"
                 )
 
-        # orientation: each scaffold starts with a positive GC skew (if both strands start
-        # negative, with the less negative one); a recentered chromosome starts with the same
-        # skew sign on both strands, so its strand is left as joined
-        flipped = []
-        if orient:
-            done = set(recentered)
-            for k, name in enumerate(names):
-                if name in done:
-                    continue
-                forward = start_skew(_scaffold_sequence(genome, layouts[k]))
-                if forward < 0:
-                    other = reverse_entries(layouts[k])
-                    if start_skew(_scaffold_sequence(genome, other)) > forward:
-                        layouts[k] = other
-                        flipped.append(name)
-
         fasta_index = {c: k for k, c in enumerate(genome)}
         info_path = output_dir / REFINED_INFO_FRAGS_NAME
         with open(info_path, "w") as fh:
@@ -991,7 +947,6 @@ def run_refine(
             recentered=recentered,
             agreement=agreement,
             extended_joins=len(extended),
-            flipped=flipped,
         )
 
     with open(output_dir / JUNCTIONS_NAME, "w") as fh:
@@ -1042,14 +997,6 @@ def run_refine(
             f"{len(circular) or 'none'}"
         )
         lines += circle_lines
-        lines.append(
-            f"Orientation: {len(flipped)} of {summary['scaffolds']} scaffolds reverse-complemented to start with a positive "
-            f"GC skew (mean of the first {ORIENT_WINDOWS} windows of {ORIENT_WINDOW // 1000} kb; the less negative strand "
-            "if both start negative); recentered chromosomes keep their strand (their start skew is set by the cut, "
-            "not by the strand)"
-            if orient
-            else "Orientation: scaffolds as joined (--no-orient)"
-        )
     else:
         supported = sum(1 for r in rows if r[4] >= min_score)
         lines.append(f"  {supported} reach the minimum score of {min_score}")
