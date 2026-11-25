@@ -8,6 +8,7 @@ from ..assembly_stats import print_assembly_stats
 from ..parse_info_frags import (
     DEFAULT_CRITERION,
     DEFAULT_CRITERION_2,
+    DEFAULT_JUNCTION_SEQUENCE,
     DEFAULT_MIN_SCAFFOLD_SIZE,
     DEFAULT_NEW_INFO_FRAGS_NAME,
     REORIENT_MODES,
@@ -113,8 +114,12 @@ POLISHED_GENOME_NAME = "polished_genome.fa"
 @click.option(
     "-j",
     "--junction",
-    default="",
-    help="Junction sequence inserted between stitched bins.",
+    default=str(DEFAULT_JUNCTION_SEQUENCE),
+    show_default=True,
+    help=(
+        "Sequence inserted between consecutive bins from different initial contigs ('' for none). "
+        "Give its length to instagraal-post --junction, whose default matches this one."
+    ),
 )
 def main(
     mode: str | None,

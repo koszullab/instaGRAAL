@@ -245,8 +245,9 @@ def _run_endtoend(
         ]
         if not polish:
             polish_cmd += ["--mode", "fasta"]
-        if junction:
-            polish_cmd += ["--junction", junction]
+        # Passed even when empty: instagraal-post is told len(junction), so
+        # instagraal-polish must not fall back to its own default junction.
+        polish_cmd += ["--junction", junction]
         if criterion is not None and polish:
             polish_cmd += ["--criterion", criterion]
         _run_cmd(polish_cmd, _record=ran_cmds, dry_run=dry_run)

@@ -270,8 +270,6 @@ def test_dry_run_post_junction_matches_polish(tmp_path, junction, expected):
     commands = _dry_run_commands(tmp_path, junction=junction)
     post_cmd = _command(commands, "instagraal-post")
     assert post_cmd[post_cmd.index("--junction") + 1] == expected
+    # even an empty junction is passed on: instagraal-polish must not fall back to its own default
     polish_cmd = _command(commands, "instagraal-polish")
-    if junction:
-        assert polish_cmd[polish_cmd.index("--junction") + 1] == junction
-    else:
-        assert "--junction" not in polish_cmd
+    assert polish_cmd[polish_cmd.index("--junction") + 1] == junction

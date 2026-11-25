@@ -853,3 +853,48 @@ def test_cli_polishing_keeps_every_base_once(cli_runner, tmp_path, seed, min_siz
     )
     assert result.exit_code == 0, result.output
     _assert_every_base_once(ref, out_dir, "NNNNNN")
+
+
+# ===========================================================================
+# CLI defaults: instagraal-polish and instagraal-post agree on the junction
+# ===========================================================================
+
+
+def test_cli_polishing_default_junction_matches_post_default(cli_runner, tmp_path):
+    """Run on their defaults (README steps 3 and 4), instagraal-polish and
+    instagraal-post agree on the polished coordinates: the scaffold lengths
+    that post rebuilds from new_info_frags.txt are the FASTA record lengths."""
+    from Bio import SeqIO
+
+    from instagraal.cli.post import main as post_main
+    from instagraal.post import _build_new_bins
+
+    (post_junction,) = [p.default for p in post_main.params if p.name == "junction"]
+    ref = {"ctgA": "ACGTTGCA" * 40, "ctgB": "GATTACA" * 30, "ctgC": "CCGGA" * 30, "ctgD": "TTAGGC" * 15}
+    # ctgA, reversed ctgB and ctgC are joined into one scaffold (two junctions);
+    # ctgD was left out by the scaffolder and is put back as its own scaffold.
+    scaffolds = {
+        "3C-assembly|contig_0": [
+            ["ctgA", 0, 0, 120, 1],
+            ["ctgA", 1, 120, 320, 1],
+            ["ctgB", 1, 90, 210, -1],
+            ["ctgB", 0, 0, 90, -1],
+            ["ctgC", 0, 0, 150, 1],
+        ],
+    }
+    fasta_file = _make_fasta_file(tmp_path, ref)
+    info_file = _make_info_frags_file(tmp_path, scaffolds)
+    out_dir = tmp_path / "out"
+    result = cli_runner.invoke(
+        polish_main,
+        ["-i", str(info_file), "-f", str(fasta_file), "-o", str(out_dir)],
+        catch_exceptions=False,
+    )
+    assert result.exit_code == 0, result.output
+
+    new_scaffolds = parse_info_frags(str(out_dir / "new_info_frags.txt"))
+    # bins of different contigs are still joined, so the junction length matters
+    assert any(len({b[0] for b in sc}) > 1 for sc in new_scaffolds.values())
+    fasta_lengths = {r.id: len(r.seq) for r in SeqIO.parse(str(out_dir / "polished_genome.fa"), "fasta")}
+    bins = _build_new_bins(new_scaffolds, junction_len=post_junction)
+    assert bins.groupby("chrom")["end"].max().to_dict() == fasta_lengths
