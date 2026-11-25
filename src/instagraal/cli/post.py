@@ -5,6 +5,7 @@ import pathlib
 
 import click
 
+from ..parse_info_frags import DEFAULT_JUNCTION_SEQUENCE
 from ..post import run_post
 
 
@@ -46,14 +47,14 @@ from ..post import run_post
 )
 @click.option(
     "--junction",
-    default=6,
+    default=len(DEFAULT_JUNCTION_SEQUENCE),
     show_default=True,
     type=int,
     help=(
         "Length (bp) of the junction sequence inserted between fragments "
         "from different source contigs during polishing.  "
-        "Must match the --junction value used with instagraal-polish.  "
-        "Default 6 (the default NNNNNN junction)."
+        "Must be the length of the --junction sequence used with instagraal-polish "
+        "(0 for --junction '').  The default matches instagraal-polish's default junction (NNNNNN)."
     ),
 )
 @click.option(

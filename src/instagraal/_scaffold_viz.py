@@ -82,11 +82,12 @@ def plot_contig_composition(new_info_frags_path, output_path=None):
         dtype=float,
     )
 
-    # Assign colours
-    cmap = plt.cm.get_cmap("tab20", len(all_src))
+    # Assign colours (``matplotlib.cm.get_cmap`` was removed in matplotlib 3.9)
+    cmap = plt.get_cmap("tab20", max(1, len(all_src)))
     colors = [cmap(i) for i in range(len(all_src))]
 
-    fig, ax = plt.subplots(figsize=(max(8, n_new * 0.25), 5))
+    # Matplotlib refuses images wider than 2**16 pixels (savefig uses dpi=150).
+    fig, ax = plt.subplots(figsize=(min(max(8, n_new * 0.25), 400), 5))
     x = np.arange(n_new)
     bottoms = np.zeros(n_new)
     for i, src in enumerate(all_src):
@@ -96,7 +97,7 @@ def plot_contig_composition(new_info_frags_path, output_path=None):
     # X-axis: strip the common prefix (e.g. "3C-assembly|") for readability
     short_labels = [name.split("|")[-1] if "|" in name else name for name in new_names_sorted]
     ax.set_xticks(x)
-    ax.set_xticklabels(short_labels, rotation=90, fontsize=max(4, min(8, 120 // n_new)))
+    ax.set_xticklabels(short_labels, rotation=90, fontsize=max(4, min(8, 120 // max(1, n_new))))
     ax.set_xlabel("New contigs")
     ax.set_ylabel("Contig length (bp)")
     ax.set_title("Source-contig composition of new assembly contigs")

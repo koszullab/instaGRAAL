@@ -125,6 +125,7 @@ def test_recap_commands_printed(tmp_path):
     "extra_args,expected_kwargs",
     [
         (["--no-bomb"], {"bomb": False}),
+        (["--no-polish"], {"polish": False}),
         (["--no-save-matrix"], {"save_matrix": False}),
         (["--no-balance"], {"balance": False}),
         (["--cycles", "5"], {"cycles": 5}),
@@ -184,9 +185,91 @@ def test_defaults(tmp_path):
     assert captured["level"] == 4
     assert captured["cycles"] == 100
     assert captured["bomb"] is True
+    assert captured["polish"] is True
     assert captured["save_matrix"] is True
     assert captured["balance"] is True
     assert captured["device"] == 0
     assert captured["min_scaffold_size"] == 0
     assert captured["min_scaffold_length"] == 0
     assert captured["junction"] == "NNNNNN"
+
+
+# ---------------------------------------------------------------------------
+# Commands built by _run_endtoend (dry run: nothing is executed)
+# ---------------------------------------------------------------------------
+
+
+def _dry_run_commands(tmp_path, **overrides) -> list[str]:
+    from instagraal.cli.endtoend import _run_endtoend
+
+    kwargs = dict(
+        fasta=REF_FASTA,
+        pairs=REF_PAIRS,
+        enzymes=["DpnII"],
+        output_dir=tmp_path,
+        device=0,
+        level=4,
+        cycles=10,
+        resolutions="1000",
+        bomb=True,
+        circular=False,
+        save_matrix=True,
+        save_pickle=False,
+        simple=False,
+        quiet=False,
+        debug=False,
+        balance=True,
+        balance_args=None,
+        coverage_std=1.0,
+        neighborhood=5,
+        min_scaffold_size=0,
+        min_scaffold_length=0,
+        junction="NNNNNN",
+        criterion=None,
+        cool_name=None,
+        dry_run=True,
+    )
+    kwargs.update(overrides)
+    return _run_endtoend(**kwargs)
+
+
+def _command(commands: list[str], name: str) -> list[str]:
+    import shlex
+
+    matches = [shlex.split(c) for c in commands if pathlib.Path(shlex.split(c)[0]).name == name]
+    assert len(matches) == 1, commands
+    return matches[0]
+
+
+def test_dry_run_polishes_by_default(tmp_path):
+    polish_cmd = _command(_dry_run_commands(tmp_path), "instagraal-polish")
+    assert "--mode" not in polish_cmd
+
+
+def test_dry_run_no_polish_writes_scaffolds_as_is(tmp_path):
+    commands = _dry_run_commands(tmp_path, polish=False, criterion="sequences")
+    polish_cmd = _command(commands, "instagraal-polish")
+    assert polish_cmd[polish_cmd.index("--mode") + 1] == "fasta"
+    assert "--criterion" not in polish_cmd
+    # the size filters and junction still apply, so post sees a matching assembly
+    assert "--min-scaffold-size" in polish_cmd
+    assert polish_cmd[polish_cmd.index("--junction") + 1] == "NNNNNN"
+    post_cmd = _command(commands, "instagraal-post")
+    assert post_cmd[post_cmd.index("--junction") + 1] == "6"
+
+
+def test_dry_run_no_bomb(tmp_path):
+    mcmc_cmd = _command(_dry_run_commands(tmp_path, bomb=False), "instagraal")
+    assert "--bomb" not in mcmc_cmd
+    mcmc_cmd = _command(_dry_run_commands(tmp_path, bomb=True), "instagraal")
+    assert "--bomb" in mcmc_cmd
+
+
+@pytest.mark.parametrize("junction,expected", [("", "0"), ("NNNNNN", "6"), ("AATTCC" * 2, "12")])
+def test_dry_run_post_junction_matches_polish(tmp_path, junction, expected):
+    commands = _dry_run_commands(tmp_path, junction=junction)
+    post_cmd = _command(commands, "instagraal-post")
+    assert post_cmd[post_cmd.index("--junction") + 1] == expected
+    # even an empty junction is passed on: instagraal-polish must not fall back to its own default
+    polish_cmd = _command(commands, "instagraal-polish")
+    assert polish_cmd[polish_cmd.index("--junction") + 1] == junction

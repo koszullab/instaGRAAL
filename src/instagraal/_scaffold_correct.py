@@ -267,7 +267,10 @@ def correct_spurious_inversions(scaffolds, criterion="colinear"):
         "colinear": is_colinear,
         "contiguous": is_contiguous,
     }
-    block_test = condition_callables.get(criterion, "colinear")
+    try:
+        block_test = condition_callables[criterion]
+    except KeyError:
+        raise ValueError("Unknown criterion {!r}, expected one of {}".format(criterion, ", ".join(condition_callables))) from None
 
     for name, scaffold in scaffolds.items():
         new_scaffold = []
@@ -358,7 +361,20 @@ def rearrange_intra_scaffolds(scaffolds):
     return new_scaffolds
 
 
+REORIENT_MODES = ("blocks", "sequences")
+
+
 def reorient_consecutive_blocks(scaffolds, mode="blocks"):
+    """Reorient runs of consecutive bins that come from the same initial contig.
+
+    In ``"blocks"`` mode, each run is sorted back into its order on the initial
+    contig and all of its bins are given the run's majority orientation. In
+    ``"sequences"`` mode, bins are reoriented according to whether their
+    neighbours' ids increase or decrease, without reordering.
+    """
+
+    if mode not in REORIENT_MODES:
+        raise ValueError("Unknown reorientation mode {!r}, expected one of {}".format(mode, ", ".join(REORIENT_MODES)))
 
     scaffolds = format_info_frags(scaffolds)
     new_scaffolds = {}
@@ -366,7 +382,7 @@ def reorient_consecutive_blocks(scaffolds, mode="blocks"):
     for name, scaffold in scaffolds.items():
         new_scaffold = []
         for _, my_block in itertools.groupby(scaffold, operator.itemgetter(0)):
-            my_bins = list(my_block)
+            my_bins = [list(my_bin) for my_bin in my_block]
 
             if mode == "sequences":
                 if len(my_bins) < 2:
@@ -404,12 +420,15 @@ def reorient_consecutive_blocks(scaffolds, mode="blocks"):
             elif mode == "blocks":
                 total_ori = sum([my_bin[-1] for my_bin in my_bins])
 
+                # Sort on the position on the initial contig rather than on the
+                # bin id, which is -1 for bins put back by integrate_lost_dna.
+                position = operator.itemgetter(2, 3)
                 if total_ori >= 0:
                     block_ori = 1
-                    sorted_block = sorted(my_bins, key=operator.itemgetter(1))
+                    sorted_block = sorted(my_bins, key=position)
                 else:
                     block_ori = -1
-                    sorted_block = sorted(my_bins, key=operator.itemgetter(1), reverse=True)
+                    sorted_block = sorted(my_bins, key=position, reverse=True)
 
                 for my_bin in sorted_block:
                     my_bin[-1] = block_ori
@@ -426,39 +445,56 @@ def reorient_consecutive_blocks(scaffolds, mode="blocks"):
 
 
 def find_lost_dna(init_fasta, scaffolds, output_file=None):
+    """Find the regions of the initial contigs that no scaffold bin covers.
+
+    Bins are 0-based, half-open ``[start, end)`` intervals, so a bin ending
+    at position ``p`` and a lost region starting at ``p`` are contiguous.
+
+    Returns a dictionary mapping each initial contig with uncovered DNA to the
+    list of its uncovered regions, sorted by position, as bins
+    ``[contig, -1, start, end, 1]``. A contig that no bin covers at all is
+    returned as a single ``[contig, -1, 0, length, 1]`` region. Contigs are
+    listed from longest to shortest.
+
+        >>> import tempfile
+        >>> with tempfile.NamedTemporaryFile("w", suffix=".fa", delete=False) as fa:
+        ...     _ = fa.write(">ctgA\\n" + "A" * 1000 + "\\n>ctgB\\n" + "C" * 50 + "\\n")
+        >>> scaffolds = {"s1": [["ctgA", 0, 100, 300, 1], ["ctgA", 2, 500, 900, -1]]}
+        >>> for name, chunks in find_lost_dna(fa.name, scaffolds).items():
+        ...     print(name, chunks)
+        ctgA [['ctgA', -1, 0, 100, 1], ['ctgA', -1, 300, 500, 1], ['ctgA', -1, 900, 1000, 1]]
+        ctgB [['ctgB', -1, 0, 50, 1]]
+    """
 
     my_scaffolds = format_info_frags(scaffolds)
-    my_records = sorted(_parse_fasta(init_fasta), reverse=True, key=len)
+
+    covered = {}
+    for scaffold in my_scaffolds.values():
+        for my_bin in scaffold:
+            covered.setdefault(my_bin[0], []).append((my_bin[2], my_bin[3]))
+
+    fasta_dict = {}
+    lengths = {}
+    for record in _parse_fasta(init_fasta):
+        lengths[record.id] = len(record)
+        if output_file:
+            fasta_dict[record.id] = record.seq
 
     that_which_was_removed = {}
-    fasta_dict = {}
-
-    def consecutiveness(key_base_tuple):
-        key, base = key_base_tuple
-        return base - key
-
-    for record in my_records:
-        fasta_dict[record.id] = record.seq
-
-        remaining_regions_ordered = range(len(record))
-        remaining_regions = set(remaining_regions_ordered)
-        regions = [my_bin for scaffold in my_scaffolds.values() for my_bin in scaffold if my_bin[0] == record.id]
-        for region in regions:
-            start, end = region[2], region[3]
-            remaining_regions -= set(remaining_regions_ordered[start : end + 1])
-
-        sorted_regions = sorted(remaining_regions)
-
-        for _, g in itertools.groupby(enumerate(sorted_regions), consecutiveness):
-            swath = list(map(operator.itemgetter(1), g))
-            start = min(swath)
-            end = max(swath) + 1
-            ori = 1
-            my_bin = [record.id, -1, start, end, ori]
-            try:
-                that_which_was_removed[record.id].append(my_bin)
-            except KeyError:
-                that_which_was_removed[record.id] = [my_bin]
+    for name in sorted(lengths, key=lambda contig: lengths[contig], reverse=True):
+        length = lengths[name]
+        chunks = []
+        cursor = 0
+        for start, end in sorted(covered.get(name, [])):
+            if start > cursor:
+                chunks.append([name, -1, cursor, min(start, length), 1])
+            cursor = max(cursor, end)
+            if cursor >= length:
+                break
+        if cursor < length:
+            chunks.append([name, -1, cursor, length, 1])
+        if chunks:
+            that_which_was_removed[name] = chunks
 
     if output_file:
         try:
@@ -481,58 +517,76 @@ def find_lost_dna(init_fasta, scaffolds, output_file=None):
 
 
 def integrate_lost_dna(scaffolds, lost_dna_positions):
+    """Put the DNA found by :func:`find_lost_dna` back into the assembly.
+
+    Each lost region is used exactly once. It is attached to a bin it is
+    contiguous with on its initial contig, in that bin's orientation: a region
+    that starts where a bin ends follows that bin on the contig, and a region
+    that ends where a bin starts precedes it. Regions contiguous with no bin
+    (e.g. contigs that no bin covers at all) become new scaffolds, one per
+    region, named after their contig (``<contig>_<start>_<end>`` when the
+    contig is otherwise present in the assembly).
+
+        >>> scaffolds = {
+        ...     "s1": [["ctgA", 0, 100, 300, 1], ["ctgB", 0, 0, 50, 1]],
+        ...     "s2": [["ctgA", 2, 500, 900, -1]],
+        ... }
+        >>> lost = {
+        ...     "ctgA": [["ctgA", -1, 0, 100, 1], ["ctgA", -1, 300, 500, 1], ["ctgA", -1, 900, 1000, 1]],
+        ...     "ctgC": [["ctgC", -1, 0, 80, 1]],
+        ... }
+        >>> for name, scaffold in integrate_lost_dna(scaffolds, lost).items():
+        ...     print(name, scaffold)
+        s1 [['ctgA', -1, 0, 100, 1], ['ctgA', 0, 100, 300, 1], ['ctgA', -1, 300, 500, 1], ['ctgB', 0, 0, 50, 1]]
+        s2 [['ctgA', -1, 900, 1000, -1], ['ctgA', 2, 500, 900, -1]]
+        ctgC [['ctgC', -1, 0, 80, 1]]
+    """
 
     scaffolds = format_info_frags(scaffolds)
-    remaining_dna_positions = copy.deepcopy(lost_dna_positions)
+
+    starting_at = {}
+    ending_at = {}
+    for contig, chunks in lost_dna_positions.items():
+        for chunk in chunks:
+            key = (contig, chunk[2], chunk[3])
+            starting_at[(contig, chunk[2])] = key
+            ending_at[(contig, chunk[3])] = key
+    used = set()
+
+    def take(key, ori):
+        if key is None or key in used:
+            return []
+        used.add(key)
+        contig, start, end = key
+        return [[contig, -1, start, end, ori]]
+
     new_scaffolds = {}
     for name, scaffold in scaffolds.items():
-        scaffold_to_modify = copy.deepcopy(scaffold)
-
-        i = 0
+        new_scaffold = []
         for my_bin in scaffold:
-            init_name = my_bin[0]
+            contig, _, start, end, ori = my_bin
+            upstream = ending_at.get((contig, start))
+            downstream = starting_at.get((contig, end))
+            # Claim the region downstream on the contig first, then upstream.
+            downstream_bins = take(downstream, ori)
+            upstream_bins = take(upstream, ori)
+            if ori == 1:
+                new_scaffold += [*upstream_bins, list(my_bin), *downstream_bins]
+            else:
+                new_scaffold += [*downstream_bins, list(my_bin), *upstream_bins]
+        new_scaffolds[name] = new_scaffold
 
-            try:
-                lost_dna_chunk = lost_dna_positions[init_name]
-                start = my_bin[2]
-                end = my_bin[3]
-                ori = my_bin[4]
-                for lost_bin in lost_dna_chunk:
-                    lost_start = lost_bin[2]
-                    lost_end = lost_bin[3]
-
-                    if end == lost_start - 1:
-                        bin_to_add = [
-                            init_name,
-                            -1,
-                            lost_start - 1,
-                            lost_end + 1,
-                            ori,
-                        ]
-                        scaffold_to_modify.insert(i + 1 - (ori < 0), bin_to_add)
-                        remaining_dna_positions.pop(init_name)
-                        i += 1
-
-                    elif start in (lost_end, lost_end - 1, lost_end + 1):
-                        bin_to_add = [init_name, -1, lost_start, lost_end, ori]
-                        scaffold_to_modify.insert(i - 1, bin_to_add)
-                        remaining_dna_positions.pop(init_name)
-                        i += 1
-            except (ValueError, KeyError):
-                i += 1
-                continue
-
-            i += 1
-
-        new_scaffolds[name] = copy.deepcopy(scaffold_to_modify)
-    print("Appending the rest...")
-    for remaining_name, remaining_bins in remaining_dna_positions.items():
-        for my_bin in remaining_bins:
-            try:
-                remaining_bin = [remaining_name, -1, my_bin[2], my_bin[3], 1]
-                new_scaffolds[remaining_name] = [remaining_bin]
-            except ValueError:
-                continue
+    contigs_in_assembly = {my_bin[0] for scaffold in scaffolds.values() for my_bin in scaffold}
+    for contig, chunks in lost_dna_positions.items():
+        left = [chunk for chunk in chunks if (contig, chunk[2], chunk[3]) not in used]
+        for chunk in left:
+            if contig in contigs_in_assembly or len(chunks) > 1:
+                new_name = "{}_{}_{}".format(contig, chunk[2], chunk[3])
+            else:
+                new_name = contig
+            while new_name in new_scaffolds:
+                new_name += "_lost"
+            new_scaffolds[new_name] = [[contig, -1, chunk[2], chunk[3], 1]]
 
     return new_scaffolds
 

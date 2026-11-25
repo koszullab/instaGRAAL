@@ -600,3 +600,301 @@ def test_cli_polishing_mode_prints_assembly_stats(cli_runner, example_info_frags
     called_label = kwargs.get("label", args[1] if len(args) > 1 else "")
     assert "polished_genome.fa" in called_path
     assert "polishing" in called_label.lower()
+
+
+# ===========================================================================
+# Lost DNA: exact half-open regions, each put back exactly once
+# ===========================================================================
+
+
+def test_find_lost_dna_exact_regions(tmp_path):
+    """Lost regions are the exact complement of the [start, end) bins."""
+    fasta_file = _make_fasta_file(tmp_path, {"ctgA": "A" * 1000, "ctgB": "C" * 50})
+    sc = {"s1": [["ctgA", 0, 100, 300, 1], ["ctgA", 2, 500, 900, -1]]}
+    lost = find_lost_dna(str(fasta_file), sc)
+    assert lost["ctgA"] == [
+        ["ctgA", -1, 0, 100, 1],
+        ["ctgA", -1, 300, 500, 1],
+        ["ctgA", -1, 900, 1000, 1],
+    ]
+    assert lost["ctgB"] == [["ctgB", -1, 0, 50, 1]]
+
+
+def test_find_lost_dna_one_base_tail(tmp_path):
+    """A single uncovered base at the end of a contig is found."""
+    fasta_file = _make_fasta_file(tmp_path, {"ctgA": "A" * 101})
+    lost = find_lost_dna(str(fasta_file), {"s1": [["ctgA", 0, 0, 100, 1]]})
+    assert lost["ctgA"] == [["ctgA", -1, 100, 101, 1]]
+
+
+@pytest.mark.parametrize(
+    "ori,expected",
+    [
+        (1, [["ctgA", -1, 0, 100, 1], ["ctgA", 0, 100, 200, 1], ["ctgA", -1, 200, 300, 1]]),
+        (-1, [["ctgA", -1, 200, 300, -1], ["ctgA", 0, 100, 200, -1], ["ctgA", -1, 0, 100, -1]]),
+    ],
+)
+def test_integrate_lost_dna_placement_follows_orientation(ori, expected):
+    """Regions go upstream/downstream of their neighbour bin, in its orientation."""
+    sc = {"s1": [["ctgA", 0, 100, 200, ori]]}
+    lost = {"ctgA": [["ctgA", -1, 0, 100, 1], ["ctgA", -1, 200, 300, 1]]}
+    assert integrate_lost_dna(sc, lost) == {"s1": expected}
+
+
+def test_integrate_lost_dna_first_bin_and_neighbours_untouched():
+    """A region attached before the first bin does not move other bins."""
+    sc = {"s1": [["ctgA", 0, 100, 200, 1], ["ctgB", 0, 0, 50, 1], ["ctgC", 0, 0, 70, -1]]}
+    lost = {"ctgA": [["ctgA", -1, 0, 100, 1]]}
+    assert integrate_lost_dna(sc, lost)["s1"] == [
+        ["ctgA", -1, 0, 100, 1],
+        ["ctgA", 0, 100, 200, 1],
+        ["ctgB", 0, 0, 50, 1],
+        ["ctgC", 0, 0, 70, -1],
+    ]
+
+
+def test_integrate_lost_dna_region_between_two_bins_used_once():
+    """A region flanked by two bins (here in two scaffolds) is put back once."""
+    sc = {"s1": [["ctgA", 0, 0, 100, 1]], "s2": [["ctgA", 2, 200, 300, 1]]}
+    lost = {"ctgA": [["ctgA", -1, 100, 200, 1]]}
+    result = integrate_lost_dna(sc, lost)
+    all_bins = [b for s in result.values() for b in s]
+    assert sum(1 for b in all_bins if b[2:4] == [100, 200]) == 1
+    assert result["s1"] == [["ctgA", 0, 0, 100, 1], ["ctgA", -1, 100, 200, 1]]
+
+
+def test_integrate_lost_dna_keeps_every_leftover_region():
+    """Regions next to no bin all become scaffolds, not only the last one."""
+    sc = {"s1": [["ctgA", 0, 100, 200, 1]]}
+    lost = {
+        "ctgA": [["ctgA", -1, 300, 400, 1], ["ctgA", -1, 500, 600, 1]],
+        "ctgB": [["ctgB", -1, 0, 80, 1]],
+    }
+    result = integrate_lost_dna(sc, lost)
+    assert result["ctgA_300_400"] == [["ctgA", -1, 300, 400, 1]]
+    assert result["ctgA_500_600"] == [["ctgA", -1, 500, 600, 1]]
+    assert result["ctgB"] == [["ctgB", -1, 0, 80, 1]]
+
+
+def test_reorient_consecutive_blocks_unknown_mode():
+    with pytest.raises(ValueError, match="Unknown reorientation mode"):
+        reorient_consecutive_blocks(SCAFFOLDS_SIMPLE, mode="colinear")
+
+
+def test_reorient_consecutive_blocks_does_not_mutate_input():
+    sc = {"s": [["ctgA", 0, 0, 100, 1], ["ctgA", 1, 100, 200, -1], ["ctgA", 2, 200, 300, -1]]}
+    reorient_consecutive_blocks(sc)
+    assert [b[-1] for b in sc["s"]] == [1, -1, -1]
+
+
+def test_correct_spurious_inversions_unknown_criterion():
+    with pytest.raises(ValueError, match="Unknown criterion"):
+        correct_spurious_inversions(SCAFFOLDS_INVERSION, criterion="blocks")
+
+
+def test_parse_info_frags_without_trailing_newline(tmp_path):
+    p = tmp_path / "info_frags.txt"
+    p.write_text(">sc1\ninit_contig\tid_frag\torientation\tstart\tend\nctgA\t0\t1\t0\t100")
+    assert parse_info_frags(str(p)) == {"sc1": [["ctgA", 0, 0, 100, 1]]}
+
+
+def test_write_fasta_headers_are_clean(tmp_path):
+    """FASTA headers are exactly the scaffold names (no trailing whitespace)."""
+    fasta_file = _make_fasta_file(tmp_path, {"ctgA": "A" * 300, "ctgB": "C" * 300})
+    info_file = _make_info_frags_file(tmp_path, {"3C-assembly|contig_1": [["ctgA", 0, 0, 100, 1]]})
+    out_file = tmp_path / "out.fa"
+    write_fasta(str(fasta_file), str(info_file), output=str(out_file))
+    assert out_file.read_text().splitlines()[0] == ">3C-assembly|contig_1"
+
+
+def test_write_fasta_accepts_scaffold_dict(tmp_path):
+    fasta_file = _make_fasta_file(tmp_path, {"ctgA": "AAAACCCC", "ctgB": "GGGG"})
+    sc = {"s1": [["ctgA", 0, 4, 8, -1], ["ctgB", 0, 0, 4, 1]]}
+    out_file = tmp_path / "out.fa"
+    write_fasta(str(fasta_file), sc, output=str(out_file), junction="NN")
+    from Bio import SeqIO
+
+    records = {r.id: str(r.seq) for r in SeqIO.parse(str(out_file), "fasta")}
+    assert records == {"s1": "GGGGNNGGGG"}
+
+
+def test_plot_contig_composition_no_scaffold(tmp_path):
+    """The composition plot does not crash on an empty assembly."""
+    from instagraal.parse_info_frags import plot_contig_composition
+
+    info_file = _make_info_frags_file(tmp_path, {})
+    plot_contig_composition(str(info_file), output_path=tmp_path / "plot.png")
+    assert (tmp_path / "plot.png").exists()
+
+
+def test_cli_fasta_mode_filters_and_writes_info_frags(cli_runner, example_ref_fasta, tmp_path):
+    """'fasta' mode applies --min-scaffold-size and writes a matching new_info_frags.txt."""
+    info_file = _make_info_frags_file(tmp_path, SCAFFOLDS_SIMPLE)
+    out_dir = tmp_path / "out"
+    result = cli_runner.invoke(
+        polish_main,
+        ["-m", "fasta", "-i", str(info_file), "-f", example_ref_fasta, "-o", str(out_dir), "-s", "2"],
+        catch_exceptions=False,
+    )
+    assert result.exit_code == 0, result.output
+    from Bio import SeqIO
+
+    records = [r.id for r in SeqIO.parse(str(out_dir / "polished_genome.fa"), "fasta")]
+    assert records == ["scaffold1"]  # scaffold2 has 2 bins
+    assert parse_info_frags(str(out_dir / "new_info_frags.txt")) == {"scaffold1": SCAFFOLDS_SIMPLE["scaffold1"]}
+
+
+@pytest.mark.parametrize(
+    "mode,criterion",
+    [("polishing", "colinear"), ("inversion2", "cis"), ("inversion", "blocks")],
+)
+def test_cli_rejects_criterion_of_another_mode(cli_runner, example_info_frags, example_ref_fasta, tmp_path, mode, criterion):
+    result = cli_runner.invoke(
+        polish_main,
+        ["-m", mode, "-i", example_info_frags, "-f", example_ref_fasta, "-o", str(tmp_path / "out"), "-c", criterion],
+    )
+    assert result.exit_code == 2
+    assert "--criterion" in result.output
+
+
+# ===========================================================================
+# Property test: polishing keeps every input base exactly once
+# ===========================================================================
+
+
+def _random_assembly(seed, tmp_path):
+    """Random reference, a bin tiling of it, and an instaGRAAL-like scaffolding.
+
+    As in instaGRAAL output, bins tile each contig from its start but may
+    stop before its end, some contigs have no bin at all, and bins are
+    shuffled, flipped and joined across contigs.
+    """
+    import itertools
+    import random
+
+    rng = random.Random(seed)
+    ref = {}
+    runs = []
+    for c in range(12):
+        name = f"ctg{c}"
+        length = rng.randint(50, 3000)
+        ref[name] = "".join(rng.choice("ACGT") for _ in range(length))
+        if rng.random() < 0.15:
+            continue  # contig entirely discarded (e.g. low coverage)
+        end_covered = length if rng.random() < 0.5 else rng.randint(length // 2, length)
+        cuts = sorted(rng.sample(range(1, end_covered), min(rng.randint(0, 8), end_covered - 1)))
+        bounds = [0, *cuts, end_covered]
+        bins = [[name, i, s, e, 1] for i, (s, e) in enumerate(itertools.pairwise(bounds))]
+        i = 0
+        while i < len(bins):
+            n = rng.randint(1, 3)
+            ori = rng.choice([1, -1])
+            run = [[c_, id_, s, e, ori] for c_, id_, s, e, _ in bins[i : i + n]]
+            runs.append(run[::-1] if ori == -1 else run)
+            i += n
+    rng.shuffle(runs)
+    scaffolds = {}
+    while runs:
+        n = rng.randint(1, 4)
+        scaffolds[f"3C-assembly|contig_{len(scaffolds)}"] = [b for r in runs[:n] for b in r]
+        runs = runs[n:]
+    for sc in scaffolds.values():  # a few spurious single-bin inversions
+        for b in sc:
+            if rng.random() < 0.1:
+                b[-1] = -b[-1]
+    fasta_file = _make_fasta_file(tmp_path, ref)
+    info_file = _make_info_frags_file(tmp_path, scaffolds)
+    return ref, fasta_file, info_file
+
+
+def _assert_every_base_once(ref, out_dir, junction):
+    from Bio import SeqIO
+    from Bio.Seq import Seq
+
+    from instagraal.post import _build_new_bins
+
+    scaffolds = parse_info_frags(str(out_dir / "new_info_frags.txt"))
+    seen = {name: [0] * len(seq) for name, seq in ref.items()}
+    for sc in scaffolds.values():
+        for contig, _, start, end, _ in sc:
+            assert 0 <= start < end <= len(ref[contig]), (contig, start, end)
+            for pos in range(start, end):
+                seen[contig][pos] += 1
+    for contig, counts in seen.items():
+        assert set(counts) == {1}, f"{contig}: bases missing or duplicated"
+
+    records = {r.id: str(r.seq) for r in SeqIO.parse(str(out_dir / "polished_genome.fa"), "fasta")}
+    assert set(records) == set(scaffolds)
+    for name, sc in scaffolds.items():
+        pieces, previous = [], None
+        for contig, _, start, end, ori in sc:
+            if junction and previous not in (None, contig):
+                pieces.append(junction)
+            piece = ref[contig][start:end]
+            pieces.append(piece if ori == 1 else str(Seq(piece).reverse_complement()))
+            previous = contig
+        assert records[name] == "".join(pieces)
+
+    # instagraal-post derives scaffold lengths from new_info_frags.txt
+    bins = _build_new_bins(scaffolds, junction_len=len(junction))
+    post_lengths = bins.groupby("chrom")["end"].max().to_dict()
+    assert post_lengths == {name: len(seq) for name, seq in records.items()}
+
+
+@pytest.mark.parametrize("seed", range(8))
+@pytest.mark.parametrize("min_size", [0, 1, 2])
+def test_cli_polishing_keeps_every_base_once(cli_runner, tmp_path, seed, min_size):
+    ref, fasta_file, info_file = _random_assembly(seed, tmp_path)
+    out_dir = tmp_path / "out"
+    result = cli_runner.invoke(
+        polish_main,
+        ["-i", str(info_file), "-f", str(fasta_file), "-o", str(out_dir), "-j", "NNNNNN", "-s", str(min_size)],
+        catch_exceptions=False,
+    )
+    assert result.exit_code == 0, result.output
+    _assert_every_base_once(ref, out_dir, "NNNNNN")
+
+
+# ===========================================================================
+# CLI defaults: instagraal-polish and instagraal-post agree on the junction
+# ===========================================================================
+
+
+def test_cli_polishing_default_junction_matches_post_default(cli_runner, tmp_path):
+    """Run on their defaults (README steps 3 and 4), instagraal-polish and
+    instagraal-post agree on the polished coordinates: the scaffold lengths
+    that post rebuilds from new_info_frags.txt are the FASTA record lengths."""
+    from Bio import SeqIO
+
+    from instagraal.cli.post import main as post_main
+    from instagraal.post import _build_new_bins
+
+    (post_junction,) = [p.default for p in post_main.params if p.name == "junction"]
+    ref = {"ctgA": "ACGTTGCA" * 40, "ctgB": "GATTACA" * 30, "ctgC": "CCGGA" * 30, "ctgD": "TTAGGC" * 15}
+    # ctgA, reversed ctgB and ctgC are joined into one scaffold (two junctions);
+    # ctgD was left out by the scaffolder and is put back as its own scaffold.
+    scaffolds = {
+        "3C-assembly|contig_0": [
+            ["ctgA", 0, 0, 120, 1],
+            ["ctgA", 1, 120, 320, 1],
+            ["ctgB", 1, 90, 210, -1],
+            ["ctgB", 0, 0, 90, -1],
+            ["ctgC", 0, 0, 150, 1],
+        ],
+    }
+    fasta_file = _make_fasta_file(tmp_path, ref)
+    info_file = _make_info_frags_file(tmp_path, scaffolds)
+    out_dir = tmp_path / "out"
+    result = cli_runner.invoke(
+        polish_main,
+        ["-i", str(info_file), "-f", str(fasta_file), "-o", str(out_dir)],
+        catch_exceptions=False,
+    )
+    assert result.exit_code == 0, result.output
+
+    new_scaffolds = parse_info_frags(str(out_dir / "new_info_frags.txt"))
+    # bins of different contigs are still joined, so the junction length matters
+    assert any(len({b[0] for b in sc}) > 1 for sc in new_scaffolds.values())
+    fasta_lengths = {r.id: len(r.seq) for r in SeqIO.parse(str(out_dir / "polished_genome.fa"), "fasta")}
+    bins = _build_new_bins(new_scaffolds, junction_len=post_junction)
+    assert bins.groupby("chrom")["end"].max().to_dict() == fasta_lengths

@@ -139,6 +139,7 @@ def _run_endtoend(
     criterion: str | None,
     cool_name: str | None,
     dry_run: bool = False,
+    polish: bool = True,
 ) -> list[str]:
     """Execute the full instaGRAAL pipeline on user-supplied data.
 
@@ -222,7 +223,11 @@ def _run_endtoend(
         raise click.ClickException(f"instagraal did not produce info_frags.txt at expected path:\n  {info_frags}")
 
     # -- 4. instagraal-polish ------------------------------------------------
-    with _step("[4/6] Running instagraal-polish …"):
+    # With --no-polish, ``instagraal-polish --mode fasta`` writes the scaffolds
+    # as instagraal left them (still size-filtered), plus the matching
+    # new_info_frags.txt so that instagraal-post can lift the pairs over.
+    step_label = "[4/6] Running instagraal-polish …" if polish else "[4/6] Skipping polishing: writing scaffolds as is …"
+    with _step(step_label):
         polish_dir = output_dir / "polished"
         polish_dir.mkdir(exist_ok=True)
         polish_cmd = [
@@ -238,9 +243,12 @@ def _run_endtoend(
             "--min-scaffold-length",
             min_scaffold_length,
         ]
-        if junction:
-            polish_cmd += ["--junction", junction]
-        if criterion is not None:
+        if not polish:
+            polish_cmd += ["--mode", "fasta"]
+        # Passed even when empty: instagraal-post is told len(junction), so
+        # instagraal-polish must not fall back to its own default junction.
+        polish_cmd += ["--junction", junction]
+        if criterion is not None and polish:
             polish_cmd += ["--criterion", criterion]
         _run_cmd(polish_cmd, _record=ran_cmds, dry_run=dry_run)
     polished_fa = polish_dir / "polished_genome.fa"
@@ -259,7 +267,7 @@ def _run_endtoend(
             "--output-dir",
             post_dir,
             "--junction",
-            len(junction) if junction else 6,
+            len(junction),
         ]
         if not balance:
             post_cmd.append("--no-balance")
@@ -277,7 +285,7 @@ def _run_endtoend(
                 fasta,
                 polished_fa,
                 "--labels",
-                "Input assembly,Polished assembly",
+                "Input assembly,Polished assembly" if polish else "Input assembly,Scaffolded assembly (not polished)",
             ],
             _record=ran_cmds,
             dry_run=dry_run,
@@ -377,7 +385,17 @@ def _run_endtoend(
     "--bomb/--no-bomb",
     default=True,
     show_default=True,
-    help="Explode the genome prior to scaffolding.",
+    help="Explode the genome into bins prior to scaffolding. With --no-bomb, scaffolding starts from the input contigs.",
+)
+@click.option(
+    "--polish/--no-polish",
+    default=True,
+    show_default=True,
+    help=(
+        "Polish the scaffolds with instagraal-polish. With --no-polish, the scaffolds are "
+        "written as instagraal left them (instagraal-polish --mode fasta), and DNA that "
+        "instagraal discarded (e.g. low-coverage contigs) is not put back."
+    ),
 )
 @click.option(
     "-C",
@@ -436,7 +454,7 @@ def _run_endtoend(
 @click.option(
     "--criterion",
     default=None,
-    help="Block criterion stringency for intragraal-polish inversion/inversion2 modes.",
+    help="Reorientation criterion passed to instagraal-polish: blocks (default) or sequences.",
 )
 @click.option(
     "--cool-name",
@@ -496,6 +514,7 @@ def main(
     quiet: bool,
     debug: bool,
     dry_run: bool,
+    polish: bool,
     balance: bool,
     balance_args: str | None,
     min_scaffold_size: int,
@@ -511,8 +530,10 @@ def main(
     -----
       1. Check that a CUDA-capable GPU is accessible.
       2. instagraal-pre    — digest FASTA and bin Hi-C pairs into fragments.
-      3. instagraal        — MCMC-based scaffolding.
-      4. instagraal-polish — full polishing pipeline.
+      3. instagraal        — MCMC-based scaffolding (on the exploded genome
+                             unless --no-bomb).
+      4. instagraal-polish — full polishing pipeline (skipped with --no-polish:
+                             the scaffolds are then written as they are).
       5. instagraal-post   — remap pairs to new assembly, write .mcool.
       6. instagraal-stats  — compare input vs. polished assembly statistics.
 
@@ -562,6 +583,7 @@ def main(
         criterion=criterion,
         cool_name=cool_name,
         dry_run=dry_run,
+        polish=polish,
     )
     _elapsed = time.monotonic() - _start
     if dry_run:

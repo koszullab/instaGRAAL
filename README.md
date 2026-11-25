@@ -65,6 +65,8 @@ Key options:
 | `-n / --cycles` | `100` | MCMC iterations (more = better convergence) |
 | `--device` | `0` | CUDA device index |
 | `-C / --circular` | off | Circular genome |
+| `--no-bomb` | bomb | Start scaffolding from the input contigs instead of exploding the genome into bins |
+| `--no-polish` | polish | Skip polishing: write the scaffolds as instaGRAAL left them (DNA it discarded is not put back) |
 
 Run `instagraal-endtoend -h` for the full option list.
 
@@ -94,13 +96,15 @@ Output: `mcmc_out/test_mcmc_4/` containing `genome.fasta` and `info_frags.txt`.
 instagraal-polish -i mcmc_out/test_mcmc_4/info_frags.txt -f assembly.fa -o polished
 ```
 
-Output: `polished/polished_genome.fa` and `polished/new_info_frags.txt`.
+Output: `polished/polished_genome.fa` and `polished/new_info_frags.txt`. Bins from different input contigs are joined with an `NNNNNN` junction (`--junction` sets another sequence, `--junction ''` none).
 
 **4. Post-process** — lift over contacts to the new assembly and build a multi-resolution `.mcool`:
 
 ```sh
 instagraal-post reads.pairs polished/new_info_frags.txt -r 1000,5000,10000 -o post
 ```
+
+`instagraal-post` rebuilds the polished coordinates from `new_info_frags.txt`, so its `--junction` must be the length of the junction used in step 3. The default (`6`) matches the default `NNNNNN`; after `instagraal-polish --junction ''`, pass `--junction 0`.
 
 **5. Compare assemblies** — print statistics side-by-side:
 

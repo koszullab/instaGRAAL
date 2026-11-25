@@ -8,8 +8,10 @@ from ..assembly_stats import print_assembly_stats
 from ..parse_info_frags import (
     DEFAULT_CRITERION,
     DEFAULT_CRITERION_2,
+    DEFAULT_JUNCTION_SEQUENCE,
     DEFAULT_MIN_SCAFFOLD_SIZE,
     DEFAULT_NEW_INFO_FRAGS_NAME,
+    REORIENT_MODES,
     correct_spurious_inversions,
     find_lost_dna,
     plot_contig_composition,
@@ -47,7 +49,8 @@ POLISHED_GENOME_NAME = "polished_genome.fa"
         "  rearrange       Rearrange intra-scaffold blocks.\n"
         "  inversion2      Correct spurious inversions (blocks criterion).\n"
         "  reincorporation Reincorporate lost DNA from reference.\n"
-        "  fasta           Write a new genome FASTA from info_frags + reference.\n"
+        "  fasta           Write the scaffolds as they are (no polishing): FASTA\n"
+        "                  from info_frags + reference, and new_info_frags.txt.\n"
         "  singleton       Remove spurious singleton insertions.\n"
         "  inversion       Correct spurious inversions (colinear criterion).\n"
     ),
@@ -84,7 +87,10 @@ POLISHED_GENOME_NAME = "polished_genome.fa"
     "-c",
     "--criterion",
     default=None,
-    help="Block criterion stringency (used for inversion/inversion2 modes).",
+    help=(
+        "Block criterion stringency. 'inversion' mode: cis, colinear (default) or contiguous. "
+        "'inversion2' and 'polishing' modes: blocks (default) or sequences."
+    ),
 )
 @click.option(
     "-s",
@@ -92,7 +98,10 @@ POLISHED_GENOME_NAME = "polished_genome.fa"
     default=DEFAULT_MIN_SCAFFOLD_SIZE,
     show_default=True,
     type=int,
-    help="Minimum scaffold size in bins.",
+    help=(
+        "Discard scaffolds made of this many bins or fewer. In the default 'polishing' mode, their DNA is "
+        "then put back next to its original neighbours, like any other DNA missing from the scaffolds."
+    ),
 )
 @click.option(
     "-l",
@@ -105,8 +114,12 @@ POLISHED_GENOME_NAME = "polished_genome.fa"
 @click.option(
     "-j",
     "--junction",
-    default="",
-    help="Junction sequence inserted between stitched bins.",
+    default=str(DEFAULT_JUNCTION_SEQUENCE),
+    show_default=True,
+    help=(
+        "Sequence inserted between consecutive bins from different initial contigs ('' for none). "
+        "Give its length to instagraal-post --junction, whose default matches this one."
+    ),
 )
 def main(
     mode: str | None,
@@ -125,6 +138,16 @@ def main(
     A reference FASTA (--fasta) is required for this default pipeline.
     """
     mode = mode or "polishing"
+    valid_criteria = {
+        "inversion": ("cis", "colinear", "contiguous"),
+        "inversion2": REORIENT_MODES,
+        "polishing": REORIENT_MODES,
+    }
+    if criterion is not None and mode in valid_criteria and criterion not in valid_criteria[mode]:
+        raise click.BadParameter(
+            "{!r} is not valid in '{}' mode, expected one of: {}.".format(criterion, mode, ", ".join(valid_criteria[mode])),
+            param_hint="'--criterion'",
+        )
     output_dir = pathlib.Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     scaffolds = {
@@ -141,10 +164,14 @@ def main(
     if mode == "fasta":
         if init_fasta is None:
             raise click.UsageError("A reference FASTA file must be provided (--fasta) for 'fasta' mode.")
+        # No polishing: write the (size-filtered) scaffolds as they are, along
+        # with the matching info_frags file that instagraal-post expects.
+        info_frags_file = str(output_dir / DEFAULT_NEW_INFO_FRAGS_NAME)
         genome_file = str(output_dir / POLISHED_GENOME_NAME)
+        write_info_frags(scaffolds, output=info_frags_file)
         write_fasta(
             init_fasta=str(init_fasta),
-            info_frags=str(info_frags),
+            info_frags=scaffolds,
             junction=junction,
             output=genome_file,
         )
@@ -191,7 +218,7 @@ def main(
         info_frags_file = str(output_dir / DEFAULT_NEW_INFO_FRAGS_NAME)
         genome_file = str(output_dir / POLISHED_GENOME_NAME)
         arranged_scaffolds = rearrange_intra_scaffolds(scaffolds=scaffolds)
-        reoriented_scaffolds = reorient_consecutive_blocks(arranged_scaffolds)
+        reoriented_scaffolds = reorient_consecutive_blocks(arranged_scaffolds, mode=criterion or DEFAULT_CRITERION_2)
         removed = find_lost_dna(init_fasta=str(init_fasta), scaffolds=reoriented_scaffolds)
         new_scaffolds = integrate_lost_dna(scaffolds=reoriented_scaffolds, lost_dna_positions=removed)
         write_info_frags(new_scaffolds, output=info_frags_file)

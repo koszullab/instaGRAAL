@@ -25,6 +25,9 @@ ZENODO_BASE_URL = f"https://zenodo.org/record/{ZENODO_RECORD_ID}/files"
 TEST_FASTA = "yeast.contigs.fa.gz"
 TEST_PAIRS = "yeast.pairs.gz"
 TEST_ENZYME = ["DpnII", "HinfI"]
+# Inserted by instagraal-polish between bins of different contigs; instagraal-post
+# must be given its length to rebuild the same coordinates (as in instagraal-endtoend).
+TEST_JUNCTION = "NNNNNN"
 
 # Use a small but meaningful number of cycles for a functional smoke-test.
 DEFAULT_TEST_CYCLES = 3
@@ -273,6 +276,8 @@ def _run_test(
             fasta_path,
             "--output-dir",
             polish_dir,
+            "--junction",
+            TEST_JUNCTION,
         ],
         _record=ran_cmds,
     )
@@ -292,6 +297,8 @@ def _run_test(
             "1000",
             "--output-dir",
             post_dir,
+            "--junction",
+            len(TEST_JUNCTION),
             "--no-balance",
         ],
         _record=ran_cmds,

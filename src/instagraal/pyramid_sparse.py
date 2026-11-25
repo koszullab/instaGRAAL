@@ -2025,9 +2025,9 @@ class level:
                 for id_s in range(1, len(idx_cut_EOL)):
                     line = cont_seq[idx_cut_EOL[id_s - 1] : idx_cut_EOL[id_s]]
                     handle_new_fasta.write("%s\n" % (line))
-                if idx_cut_EOL[-1] != len_seq - 1:
-                    line = cont_seq[idx_cut_EOL[-1] :]
-                    handle_new_fasta.write("%s\n" % (line))
+                # Always write the remainder, even when it is a single base.
+                line = cont_seq[idx_cut_EOL[-1] :]
+                handle_new_fasta.write("%s\n" % (line))
 
         handle_new_fasta.close()
         handle_info_frags.close()
