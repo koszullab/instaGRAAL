@@ -107,6 +107,10 @@ instagraal-refine -i polished/new_info_frags.txt -c hic_folder/reads.cool -f ass
 
 In many bacteria the two replication arms of a chromosome are aligned, which adds an X (anti-diagonal) to the contact map. The scaffolder's model has no term for it and tends to fold such chromosomes, interleaving their arms: the map then looks deceptively smooth, and borders appear after polishing. `instagraal-refine` ignores long-range contacts, so it is not misled by the X. Contigs shorter than `--min-contig-length` (15 kb) are too short to be joined reliably: each is then placed, whole, where its contacts clearly fit best in the new scaffolds (`--short-margin`, or `--no-place-short` to leave them as scaffolds of their own). It writes `refined/refined_info_frags.txt` and `refined/refined_genome.fa` (use them in steps 4 and 5), plus `junctions.tsv` and `refine_report.txt`, a reference-free QC of the input layout (contradicted or unsupported joins, and GC skew of large scaffolds: a whole circular chromosome changes skew sign at most twice: at the origin and terminus). Use `--qc-only` to only check a layout.
 
+Scaffolds of at least 500 kb whose two ends join (whole circular chromosomes) are recentered: cut at the replication terminus found from their GC skew, so that the origin sits near the middle (`--origin-first` to start at the origin instead, `--no-recenter` to leave them as they are).
+
+The refined assembly depends on the contact map and the contigs only, not on the input layout, so `-i` is optional: for bacterial genomes, `instagraal-pre` then `instagraal-refine -c hic_folder/reads.cool -f assembly.fa -o refined` gives the same assembly without a GPU (the scaffolder's layout is then only used for the QC in `junctions.tsv`).
+
 **4. Post-process** — lift over contacts to the new assembly and build a multi-resolution `.mcool`:
 
 ```sh
@@ -136,7 +140,7 @@ After polishing (`instagraal-polish`):
 
 After refining (`instagraal-refine`):
 
-- `refined_genome.fa` / `refined_info_frags.txt` — whole input contigs, re-joined where the junction evidence is clear
+- `refined_genome.fa` / `refined_info_frags.txt` — whole input contigs, re-joined where the junction evidence is clear (a recentered circular scaffold starts and ends with the two parts of the contig it is cut in)
 - `junctions.tsv` / `refine_report.txt` — score and status of every input and refined join, and GC skew of large scaffolds
 
 > Note: Scaffolding pyramids are cached in HDF5 format. If a run was interrupted and pyramids appear corrupted, delete the `pyramids/` folder and re-run.

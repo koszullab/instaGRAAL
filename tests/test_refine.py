@@ -18,7 +18,16 @@ from click.testing import CliRunner
 
 from instagraal.cli.refine import main as refine_main
 from instagraal.parse_info_frags import parse_info_frags, write_info_frags
-from instagraal.refine import EndScores, build_scaffolds, gc_skew_summary, place_short_contigs, run_refine
+import instagraal.refine as refine_module
+from instagraal.refine import (
+    EndScores,
+    build_scaffolds,
+    gc_skew_summary,
+    place_short_contigs,
+    replication_axis,
+    rotate,
+    run_refine,
+)
 
 GENOME_KB = 300
 FRAG_KB = 1
@@ -31,16 +40,24 @@ def _revcomp(seq):
     return seq.translate(RC)[::-1]
 
 
-def _make_genome(d, cuts_kb, reversed_contigs, circular=True, mirror=2.0, seed=1):
+def _make_genome(d, cuts_kb, reversed_contigs, circular=True, mirror=2.0, seed=1, skew=0.0):
     """Random chromosome cut into contigs (some reverse-complemented), with simulated contacts.
 
     Contacts between 1 kb fragments decay with distance (along the circle if
     ``circular``), plus a stripe of strength ``mirror`` between mirror loci of the two
-    replication arms, plus background.
+    replication arms, plus background. With ``skew``, the first half of the chromosome
+    has GC skew ``skew`` and the second half ``-skew``: origin at 0, terminus in the middle.
     """
     rng = np.random.default_rng(seed)
     genome_kb = cuts_kb[-1]
-    chrom = "".join(rng.choice(list("ACGT"), size=genome_kb * 1000))
+    if skew:
+        half = genome_kb * 500
+        g_rich = [0.25, 0.25 - skew / 4, 0.25 + skew / 4, 0.25]  # A, C, G, T
+        chrom = "".join(rng.choice(list("ACGT"), size=half, p=g_rich)) + "".join(
+            rng.choice(list("ACGT"), size=half, p=g_rich[:1] + g_rich[2:0:-1] + g_rich[3:])
+        )
+    else:
+        chrom = "".join(rng.choice(list("ACGT"), size=genome_kb * 1000))
     names = [f"ctg{k}" for k in range(len(cuts_kb) - 1)]
     seqs = {}
     for k, name in enumerate(names):
@@ -139,6 +156,7 @@ def test_refine_flags_the_folded_layout(synthetic, tmp_path):
     table = pd.read_csv(tmp_path / "junctions.tsv", sep="\t")
     assert set(table["layout"]) == {"input", "refined"}
     assert (table.loc[table["layout"] == "refined", "status"] == "joined").all()
+    assert summary["circular"] == []  # 300 kb: below CIRCULAR_MIN_LENGTH, not tested
     assert (tmp_path / "refine_report.txt").read_text().startswith("instagraal-refine")
 
 
@@ -294,3 +312,127 @@ def test_place_short_contigs_orders_and_orients_within_a_slot():
     chains, placed = place_short_contigs([[("A", 1), ("B", 1)]], es, ["s1", "s2", "s3"], {"A", "B"}, 10.0, 10.0)
     assert chains == [[("A", 1), ("s1", 1), ("s2", -1), ("B", 1)]]
     assert placed == {"s1": 55.0, "s2": 45.0}
+
+
+# ---------------------------------------------------------------------------
+# Circular scaffolds and recentering
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(scope="module")
+def skewed_circle(tmp_path_factory):
+    """The folded synthetic circle, with GC skew: origin at 0, terminus at 150 kb."""
+    data = _make_genome(tmp_path_factory.mktemp("refine_skewed"), CUTS_KB, REVERSED, skew=0.2)
+    folded = {"scaffold1": [("ctg0", -1), ("ctg5", 1), ("ctg1", 1), ("ctg4", -1), ("ctg2", -1), ("ctg3", 1)]}
+    data["layout"] = _write_layout(data["dir"] / "new_info_frags.txt", folded, data["lengths"])
+    return data
+
+
+def _start_on_circle(seq, chrom):
+    """Position of the circle (forward strand) where a rotation of it, on either strand, starts."""
+    size = len(chrom)
+    forward = (chrom * 2).find(seq[:2000])
+    if forward >= 0:
+        return forward % size
+    return (size - (_revcomp(chrom) * 2).find(seq[:2000])) % size
+
+
+def _circular_distance(a, b, size):
+    d = abs(a - b) % size
+    return min(d, size - d)
+
+
+@pytest.mark.parametrize("origin_first,expected_start", [(False, 150_000), (True, 0)], ids=["terminus-cut", "origin-first"])
+def test_refine_recenters_a_circular_chromosome(skewed_circle, tmp_path, monkeypatch, origin_first, expected_start):
+    monkeypatch.setattr(refine_module, "CIRCULAR_MIN_LENGTH", 100_000)
+    data = skewed_circle
+    summary = _refine(data, tmp_path, origin_first=origin_first)
+    assert summary["circular"] == summary["recentered"] == ["refined_scaffold_1"]
+    records = list(SeqIO.parse(str(tmp_path / "refined_genome.fa"), "fasta"))
+    assert len(records) == 1
+    seq = str(records[0].seq)
+    assert len(seq) == GENOME_KB * 1000
+    assert seq in data["chrom"] * 2 or _revcomp(seq) in data["chrom"] * 2
+    # cut at the terminus (origin in the middle), or at the origin: within one 10 kb skew window
+    assert _circular_distance(_start_on_circle(seq, data["chrom"]), expected_start, len(data["chrom"])) <= 10_000
+    assert "recentered on its GC skew" in summary["report"]
+    # the contig holding the cut starts and ends the scaffold, and the layout still matches the FASTA
+    scaffolds = parse_info_frags(str(tmp_path / "refined_info_frags.txt"))
+    (bins,) = scaffolds.values()
+    assert sum(e - s for _c, _i, s, e, _o in bins) == len(seq)
+
+
+def test_refine_leaves_skewless_circles_alone(synthetic, tmp_path, monkeypatch):
+    """The plain synthetic circle has no GC skew: circular, but not recentered."""
+    monkeypatch.setattr(refine_module, "CIRCULAR_MIN_LENGTH", 100_000)
+    summary = _refine(synthetic, tmp_path)
+    assert summary["circular"] == ["refined_scaffold_1"]
+    assert summary["recentered"] == []
+    assert "not recentered" in summary["report"]
+    # the join refine refuses (it would close a cycle) is reported
+    table = pd.read_csv(tmp_path / "junctions.tsv", sep="\t")
+    assert list(table.loc[table["status"] == "closure", "scaffold"]) == ["refined_scaffold_1"]
+
+
+def test_refine_no_recenter(skewed_circle, tmp_path, monkeypatch):
+    monkeypatch.setattr(refine_module, "CIRCULAR_MIN_LENGTH", 100_000)
+    summary = _refine(skewed_circle, tmp_path, recenter=False)
+    assert summary["circular"] == ["refined_scaffold_1"]
+    assert summary["recentered"] == []
+
+
+def test_linear_chromosome_is_not_circular(with_short_contig, tmp_path):
+    summary = _refine_short(with_short_contig, tmp_path, {"scaffold1": TRUE_ORDER})
+    assert summary["circular"] == []
+
+
+def test_replication_axis_on_two_replichores():
+    rng = np.random.default_rng(0)
+    g_rich = "".join(rng.choice(list("ACGT"), size=300_000, p=[0.25, 0.2, 0.3, 0.25]))
+    c_rich = g_rich.translate(str.maketrans("GC", "CG"))
+    chrom = g_rich + c_rich  # origin at 0, terminus at 300 kb
+    size = len(chrom)
+    for shift in (0, 150_000, 420_000):
+        rotated = chrom[shift:] + chrom[:shift]
+        for seq in (rotated, _revcomp(rotated)):
+            origin, terminus, fit = replication_axis(seq)
+            expected_origin = (-shift) % size if seq is rotated else shift % size
+            assert _circular_distance(origin, expected_origin, size) <= 10_000
+            assert _circular_distance(terminus, (expected_origin + 300_000) % size, size) <= 10_000
+            assert fit > 0.9
+    assert replication_axis("ACGT" * 1000) is None
+
+
+def test_rotate_splits_the_contig_holding_the_cut():
+    rng = np.random.default_rng(3)
+    genome = {name: "".join(rng.choice(list("ACGT"), size=n)) for name, n in (("a", 30), ("b", 50), ("c", 20))}
+    entries = [("a", 1, 0, 30), ("b", -1, 0, 50), ("c", 1, 5, 20)]
+
+    def sequence(es):
+        return "".join(genome[c][s:e] if o == 1 else _revcomp(genome[c][s:e]) for c, o, s, e in es)
+
+    whole = sequence(entries)
+    for cut in (0, 10, 30, 47, 80, 94):
+        rotated = rotate(entries, cut)
+        assert sequence(rotated) == whole[cut:] + whole[:cut]
+        assert all(s < e for _c, _o, s, e in rotated)
+
+
+def test_refine_cli_without_input_layout_gives_the_same_assembly(synthetic, tmp_path):
+    """The refined assembly depends on the contact map and the contigs only: -i is optional."""
+    common = ["-c", str(synthetic["cool"]), "-f", str(synthetic["fasta"]), "-w", "30000", "-l", "10000", "-j", "NNNNNN"]
+    with_layout = CliRunner().invoke(refine_main, [*common, "-i", str(synthetic["layout"]), "-o", str(tmp_path / "a")])
+    without = CliRunner().invoke(refine_main, [*common, "-o", str(tmp_path / "b"), "--origin-first"])
+    assert with_layout.exit_code == 0, with_layout.output
+    assert without.exit_code == 0, without.output
+    assert "Input layout: none given" in without.output
+    assert (tmp_path / "a" / "refined_genome.fa").read_text() == (tmp_path / "b" / "refined_genome.fa").read_text()
+
+
+@pytest.mark.parametrize("flag", ["--qc-only", "--keep-unresolved"])
+def test_refine_cli_layout_options_need_a_layout(synthetic, tmp_path, flag):
+    result = CliRunner().invoke(
+        refine_main, ["-c", str(synthetic["cool"]), "-f", str(synthetic["fasta"]), "-o", str(tmp_path / "o"), flag]
+    )
+    assert result.exit_code != 0
+    assert "need an input layout" in result.output

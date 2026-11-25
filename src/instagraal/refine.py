@@ -31,6 +31,15 @@ clearly beats every other one (``short_margin``); the others become scaffolds of
 own. Placement depends on the contact map only, not on where the input layout put
 them: the scaffolder misplaces many short contigs.
 
+A scaffold of at least ``CIRCULAR_MIN_LENGTH`` is circular when its two outer ends
+would be joined if cycles were allowed (they are each other's best free partner);
+shorter ones are not tested, as their two ends are close along the scaffold itself.
+A circular scaffold is recentered on its GC skew, whose cumulative sum is lowest at
+the replication origin and highest at the terminus: it is cut at the terminus, which
+puts the origin near its middle (or, with ``origin_first``, at the origin), provided
+the skew fits the two-replichore pattern. Skew cannot tell the two strands apart, so
+the orientation is left as it is.
+
 The input layout (``new_info_frags.txt`` from ``instagraal-polish``, or the raw
 ``info_frags.txt``) is scored the same way, which gives a reference-free QC of its
 joins, and GC skew is reported for large scaffolds: a correctly assembled circular
@@ -63,6 +72,9 @@ REFINED_GENOME_NAME = "refined_genome.fa"
 JUNCTIONS_NAME = "junctions.tsv"
 REPORT_NAME = "refine_report.txt"
 SKEW_MIN_SCAFFOLD = 500_000
+CIRCULAR_MIN_LENGTH = 500_000  # shorter scaffolds are not tested: their two ends are close along the scaffold itself
+RECENTER_MIN_FIT = 0.75  # share of skew windows that must fit the two-replichore pattern
+RECENTER_ARMS = (0.25, 0.75)  # allowed share of the scaffold from origin to terminus
 
 
 # ---------------------------------------------------------------------------
@@ -500,6 +512,89 @@ def layout_contig_joins(scaffolds: dict[str, list], keep: set[str]) -> list[tupl
     return joins
 
 
+Entry = tuple[str, int, int, int]  # contig, orientation, start, end
+
+
+def closing_scores(
+    chains: list[list[tuple[str, int]]],
+    es: EndScores,
+    anchors: set[str],
+    min_score: float = DEFAULT_MIN_SCORE,
+    min_margin: float = DEFAULT_MIN_MARGIN,
+) -> list[float | None]:
+    """For each chain, the score of the join that would close it into a circle, or None.
+
+    The outer ends of the chains (their first and last ``anchors`` contigs) are the
+    ends left free by joining. A chain closes when its own two outer ends are each
+    other's best free partner, with ``score >= min_score`` and a lead of ``min_margin``
+    over every other free end: the join that ``join_ends`` refuses only because it
+    would close a cycle. A lone contig cannot be tested.
+    """
+    outer: list[tuple[End, End] | None] = []
+    for chain in chains:
+        longs = [(c, o) for c, o in chain if c in anchors]
+        if not longs:
+            outer.append(None)
+            continue
+        (c0, o0), (c1, o1) = longs[0], longs[-1]
+        outer.append(((c0, LEFT if o0 == 1 else RIGHT), (c1, RIGHT if o1 == 1 else LEFT)))
+    free = np.array([es.index[e] for ends in outer if ends for e in ends], dtype=np.int64)
+    scores: list[float | None] = []
+    for ends in outer:
+        if ends is None or ends[0][0] == ends[1][0]:
+            scores.append(None)
+            continue
+        ia, ib = es.index[ends[0]], es.index[ends[1]]
+        score = float(es.score[ia, ib])
+        others = free[(free != ia) & (free != ib)]
+        runner_up = max((float(es.score[i, others].max()) for i in (ia, ib)), default=0.0) if others.size else 0.0
+        closes = score >= min_score and score - max(runner_up, 0.0) >= min_margin
+        scores.append(score if closes else None)
+    return scores
+
+
+def replication_axis(seq: str, window: int = 10_000, smooth: int = 10) -> tuple[int, int, float] | None:
+    """Origin and terminus of a circular chromosome from its cumulative GC skew.
+
+    The cumulative skew is lowest at the origin and highest at the terminus, on either
+    strand. Returns their positions and the share of windows whose skew (smoothed over
+    ``smooth`` windows) has the sign the two-replichore pattern predicts: positive from
+    origin to terminus, negative after. None if the sequence is too short.
+    """
+    arr = np.frombuffer(seq.upper().encode(), dtype=np.uint8)
+    n = len(arr) // window
+    if n < 2 * smooth:
+        return None
+    g = (arr[: n * window] == ord("G")).reshape(n, window).sum(1)
+    c = (arr[: n * window] == ord("C")).reshape(n, window).sum(1)
+    skew = (g - c) / np.maximum(g + c, 1)
+    cumulative = np.cumsum(skew)
+    imin, imax = int(np.argmin(cumulative)), int(np.argmax(cumulative))
+    smoothed = np.convolve(skew, np.ones(smooth) / smooth, mode="same")
+    k = np.arange(n)
+    predicted = np.where(((k - imin) % n) < ((imax - imin) % n), 1, -1)
+    fit = float(np.mean(np.sign(smoothed) == predicted))
+    return (imin + 1) * window % len(seq), (imax + 1) * window % len(seq), fit
+
+
+def rotate(entries: list[Entry], cut: int) -> list[Entry]:
+    """The circular scaffold ``entries`` read from position ``cut`` onwards.
+
+    The entry holding ``cut`` is split in two: its part after the cut starts the
+    scaffold, its part before ends it.
+    """
+    offset = 0
+    for k, (c, o, s, e) in enumerate(entries):
+        if offset + (e - s) > cut:
+            q = cut - offset
+            if q == 0:
+                return entries[k:] + entries[:k]
+            head, tail = ((c, o, s, s + q), (c, o, s + q, e)) if o == 1 else ((c, o, e - q, e), (c, o, s, e - q))
+            return [tail, *entries[k + 1 :], *entries[:k], head]
+        offset += e - s
+    return list(entries)
+
+
 _RC = str.maketrans("ACGTNacgtn", "TGCANtgcan")
 
 
@@ -535,8 +630,13 @@ def _n50(sizes: Iterable[int]) -> int:
     return 0
 
 
+def _row(es: EndScores, name: str, ea: End, eb: End, verdict: str) -> tuple:
+    a, b = es.index[ea], es.index[eb]
+    return ("refined", name, ea, eb, es.score[a, b], es.oe[a, b], es.contacts[a, b], verdict)
+
+
 def run_refine(
-    info_frags: str | pathlib.Path,
+    info_frags: str | pathlib.Path | None,
     cool_path: str | pathlib.Path,
     fasta: str | pathlib.Path,
     output_dir: str | pathlib.Path,
@@ -550,12 +650,17 @@ def run_refine(
     qc_only: bool = False,
     place_short: bool = True,
     short_margin: float = DEFAULT_SHORT_MARGIN,
+    recenter: bool = True,
+    origin_first: bool = False,
 ) -> dict[str, Any]:
     """Score the input layout's joins and, unless ``qc_only``, re-scaffold the contigs.
 
-    Writes ``junctions.tsv`` and ``refine_report.txt`` and, unless ``qc_only``,
+    The refined assembly depends on the contact map and the contigs only; the input
+    layout (``info_frags``, optional unless ``qc_only`` or ``keep_unresolved``) is
+    scored for QC. Writes ``junctions.tsv`` and ``refine_report.txt`` and, unless ``qc_only``,
     ``refined_info_frags.txt`` and ``refined_genome.fa`` (whole contigs, joined with
-    ``junction`` between them) into ``output_dir``. Returns a summary dictionary.
+    ``junction`` between them; a recentered scaffold starts and ends with the two parts
+    of the contig it is cut in) into ``output_dir``. Returns a summary dictionary.
     """
     output_dir = pathlib.Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -564,7 +669,9 @@ def run_refine(
     missing = [c for c in genome if c not in cb.lengths]
     if missing:
         raise ValueError(f"{len(missing)} contig(s) of the FASTA are absent from the contact map, e.g. {missing[0]}.")
-    layout = parse_info_frags(str(info_frags))
+    if info_frags is None and (qc_only or keep_unresolved):
+        raise ValueError("qc_only and keep_unresolved need an input layout (info_frags).")
+    layout = parse_info_frags(str(info_frags)) if info_frags is not None else {}
     unknown = {b[0] for bins in layout.values() for b in bins} - set(genome)
     if unknown:
         raise ValueError(f"The layout uses contigs absent from the FASTA, e.g. {min(unknown)}.")
@@ -623,25 +730,58 @@ def run_refine(
             chains, placed = place_short_contigs(chains, es_all, short, keep, min_score, short_margin)
         chains += [[(c, 1)] for c in short if c not in placed]
         chains.sort(key=lambda ch: -sum(len(genome[c]) for c, _o in ch))
-        fasta_index = {c: k for k, c in enumerate(genome)}
-        info_path = output_dir / REFINED_INFO_FRAGS_NAME
-        with open(info_path, "w") as fh:
-            for k, chain in enumerate(chains, start=1):
-                fh.write(f">refined_scaffold_{k}\ninit_contig\tid_frag\torientation\tstart\tend\n")
-                fh.writelines(f"{c}\t{fasta_index[c]}\t{o}\t0\t{len(genome[c])}\n" for c, o in chain)
-        write_fasta(str(fasta), str(info_path), output=str(output_dir / REFINED_GENOME_NAME), junction=junction)
-        for k, chain in enumerate(chains, start=1):
-            name = f"refined_scaffold_{k}"
+        names = [f"refined_scaffold_{k}" for k in range(1, len(chains) + 1)]
+        for name, chain in zip(names, chains, strict=True):
             # the joins between long contigs, then the neighbours of each placed short contig
             long_pairs = itertools.pairwise([(c, o) for c, o in chain if c in keep])
             short_pairs = ((x, y) for x, y in itertools.pairwise(chain) if x[0] not in keep or y[0] not in keep)
             for verdict, pairs in (("joined", long_pairs), ("placed", short_pairs)):
                 for (ca, oa), (cbn, ob) in pairs:
-                    ea = (ca, RIGHT if oa == 1 else LEFT)
-                    eb = (cbn, LEFT if ob == 1 else RIGHT)
-                    a, b = es_all.index[ea], es_all.index[eb]
-                    rows.append(("refined", name, ea, eb, es_all.score[a, b], es_all.oe[a, b], es_all.contacts[a, b], verdict))
-            seq = _scaffold_sequence(genome, [(c, o, 0, len(genome[c])) for c, o in chain])
+                    rows.append(_row(es_all, name, (ca, RIGHT if oa == 1 else LEFT), (cbn, LEFT if ob == 1 else RIGHT), verdict))
+
+        # circular scaffolds, recentered on their GC skew
+        layouts = [[(c, o, 0, len(genome[c])) for c, o in chain] for chain in chains]
+        circular, recentered, circle_lines = [], [], []
+        for k, closure in enumerate(closing_scores(chains, es, keep, min_score, min_margin)):
+            seq = _scaffold_sequence(genome, layouts[k])
+            if closure is None or len(seq) < CIRCULAR_MIN_LENGTH:
+                continue
+            name = names[k]
+            circular.append(name)
+            longs = [(c, o) for c, o in chains[k] if c in keep]
+            (c0, o0), (c1, o1) = longs[0], longs[-1]
+            ends = (c1, RIGHT if o1 == 1 else LEFT), (c0, LEFT if o0 == 1 else RIGHT)
+            rows.append(_row(es_all, name, *ends, "closure"))
+            what = f"  {name}: {len(seq):,} bp, closure score {closure:.1f}"
+            axis = replication_axis(seq) if recenter else None
+            if axis is None:
+                circle_lines.append(what)
+            else:
+                origin, terminus, fit = axis
+                arm = ((terminus - origin) % len(seq)) / len(seq)
+                if fit < RECENTER_MIN_FIT or not RECENTER_ARMS[0] <= arm <= RECENTER_ARMS[1]:
+                    circle_lines.append(
+                        f"{what}; not recentered: GC skew fits two replichores on {fit:.0%} of the scaffold, "
+                        f"origin-to-terminus arm {arm:.0%}"
+                    )
+                    continue
+                cut = origin if origin_first else terminus
+                layouts[k] = rotate(layouts[k], cut)
+                recentered.append(name)
+                circle_lines.append(
+                    f"{what}; recentered on its GC skew: origin at {(origin - cut) % len(seq):,} bp, terminus at "
+                    f"{(terminus - cut) % len(seq):,} bp (replichores {arm:.0%} / {1 - arm:.0%}, skew fits {fit:.0%})"
+                )
+
+        fasta_index = {c: k for k, c in enumerate(genome)}
+        info_path = output_dir / REFINED_INFO_FRAGS_NAME
+        with open(info_path, "w") as fh:
+            for name, entries in zip(names, layouts, strict=True):
+                fh.write(f">{name}\ninit_contig\tid_frag\torientation\tstart\tend\n")
+                fh.writelines(f"{c}\t{fasta_index[c]}\t{o}\t{st}\t{en}\n" for c, o, st, en in entries)
+        write_fasta(str(fasta), str(info_path), output=str(output_dir / REFINED_GENOME_NAME), junction=junction)
+        for name, entries in zip(names, layouts, strict=True):
+            seq = _scaffold_sequence(genome, entries)
             if len(seq) >= SKEW_MIN_SCAFFOLD:
                 share, changes = gc_skew_summary(seq)
                 skew_lines.append(f"  refined  {name}: {len(seq):,} bp, skew > 0 on {share:.0%}, {changes} sign changes")
@@ -651,11 +791,15 @@ def run_refine(
             new_joins=len(refined_joins) - statuses.get("kept", 0),
             scaffolds=len(chains),
             scaffold_n50=_n50(sizes),
-            input_n50=_n50([sum(e - s for _c, _i, s, e, _o in bins) for bins in layout.values()]),
+            input_n50=_n50(
+                [sum(e - s for _c, _i, s, e, _o in bins) for bins in layout.values()] if layout else map(len, genome.values())
+            ),
             short_contigs=len(short),
             short_placed=len(placed),
             short_placed_bp=sum(len(genome[c]) for c in placed),
             short_alone_bp=sum(len(genome[c]) for c in short if c not in placed),
+            circular=circular,
+            recentered=recentered,
         )
 
     with open(output_dir / JUNCTIONS_NAME, "w") as fh:
@@ -670,13 +814,19 @@ def run_refine(
             f"{len(contigs)} of {len(genome)}; min score {min_score}, min margin {min_margin}"
         ),
         f"  contact decay exponent inside contigs: {es.decay_slope:.2f}",
-        f"Input layout: {len(input_joins)} joins between contigs >= {min_contig_length:,} bp",
+        (
+            f"Input layout: {len(input_joins)} joins between contigs >= {min_contig_length:,} bp"
+            if info_frags is not None
+            else "Input layout: none given (contigs as in the FASTA)"
+        ),
     ]
     if not qc_only:
-        lines.append(
-            f"  kept {statuses.get('kept', 0)}, contradicted {statuses.get('contradicted', 0)} (an end has a better partner), "
-            f"unsupported {statuses.get('unsupported', 0)} (score < {min_score}), unresolved {statuses.get('unresolved', 0)}"
-        )
+        if info_frags is not None:
+            lines.append(
+                f"  kept {statuses.get('kept', 0)}, contradicted {statuses.get('contradicted', 0)} (an end has a better "
+                f"partner), unsupported {statuses.get('unsupported', 0)} (score < {min_score}), "
+                f"unresolved {statuses.get('unresolved', 0)}"
+            )
         lines.append(
             f"Refined: {summary['refined_joins']} joins ({summary['new_joins']} new), {summary['scaffolds']} scaffolds, "
             f"N50 {summary['scaffold_n50']:,} bp (input N50 {summary['input_n50']:,} bp)"
@@ -690,6 +840,11 @@ def run_refine(
                 else f"  contigs < {min_contig_length:,} bp: {summary['short_contigs']} ({summary['short_alone_bp']:,} bp), "
                 "each a scaffold of its own"
             )
+        lines.append(
+            f"Circular scaffolds (>= {CIRCULAR_MIN_LENGTH:,} bp, outer ends joined if cycles were allowed): "
+            f"{len(circular) or 'none'}"
+        )
+        lines += circle_lines
     else:
         supported = sum(1 for r in rows if r[4] >= min_score)
         lines.append(f"  {supported} reach the minimum score of {min_score}")

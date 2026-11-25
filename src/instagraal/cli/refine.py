@@ -22,9 +22,12 @@ from ..version import __version__ as VERSION_NUMBER
     "-i",
     "--info-frags",
     "info_frags",
-    required=True,
+    default=None,
     type=click.Path(exists=True, dir_okay=False, path_type=pathlib.Path),
-    help="Layout to check and refine: new_info_frags.txt from instagraal-polish (or instagraal's info_frags.txt).",
+    help=(
+        "Layout to check: new_info_frags.txt from instagraal-polish (or instagraal's info_frags.txt). Optional: the "
+        "refined assembly depends on the contact map and the contigs only; the layout is scored for QC."
+    ),
 )
 @click.option(
     "-c",
@@ -98,6 +101,21 @@ from ..version import __version__ as VERSION_NUMBER
     help="Minimum lead of a short contig's best place over its next best (higher: fewer, more reliable placements).",
 )
 @click.option(
+    "--recenter/--no-recenter",
+    default=True,
+    show_default=True,
+    help=(
+        "Cut each circular scaffold of at least 500 kb at the replication terminus found from its GC skew, so that "
+        "the origin sits near its middle (left as is if the skew does not show two clear replichores)."
+    ),
+)
+@click.option(
+    "--origin-first",
+    is_flag=True,
+    default=False,
+    help="With --recenter, start circular scaffolds at the origin instead.",
+)
+@click.option(
     "-j",
     "--junction",
     default="",
@@ -116,7 +134,7 @@ from ..version import __version__ as VERSION_NUMBER
     help="Only score the input layout's joins (junctions.tsv, refine_report.txt); do not re-scaffold.",
 )
 def main(
-    info_frags: pathlib.Path,
+    info_frags: pathlib.Path | None,
     cool_path: pathlib.Path,
     fasta: pathlib.Path,
     output_dir: pathlib.Path,
@@ -128,6 +146,8 @@ def main(
     junction: str,
     place_short: bool,
     short_margin: float,
+    recenter: bool,
+    origin_first: bool,
     keep_unresolved: bool,
     qc_only: bool,
 ) -> None:
@@ -138,7 +158,9 @@ def main(
     every contig junction from the contacts next to the two contig ends only, flags
     the input layout's unsupported or contradicted joins, and re-joins whole contigs
     whose ends are each other's clear best partner, then places the contigs too short
-    to be joined where their contacts clearly fit.
+    to be joined where their contacts clearly fit, and recenters circular scaffolds
+    on their GC skew. The result does not depend on the input layout, so the GPU
+    scaffolding step can be skipped: run it on instagraal-pre's output alone.
 
     \b
     Outputs (in OUTPUT_DIR):
@@ -149,6 +171,8 @@ def main(
     """
     if window < binsize:
         raise click.BadParameter("--window must be at least --binsize.", param_hint="--window")
+    if info_frags is None and (qc_only or keep_unresolved):
+        raise click.UsageError("--qc-only and --keep-unresolved need an input layout (--info-frags).")
     try:
         run_refine(
             info_frags=info_frags,
@@ -165,6 +189,8 @@ def main(
             qc_only=qc_only,
             place_short=place_short,
             short_margin=short_margin,
+            recenter=recenter,
+            origin_first=origin_first,
         )
     except ValueError as exc:
         raise click.ClickException(str(exc)) from exc
