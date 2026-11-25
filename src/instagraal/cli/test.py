@@ -67,7 +67,10 @@ def _check_gpu(device: int) -> None:
     try:
         import pycuda
     except ImportError as exc:
-        raise click.ClickException("pycuda is not installed.  instagraal requires it along with a CUDA-capable GPU.") from exc
+        raise click.ClickException(
+            "pycuda is not installed: instagraal-test runs the MCMC scaffolder, which needs it and a CUDA GPU "
+            "(pip install 'instagraal[gpu]', which needs the CUDA toolkit)."
+        ) from exc
     click.echo(f"  pycuda version: {pycuda.VERSION_TEXT}")
 
     try:

@@ -285,6 +285,17 @@ def test_cpu_mode_needs_no_gpu_check(tmp_path):
     assert "[2/4] Running instagraal-refine" in result.output
 
 
+@needs_data
+@pytest.mark.parametrize("args", [[], ["--mode", "legacy"]])
+def test_mcmc_without_pycuda_stops_before_running_anything(args, no_pycuda, tmp_path):
+    with patch("instagraal.cli.endtoend._run_cmd") as run_cmd:
+        result = _invoke([*_base_args(), "--output-dir", tmp_path, *args])
+    assert result.exit_code == 1, result.output
+    assert "pip install 'instagraal[gpu]'" in result.output
+    assert "Use --mode cpu" in result.output
+    run_cmd.assert_not_called()
+
+
 # ---------------------------------------------------------------------------
 # Successful invocation (mocked pipeline)
 # ---------------------------------------------------------------------------

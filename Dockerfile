@@ -35,7 +35,7 @@ RUN apt-get update \
 
 COPY . /tmp/instaGRAAL
 
-RUN python3.12 -m pip install --break-system-packages /tmp/instaGRAAL[dev] \
+RUN python3.12 -m pip install --break-system-packages "/tmp/instaGRAAL[gpu,dev]" \
   && rm -rf /tmp/instaGRAAL
 
 WORKDIR /work

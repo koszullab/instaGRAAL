@@ -145,8 +145,8 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install instagraal with test extras
-        run: pip install ".[test]"
+      - name: Install instagraal with GPU and test extras
+        run: pip install ".[gpu,test]"
 
       - name: Run pytest
         run: pytest -v --tb=short --junitxml=test-results.xml

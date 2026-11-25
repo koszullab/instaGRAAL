@@ -36,13 +36,17 @@ dependencies = [
     "matplotlib",
     "h5py",
     "biopython>=1.78",
-    "pycuda",
     "click",
     "cooler",
     "pandas",
     "pyfaidx",
 ]
 [project.optional-dependencies]
+# the MCMC scaffolder (instagraal, and instagraal-endtoend modes with mcmc) runs on a CUDA GPU;
+# building pycuda needs the CUDA toolkit
+gpu = [
+    "pycuda",
+]
 test = [
     "coverage[toml]",
     "isort",

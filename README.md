@@ -10,14 +10,22 @@
 
 Large genome reassembly based on Hi-C data (continuation and partial rewrite of [GRAAL](https://github.com/koszullab/GRAAL)).
 It relies on `pycuda` for GPU-accelerated MCMC scaffolding and `cooler` for multi-resolution contact map generation.
-Requires **Python 3.10-3.12** and the **CUDA toolkit** (to install `pycuda`). The default pipeline runs its MCMC on an **NVIDIA GPU**; `instagraal-endtoend --mode cpu` needs none.
+Requires **Python 3.10-3.12**. The default pipeline runs its MCMC on an **NVIDIA GPU** and needs the `gpu` extra (see [Installation](#installation)); `instagraal-endtoend --mode cpu` needs neither.
 
 ## Installation
 
-`instaGRAAL` is available on PyPI:
+`instaGRAAL` is available on PyPI. On any machine:
 
 ```sh
 pip install instagraal
+```
+
+This installs every step but the MCMC scaffolder: `instagraal-endtoend --mode cpu`, `instagraal-pre`, `instagraal-refine`, `instagraal-polish`, `instagraal-post` and `instagraal-stats`.
+
+On a machine with an NVIDIA GPU and the **CUDA toolkit**, the `gpu` extra adds `pycuda`, which the MCMC scaffolder (`instagraal`, `instagraal-test` and the default `instagraal-endtoend` mode) needs. `pip` builds `pycuda` against the toolkit (see [Troubleshooting](#cuda-not-found-during-installation)):
+
+```sh
+pip install "instagraal[gpu]"
 ```
 
 Pre-built Docker images are also available with `python3.12` and various `CUDA` versions:
@@ -77,7 +85,7 @@ Run `instagraal-endtoend -h` for the full option list.
 | `cpu` | `refine,extend` | no | `instagraal-refine` alone, its second pass forced: the most contiguous assemblies, though on clearly incomplete bins that pass can add misjoins (`--mode refine` leaves it out) |
 | `legacy` | `bomb,mcmc,polish` | yes | The pipeline before refine: MCMC on the genome exploded into bins, then `instagraal-polish` |
 
-Other combinations work too, e.g. `--mode mcmc,polish` (no bombing) or `--mode mcmc` (the MCMC scaffolds as they are). Refine needs memory in proportion to the square of the number of contigs: above 5,000 contigs, the default mode falls back to `legacy`. Whatever the mode, the final assembly is also copied to `out/final_genome.fa`, and its layout to `out/final_info_frags.txt`. The former `--no-bomb` and `--no-polish` still work, with their former meaning on the legacy pipeline, but are deprecated.
+Other combinations work too, e.g. `--mode mcmc,polish` (no bombing) or `--mode mcmc` (the MCMC scaffolds as they are). Every mode with `mcmc` needs an NVIDIA GPU and the `gpu` extra (`pip install "instagraal[gpu]"`). Refine needs memory in proportion to the square of the number of contigs: above 5,000 contigs, the default mode falls back to `legacy`. Whatever the mode, the final assembly is also copied to `out/final_genome.fa`, and its layout to `out/final_info_frags.txt`. The former `--no-bomb` and `--no-polish` still work, with their former meaning on the legacy pipeline, but are deprecated.
 
 ### Step-by-step
 
@@ -160,8 +168,9 @@ After refining (`instagraal-refine`):
 ```sh
 git clone https://github.com/koszullab/instagraal.git
 cd instagraal
-uv sync --python 3.12          # creates .venv and installs all dependencies
-uv run pytest                  # run the test suite
+uv sync --python 3.12 --extra test               # creates .venv; GPU tests are skipped
+uv sync --python 3.12 --extra test --extra gpu   # or, with the CUDA toolkit: adds pycuda for the GPU tests
+uv run pytest                                    # run the test suite
 ```
 
 Format and lint before opening a PR:
@@ -177,7 +186,7 @@ Please open a pull request against `master` with a clear description of the chan
 
 ### CUDA not found during installation
 
-`pycuda` requires the **full CUDA Toolkit** (headers + compiler), not just the driver. Verify with:
+`pip install "instagraal[gpu]"` builds `pycuda`, which requires the **full CUDA Toolkit** (headers + compiler), not just the driver. Without a GPU, `pip install instagraal` needs neither. Verify with:
 
 ```sh
 nvcc --version
