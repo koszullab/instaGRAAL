@@ -1648,7 +1648,8 @@ class pyramid:
                 self.dict_sequence_contigs[id_chrom] = ""
 
         chrom_list.append(id_chrom)
-        self.dict_sequence_contigs[id_chrom] = "".join(all_lines[start:-1])
+        # up to the very last line: [start:-1] dropped the end of the last record
+        self.dict_sequence_contigs[id_chrom] = "".join(all_lines[start:])
 
         chrom_list = list(self.dict_sequence_contigs.keys())
         # chrom_list.sort()
