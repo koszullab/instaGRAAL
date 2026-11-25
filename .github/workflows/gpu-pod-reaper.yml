@@ -1,0 +1,39 @@
+name: GPU pod reaper
+
+# Last safeguard against runaway RunPod costs from test-gpu.yml: terminates
+# every CI pod (name starting with gha-instagraal-) older than
+# MAX_POD_AGE_MINUTES, whatever happened to the run that created it
+# (force-cancelled run, failed cleanup job, container that never started...).
+# Other pods of the RunPod account are never touched. Scheduled workflows run
+# from the default branch only.
+
+on:
+  schedule:
+    - cron: "11,31,51 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gpu-pod-reaper
+
+jobs:
+  reap:
+    name: Terminate stale CI pods
+    if: github.repository == 'koszullab/instaGRAAL'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout CI scripts
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/runpod
+          persist-credentials: false
+
+      - name: Terminate CI pods older than MAX_POD_AGE_MINUTES
+        env:
+          RUNPOD_API_KEY: ${{ secrets.RUNPOD_API_KEY }}
+          # POD_TTL_MINUTES of test-gpu.yml (60) + 15 min.
+          MAX_POD_AGE_MINUTES: 75
+        run: bash .github/runpod/ci.sh reap
