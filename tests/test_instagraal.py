@@ -11,7 +11,7 @@ import pathlib
 import shutil
 import sys
 import types
-from unittest.mock import MagicMock, create_autospec, patch
+from unittest.mock import patch
 
 import h5py
 import pandas as pd
@@ -156,38 +156,6 @@ def test_pyramid_build_from_pre_output(pre_output_dir, tmp_path):
     with h5py.File(hdf5_path, "r") as f:
         assert f.attrs.get("0") == "done", "Pyramid level 0 not marked as done"
         assert "0" in f, "Pyramid level 0 dataset missing from HDF5"
-
-
-# ---------------------------------------------------------------------------
-# Tests: run_instagraal dispatch (no GPU work)
-# ---------------------------------------------------------------------------
-
-
-def test_run_instagraal_calls_existing_methods(tmp_path, monkeypatch):
-    """``run_instagraal`` only calls methods that ``instagraal_class`` defines.
-
-    The class is replaced by an autospec mock, which raises AttributeError for
-    any attribute the real class lacks, so a call to a removed method fails
-    here without running the MCMC. Importing the module still needs pycuda
-    and a GPU: the test runs on the GPU CI only.
-    """
-    try:
-        import pycuda.autoinit  # noqa: F401
-    except Exception as exc:  # noqa: BLE001  (no pycuda, or pycuda without a usable CUDA device)
-        pytest.skip(f"instagraal.instagraal needs pycuda and a GPU: {exc}")
-    from instagraal import instagraal as ig
-
-    mock_cls = create_autospec(ig.instagraal_class)
-    mock_stats = MagicMock()
-    monkeypatch.setattr(ig, "instagraal_class", mock_cls)
-    monkeypatch.setattr("instagraal.assembly_stats.print_assembly_stats", mock_stats)
-    p2 = mock_cls.return_value
-    p2.simulation = MagicMock()  # set in __init__, so not part of the autospec
-
-    ig.run_instagraal(tmp_path, REF_FASTA, cycles=3, neighborhood=7, bomb=True, save_matrix=True)
-
-    p2.full_em.assert_called_once_with(n_cycles=3, n_neighbours=7, bomb=True, id_start_sample_param=4, save_matrix=True)
-    mock_stats.assert_called_once_with(p2.simulation.new_fasta, label="Scaffolded assembly")
 
 
 # ---------------------------------------------------------------------------

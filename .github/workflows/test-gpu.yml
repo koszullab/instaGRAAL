@@ -24,7 +24,9 @@ on:
   pull_request:
     paths:
       - "src/**"
-      - "tests/**"
+      - "tests/test_instagraal_gpu.py"
+      - "tests/conftest.py"
+      - "tests/data/**"
       - "pyproject.toml"
       - ".github/workflows/test-gpu.yml"
       - ".github/runpod/**"
@@ -111,7 +113,8 @@ jobs:
         run: bash .github/runpod/ci.sh wait-online
 
   # ---------------------------------------------------------------------------
-  # Run the full test suite — one job per Python × CUDA combo.
+  # Run the GPU tests (tests/test_instagraal_gpu.py) — one job per Python ×
+  # CUDA combo. Every other test runs on GitHub's runners (test-cpu.yml).
   # ---------------------------------------------------------------------------
   test-gpu:
     name: Test (py${{ matrix.python-version }} / CUDA ${{ matrix.cuda-version }})
@@ -148,8 +151,14 @@ jobs:
       - name: Install instagraal with GPU and test extras
         run: pip install ".[gpu,test]"
 
-      - name: Run pytest
-        run: pytest -v --tb=short --junitxml=test-results.xml
+      # The GPU tests skip themselves when pycuda cannot use the GPU: fail here
+      # instead, so that a host whose CUDA does not work cannot pass by
+      # skipping every test.
+      - name: Check that pycuda can use the GPU
+        run: python -c "import pycuda.driver as cuda; cuda.init(); assert cuda.Device.count() > 0, 'no CUDA device'"
+
+      - name: Run the GPU tests
+        run: pytest -v --tb=short --junitxml=test-results.xml tests/test_instagraal_gpu.py
 
       - name: Upload test results
         if: always()
