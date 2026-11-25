@@ -25,8 +25,10 @@ from instagraal.refine import (
     gc_skew_summary,
     place_short_contigs,
     replication_axis,
+    reverse_entries,
     rotate,
     run_refine,
+    start_skew,
 )
 
 GENOME_KB = 300
@@ -384,6 +386,74 @@ def test_refine_no_recenter(skewed_circle, tmp_path, monkeypatch):
 def test_linear_chromosome_is_not_circular(with_short_contig, tmp_path):
     summary = _refine_short(with_short_contig, tmp_path, {"scaffold1": TRUE_ORDER})
     assert summary["circular"] == []
+
+
+def test_start_skew_and_reverse_entries():
+    assert start_skew("GGGGGGCC" + "C" * 8, window=8, windows=1) == pytest.approx(0.5)
+    assert start_skew("GGGGGGCC" + "C" * 8, window=8, windows=2) == pytest.approx(-0.25)
+    assert start_skew("GGC", window=8) == pytest.approx(1 / 3)  # shorter than one window
+    assert start_skew("") == 0.0
+    assert reverse_entries([("a", 1, 0, 10), ("b", -1, 5, 9)]) == [("b", 1, 5, 9), ("a", -1, 0, 10)]
+
+
+@pytest.fixture(scope="module", params=["G-rich", "C-rich"])
+def skewed_line(request, tmp_path_factory):
+    """The linear chromosome with a short contig, its sequence redrawn with a uniform GC skew of +0.4
+    (G-rich) or -0.4 (C-rich): read forward, any stretch of it starts with that skew, read backward
+    with the opposite one. The contacts, hence the joins, are the same for both."""
+    data = _make_genome(tmp_path_factory.mktemp("refine_skewed_line"), SHORT_CUTS_KB, SHORT_REVERSED, circular=False, mirror=0.0)
+    rng = np.random.default_rng(7)
+    p = [0.25, 0.15, 0.35, 0.25] if request.param == "G-rich" else [0.25, 0.35, 0.15, 0.25]  # A, C, G, T
+    chrom = "".join(rng.choice(list("ACGT"), size=SHORT_CUTS_KB[-1] * 1000, p=p))
+    records = []
+    for k in range(len(SHORT_CUTS_KB) - 1):
+        s = chrom[SHORT_CUTS_KB[k] * 1000 : SHORT_CUTS_KB[k + 1] * 1000]
+        records.append(f">ctg{k}\n{_revcomp(s) if k in SHORT_REVERSED else s}\n")
+    data["fasta"].write_text("".join(records))
+    data["chrom"], data["g_rich"] = chrom, request.param == "G-rich"
+    return data
+
+
+def test_refine_orients_scaffolds_to_start_with_a_positive_skew(skewed_line, tmp_path):
+    data = skewed_line
+    plain = tmp_path / "plain"
+    result = CliRunner().invoke(
+        refine_main,
+        ["-c", str(data["cool"]), "-f", str(data["fasta"]), "-o", str(plain), "-w", "30000", "-l", "10000", "--no-orient"],
+    )
+    assert result.exit_code == 0, result.output
+    assert "--no-orient" in (plain / "refine_report.txt").read_text()
+    summary = run_refine(None, data["cool"], data["fasta"], tmp_path / "oriented", window=30_000, min_contig_length=10_000)
+    assert "reverse-complemented to start with a positive GC skew" in summary["report"]
+    before = parse_info_frags(str(plain / "refined_info_frags.txt"))
+    after = parse_info_frags(str(tmp_path / "oriented" / "refined_info_frags.txt"))
+    assert list(before) == list(after)
+    records = {r.id: str(r.seq) for r in SeqIO.parse(str(tmp_path / "oriented" / "refined_genome.fa"), "fasta")}
+    for name, bins in after.items():
+        unoriented = [(c, o, s, e) for c, _i, s, e, o in before[name]]
+        assert [(c, o, s, e) for c, _i, s, e, o in bins] == (
+            reverse_entries(unoriented) if name in summary["flipped"] else unoriented
+        )
+        if len(records[name]) >= 10_000:
+            assert start_skew(records[name]) > 0
+    # the chromosome is rebuilt whole (joined forward) and read on its G-rich strand; the strand of
+    # the 5 kb ctg2 (110-115 kb, 185-190 kb once reverse-complemented) is not reliable from its contacts
+    assert summary["flipped"] == ([] if data["g_rich"] else ["refined_scaffold_1"])
+    expected = data["chrom"] if data["g_rich"] else _revcomp(data["chrom"])
+    a, b = (110_000, 115_000) if data["g_rich"] else (185_000, 190_000)
+    seq = records["refined_scaffold_1"]
+    assert len(seq) == len(expected)
+    assert seq[:a] == expected[:a] and seq[b:] == expected[b:]
+
+
+def test_refine_keeps_the_strand_of_recentered_chromosomes(skewed_circle, tmp_path, monkeypatch):
+    """Read away from the terminus, both strands start with a negative skew: no flip."""
+    monkeypatch.setattr(refine_module, "CIRCULAR_MIN_LENGTH", 100_000)
+    oriented = _refine(skewed_circle, tmp_path / "a")
+    plain = _refine(skewed_circle, tmp_path / "b", orient=False)
+    assert oriented["recentered"] == plain["recentered"] == ["refined_scaffold_1"]
+    assert oriented["flipped"] == []
+    assert (tmp_path / "a" / "refined_genome.fa").read_text() == (tmp_path / "b" / "refined_genome.fa").read_text()
 
 
 def test_replication_axis_on_two_replichores():
