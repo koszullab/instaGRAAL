@@ -436,3 +436,96 @@ def test_refine_cli_layout_options_need_a_layout(synthetic, tmp_path, flag):
     )
     assert result.exit_code != 0
     assert "need an input layout" in result.output
+
+
+# ---------------------------------------------------------------------------
+# Second pass (--extend)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(scope="module")
+def gapped(tmp_path_factory):
+    """Linear chromosome whose 20 kb between ctg2 and ctg4 (ctg3) is missing from the assembly.
+
+    The missing piece weakens the contacts right across the ctg2-ctg4 junction: too weak for
+    the first pass (30 kb windows), enough for the second pass over whole scaffolds.
+    """
+    d = tmp_path_factory.mktemp("refine_gapped")
+    rng = np.random.default_rng(1)
+    cuts = [0, 60, 110, 170, 190, 250, 290, 330]
+    genome_kb = cuts[-1]
+    chrom = "".join(rng.choice(list("ACGT"), size=genome_kb * 1000))
+    names = [f"ctg{k}" for k in range(len(cuts) - 1)]
+    kept = [k for k in range(len(names)) if k != 3]
+    fasta = d / "assembly.fa"
+    fasta.write_text("".join(f">{names[k]}\n{chrom[cuts[k] * 1000 : cuts[k + 1] * 1000]}\n" for k in kept))
+    contig_of = [max(i for i in range(len(names)) if cuts[i] <= f) for f in range(genome_kb)]
+    frags = [f for f in range(genome_kb) if contig_of[f] != 3]
+    bin_of = {f: b for b, f in enumerate(frags)}
+    bins = pd.DataFrame(
+        {
+            "chrom": [names[contig_of[f]] for f in frags],
+            "start": [(f - cuts[contig_of[f]]) * 1000 for f in frags],
+            "end": [(f - cuts[contig_of[f]] + 1) * 1000 for f in frags],
+        }
+    )
+    pos = np.array(frags) + 0.5
+    lam = 40.0 / np.maximum(np.abs(pos[:, None] - pos[None, :]), 1.0) + 0.05
+    counts = rng.poisson(np.triu(lam, 1))
+    i, j = np.nonzero(counts)
+    b1 = np.array([bin_of[frags[x]] for x in i])
+    b2 = np.array([bin_of[frags[x]] for x in j])
+    pixels = pd.DataFrame({"bin1_id": np.minimum(b1, b2), "bin2_id": np.maximum(b1, b2), "count": counts[i, j]})
+    cool = d / "contacts.cool"
+    cooler.create_cooler(
+        str(cool),
+        bins,
+        pixels.sort_values(["bin1_id", "bin2_id"]).reset_index(drop=True),
+        ordered=True,
+        symmetric_upper=True,
+        dtypes={"count": np.int32},
+    )
+    lengths = {names[k]: (cuts[k + 1] - cuts[k]) * 1000 for k in kept}
+    assembled = chrom[: cuts[3] * 1000] + chrom[cuts[4] * 1000 :]
+    return {"dir": d, "fasta": fasta, "cool": cool, "lengths": lengths, "assembled": assembled, "kept": [names[k] for k in kept]}
+
+
+def _refine_gapped(data, tmp_path, layout=None, **kwargs):
+    path = None if layout is None else _write_layout(tmp_path / "layout.txt", layout, data["lengths"])
+    kwargs = {"window": 30_000, "min_contig_length": 10_000, **kwargs}
+    return run_refine(path, data["cool"], data["fasta"], tmp_path / "out", **kwargs)
+
+
+def test_second_pass_joins_across_a_gap(gapped, tmp_path):
+    first = _refine_gapped(gapped, tmp_path / "off", extend="off")
+    assert first["scaffolds"] == 2 and first["extended_joins"] == 0
+    summary = _refine_gapped(gapped, tmp_path / "on", extend="on")
+    assert summary["extended_joins"] == 1
+    records = list(SeqIO.parse(str(tmp_path / "on" / "out" / "refined_genome.fa"), "fasta"))
+    assert len(records) == 1
+    seq = str(records[0].seq)
+    assert seq == gapped["assembled"] or _revcomp(seq) == gapped["assembled"]
+    table = pd.read_csv(tmp_path / "on" / "out" / "junctions.tsv", sep="\t")
+    extended = table[table["status"] == "extended"]
+    assert len(extended) == 1
+    assert {extended["end_a"].iloc[0], extended["end_b"].iloc[0]} == {"ctg2:R", "ctg4:L"}
+
+
+TRUE_GAPPED = {"scaffold1": [("ctg0", 1), ("ctg1", 1), ("ctg2", 1), ("ctg4", 1), ("ctg5", 1), ("ctg6", 1)]}
+SCRAMBLED_GAPPED = {"scaffold1": [("ctg0", -1), ("ctg4", 1), ("ctg1", -1), ("ctg5", 1), ("ctg2", -1), ("ctg6", -1)]}
+
+
+@pytest.mark.parametrize(
+    "layout,extended",
+    [(TRUE_GAPPED, 1), (SCRAMBLED_GAPPED, 0), (None, 0)],
+    ids=["layout-confirmed", "layout-contradicted", "no-layout"],
+)
+def test_extend_auto_trusts_long_range_contacts_only_when_the_layout_agrees(gapped, tmp_path, layout, extended):
+    summary = _refine_gapped(gapped, tmp_path, layout=layout)  # extend="auto" by default
+    assert summary["extended_joins"] == extended
+    if layout is None:
+        assert "needs an input layout" in summary["report"]
+    elif extended:
+        assert summary["agreement"] >= refine_module.EXTEND_MIN_AGREEMENT
+    else:
+        assert summary["agreement"] < refine_module.EXTEND_MIN_AGREEMENT

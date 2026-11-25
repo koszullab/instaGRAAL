@@ -101,6 +101,18 @@ from ..version import __version__ as VERSION_NUMBER
     help="Minimum lead of a short contig's best place over its next best (higher: fewer, more reliable placements).",
 )
 @click.option(
+    "--extend",
+    type=click.Choice(["auto", "on", "off"]),
+    default="auto",
+    show_default=True,
+    help=(
+        "Second joining pass over whole scaffolds with 200 kb windows, which recovers joins too weak locally "
+        "(gaps, low coverage). Long-range contacts mislead it where replication arms are aligned, so 'auto' runs it "
+        "only if refine confirms at least 30% of the --info-frags layout's joins (a scaffolder that did not fold "
+        "the chromosomes); 'on' always, 'off' never."
+    ),
+)
+@click.option(
     "--recenter/--no-recenter",
     default=True,
     show_default=True,
@@ -146,6 +158,7 @@ def main(
     junction: str,
     place_short: bool,
     short_margin: float,
+    extend: str,
     recenter: bool,
     origin_first: bool,
     keep_unresolved: bool,
@@ -159,8 +172,10 @@ def main(
     the input layout's unsupported or contradicted joins, and re-joins whole contigs
     whose ends are each other's clear best partner, then places the contigs too short
     to be joined where their contacts clearly fit, and recenters circular scaffolds
-    on their GC skew. The result does not depend on the input layout, so the GPU
-    scaffolding step can be skipped: run it on instagraal-pre's output alone.
+    on their GC skew. These steps do not depend on the input layout, so the GPU
+    scaffolding step can be skipped: run it on instagraal-pre's output alone. With
+    an input layout, a second pass (--extend auto) also joins whole scaffolds from
+    wider windows when the layout shows that long-range contacts can be trusted.
 
     \b
     Outputs (in OUTPUT_DIR):
@@ -191,6 +206,7 @@ def main(
             short_margin=short_margin,
             recenter=recenter,
             origin_first=origin_first,
+            extend=extend,
         )
     except ValueError as exc:
         raise click.ClickException(str(exc)) from exc

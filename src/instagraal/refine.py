@@ -31,6 +31,13 @@ clearly beats every other one (``short_margin``); the others become scaffolds of
 own. Placement depends on the contact map only, not on where the input layout put
 them: the scaffolder misplaces many short contigs.
 
+The joins left out for lack of local evidence (gaps, low coverage) can often be made
+from more contacts: a second pass treats each refined scaffold as one sequence and
+scores its ends over ``EXTEND_WINDOW``. Long-range contacts are exactly what aligned
+replication arms distort, and a join between mirror loci looks like a true junction
+there, so with ``extend="auto"`` this pass runs only when refine confirms most of the
+input layout's joins: a scaffolder that was not folded by long-range contacts.
+
 A scaffold of at least ``CIRCULAR_MIN_LENGTH`` is circular when its two outer ends
 would be joined if cycles were allowed (they are each other's best free partner);
 shorter ones are not tested, as their two ends are close along the scaffold itself.
@@ -73,6 +80,10 @@ JUNCTIONS_NAME = "junctions.tsv"
 REPORT_NAME = "refine_report.txt"
 SKEW_MIN_SCAFFOLD = 500_000
 CIRCULAR_MIN_LENGTH = 500_000  # shorter scaffolds are not tested: their two ends are close along the scaffold itself
+EXTEND_BINSIZE = 10_000  # second pass: bin size along whole scaffolds
+EXTEND_WINDOW = 200_000  # second pass: length next to each scaffold end
+EXTEND_MIN_LENGTH = 100_000  # second pass: shorter scaffolds are left out
+EXTEND_MIN_AGREEMENT = 0.3  # --extend auto: share of the input layout's joins refine must confirm
 RECENTER_MIN_FIT = 0.75  # share of skew windows that must fit the two-replichore pattern
 RECENTER_ARMS = (0.25, 0.75)  # allowed share of the scaffold from origin to terminus
 
@@ -125,6 +136,46 @@ def load_contig_bins(cool_path: str | pathlib.Path, binsize: int = DEFAULT_BINSI
     matrix = sym.tocsr()
     matrix.eliminate_zeros()
     contig_of_bin = np.repeat(np.arange(len(names)), [nbins[c] for c in names])
+    return ContigBins(names, lengths, binsize, offset, nbins, matrix, contig_of_bin)
+
+
+def lift_scaffold_bins(cool_path: str | pathlib.Path, scaffolds: dict[str, list["Entry"]], binsize: int) -> ContigBins:
+    """Bin the fragment-level cool from instagraal-pre along scaffolds of contig entries.
+
+    Each fragment is placed through the entry (contig, orientation, start, end) holding its
+    midpoint; fragments of contigs left out of ``scaffolds`` are dropped.
+    """
+    clr = cooler.Cooler(str(cool_path))
+    frags = clr.bins()[["chrom", "start", "end"]][:]
+    mid = ((frags["start"].to_numpy() + frags["end"].to_numpy()) // 2).astype(np.int64)
+    frags_of = {str(c): np.asarray(idx) for c, idx in frags.groupby(frags["chrom"].astype(str), observed=True).indices.items()}
+    names = list(scaffolds)
+    lengths = {n: sum(e - s for _c, _o, s, e in entries) for n, entries in scaffolds.items()}
+    nbins = {n: max(1, math.ceil(lengths[n] / binsize)) for n in names}
+    offset, acc = {}, 0
+    for n in names:
+        offset[n] = acc
+        acc += nbins[n]
+    frag_bin = np.full(len(frags), -1, dtype=np.int64)
+    for n, entries in scaffolds.items():
+        pos = 0
+        for c, o, s, e in entries:
+            idx = frags_of.get(c)
+            if idx is not None:
+                sel = idx[(mid[idx] >= s) & (mid[idx] < e)]
+                p = pos + ((mid[sel] - s) if o == 1 else (e - 1 - mid[sel]))
+                frag_bin[sel] = offset[n] + np.minimum(p // binsize, nbins[n] - 1)
+            pos += e - s
+    pix = clr.pixels()[:]
+    i = frag_bin[pix["bin1_id"].to_numpy()]
+    j = frag_bin[pix["bin2_id"].to_numpy()]
+    ok = (i >= 0) & (j >= 0)
+    half = sp.coo_matrix((pix["count"].to_numpy()[ok].astype(float), (i[ok], j[ok])), shape=(acc, acc)).tocsr()
+    sym = (half + half.T).tolil()
+    sym.setdiag(0)
+    matrix = sym.tocsr()
+    matrix.eliminate_zeros()
+    contig_of_bin = np.repeat(np.arange(len(names)), [nbins[n] for n in names])
     return ContigBins(names, lengths, binsize, offset, nbins, matrix, contig_of_bin)
 
 
@@ -595,6 +646,60 @@ def rotate(entries: list[Entry], cut: int) -> list[Entry]:
     return list(entries)
 
 
+def extend_scaffolds(
+    chains: list[list[tuple[str, int]]],
+    closed: set[int],
+    lengths: dict[str, int],
+    cool_path: str | pathlib.Path,
+    anchors: set[str],
+    min_score: float = DEFAULT_MIN_SCORE,
+    min_margin: float = DEFAULT_MIN_MARGIN,
+) -> tuple[list[list[tuple[str, int]]], dict[frozenset[End], float], list[float | None]]:
+    """Second joining pass: whole scaffolds as units, scored over wider windows.
+
+    Scaffolds of at least ``EXTEND_MIN_LENGTH`` (except the ``closed`` ones, circular
+    already) are binned at ``EXTEND_BINSIZE`` and their ends scored over
+    ``EXTEND_WINDOW`` with ``score_ends``, then joined with ``join_ends``. Returns the
+    new chains, the second-pass junctions (the facing ``anchors`` contig ends) with
+    their scores, and for each new chain the score of the join that would close it
+    into a circle, if any.
+    """
+    units = {
+        f"u{k}": [(c, o, 0, lengths[c]) for c, o in chain]
+        for k, chain in enumerate(chains)
+        if k not in closed and sum(lengths[c] for c, _o in chain) >= EXTEND_MIN_LENGTH
+    }
+    if len(units) < 2:
+        return chains, {}, [None] * len(chains)
+    es2 = score_ends(lift_scaffold_bins(cool_path, units, EXTEND_BINSIZE), list(units), EXTEND_WINDOW)
+    groups = build_scaffolds(list(units), join_ends(es2, min_score, min_margin))
+    closures = closing_scores(groups, es2, set(units), min_score, min_margin)
+    merged: list[list[tuple[str, int]]] = []
+    extended: dict[frozenset[End], float] = {}
+    for group in groups:
+        new: list[tuple[str, int]] = []
+        for k, (unit, o) in enumerate(group):
+            chain = chains[int(unit[1:])]
+            part = chain if o == 1 else [(c, -oo) for c, oo in reversed(chain)]
+            if k:
+                prev_unit, prev_o = group[k - 1]
+                ua = (prev_unit, RIGHT if prev_o == 1 else LEFT)
+                ub = (unit, LEFT if o == 1 else RIGHT)
+                ca = next((c, oo) for c, oo in reversed(new) if c in anchors)
+                cb_ = next((c, oo) for c, oo in part if c in anchors)
+                ea = (ca[0], RIGHT if ca[1] == 1 else LEFT)
+                eb = (cb_[0], LEFT if cb_[1] == 1 else RIGHT)
+                extended[frozenset((ea, eb))] = float(es2.score[es2.index[ua], es2.index[ub]])
+            new += part
+        merged.append(new)
+    closure_of = list(closures)
+    for k, chain in enumerate(chains):
+        if f"u{k}" not in units:
+            merged.append(chain)
+            closure_of.append(None)
+    return merged, extended, closure_of
+
+
 _RC = str.maketrans("ACGTNacgtn", "TGCANtgcan")
 
 
@@ -652,12 +757,17 @@ def run_refine(
     short_margin: float = DEFAULT_SHORT_MARGIN,
     recenter: bool = True,
     origin_first: bool = False,
+    extend: str = "auto",
 ) -> dict[str, Any]:
     """Score the input layout's joins and, unless ``qc_only``, re-scaffold the contigs.
 
-    The refined assembly depends on the contact map and the contigs only; the input
-    layout (``info_frags``, optional unless ``qc_only`` or ``keep_unresolved``) is
-    scored for QC. Writes ``junctions.tsv`` and ``refine_report.txt`` and, unless ``qc_only``,
+    The refined assembly depends on the contact map and the contigs only, except that
+    ``extend="auto"`` runs the second joining pass (``extend_scaffolds``) only if refine
+    confirms at least ``EXTEND_MIN_AGREEMENT`` of the input layout's joins
+    (``extend="on"``: always, ``"off"``: never). The input layout (``info_frags``,
+    optional unless ``qc_only`` or ``keep_unresolved``) is also scored for QC.
+
+    Writes ``junctions.tsv`` and ``refine_report.txt`` and, unless ``qc_only``,
     ``refined_info_frags.txt`` and ``refined_genome.fa`` (whole contigs, joined with
     ``junction`` between them; a recentered scaffold starts and ends with the two parts
     of the contig it is cut in) into ``output_dir``. Returns a summary dictionary.
@@ -729,20 +839,55 @@ def run_refine(
         if place_short:
             chains, placed = place_short_contigs(chains, es_all, short, keep, min_score, short_margin)
         chains += [[(c, 1)] for c in short if c not in placed]
-        chains.sort(key=lambda ch: -sum(len(genome[c]) for c, _o in ch))
+
+        # second pass: join whole scaffolds over wider windows, unless long-range contacts are suspect
+        contig_length = {c: len(seq) for c, seq in genome.items()}
+        agreement = statuses.get("kept", 0) / len(input_joins) if input_joins else None
+        if extend == "on":
+            do_extend, why = True, "--extend on"
+        elif extend == "auto" and agreement is not None:
+            do_extend = agreement >= EXTEND_MIN_AGREEMENT
+            why = f"--extend auto: refine confirms {agreement:.0%} of the input layout's joins " + (
+                f">= {EXTEND_MIN_AGREEMENT:.0%}"
+                if do_extend
+                else f"< {EXTEND_MIN_AGREEMENT:.0%}: its long-range order is not trusted"
+            )
+        else:
+            do_extend = False
+            why = "--extend off" if extend == "off" else "--extend auto needs an input layout (--info-frags)"
+        extended: dict[frozenset[End], float] = {}
+        unit_closure: list[float | None] = [None] * len(chains)
+        if do_extend:
+            first_closures = closing_scores(chains, es, keep, min_score, min_margin)
+            closed = {
+                k
+                for k, closure in enumerate(first_closures)
+                if closure is not None and sum(contig_length[c] for c, _o in chains[k]) >= CIRCULAR_MIN_LENGTH
+            }
+            chains, extended, unit_closure = extend_scaffolds(
+                chains, closed, contig_length, cool_path, keep, min_score, min_margin
+            )
+
+        order = sorted(range(len(chains)), key=lambda k: -sum(contig_length[c] for c, _o in chains[k]))
+        chains = [chains[k] for k in order]
+        unit_closure = [unit_closure[k] for k in order]
         names = [f"refined_scaffold_{k}" for k in range(1, len(chains) + 1)]
         for name, chain in zip(names, chains, strict=True):
             # the joins between long contigs, then the neighbours of each placed short contig
-            long_pairs = itertools.pairwise([(c, o) for c, o in chain if c in keep])
-            short_pairs = ((x, y) for x, y in itertools.pairwise(chain) if x[0] not in keep or y[0] not in keep)
-            for verdict, pairs in (("joined", long_pairs), ("placed", short_pairs)):
-                for (ca, oa), (cbn, ob) in pairs:
-                    rows.append(_row(es_all, name, (ca, RIGHT if oa == 1 else LEFT), (cbn, LEFT if ob == 1 else RIGHT), verdict))
+            for (ca, oa), (cbn, ob) in itertools.pairwise([(c, o) for c, o in chain if c in keep]):
+                ea, eb = (ca, RIGHT if oa == 1 else LEFT), (cbn, LEFT if ob == 1 else RIGHT)
+                second = extended.get(frozenset((ea, eb)))
+                row = _row(es_all, name, ea, eb, "joined" if second is None else "extended")
+                rows.append(row if second is None else (*row[:4], second, *row[5:]))
+            for (ca, oa), (cbn, ob) in itertools.pairwise(chain):
+                if ca not in keep or cbn not in keep:
+                    rows.append(_row(es_all, name, (ca, RIGHT if oa == 1 else LEFT), (cbn, LEFT if ob == 1 else RIGHT), "placed"))
 
         # circular scaffolds, recentered on their GC skew
         layouts = [[(c, o, 0, len(genome[c])) for c, o in chain] for chain in chains]
         circular, recentered, circle_lines = [], [], []
-        for k, closure in enumerate(closing_scores(chains, es, keep, min_score, min_margin)):
+        contig_closures = closing_scores(chains, es, keep, min_score, min_margin)
+        for k, closure in enumerate(c if c is not None else u for c, u in zip(contig_closures, unit_closure, strict=True)):
             seq = _scaffold_sequence(genome, layouts[k])
             if closure is None or len(seq) < CIRCULAR_MIN_LENGTH:
                 continue
@@ -800,6 +945,8 @@ def run_refine(
             short_alone_bp=sum(len(genome[c]) for c in short if c not in placed),
             circular=circular,
             recentered=recentered,
+            agreement=agreement,
+            extended_joins=len(extended),
         )
 
     with open(output_dir / JUNCTIONS_NAME, "w") as fh:
@@ -828,8 +975,13 @@ def run_refine(
                 f"unresolved {statuses.get('unresolved', 0)}"
             )
         lines.append(
-            f"Refined: {summary['refined_joins']} joins ({summary['new_joins']} new), {summary['scaffolds']} scaffolds, "
-            f"N50 {summary['scaffold_n50']:,} bp (input N50 {summary['input_n50']:,} bp)"
+            f"Refined: {summary['refined_joins']} joins ({summary['new_joins']} new)"
+            + (f" + {summary['extended_joins']} from the second pass" if summary["extended_joins"] else "")
+            + f", {summary['scaffolds']} scaffolds, N50 {summary['scaffold_n50']:,} bp (input N50 {summary['input_n50']:,} bp)"
+        )
+        lines.append(
+            f"  second pass over whole scaffolds ({EXTEND_WINDOW // 1000} kb windows): "
+            + (f"{summary['extended_joins']} joins ({why})" if do_extend else f"not run ({why})")
         )
         if summary["short_contigs"]:
             lines.append(

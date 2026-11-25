@@ -109,7 +109,9 @@ In many bacteria the two replication arms of a chromosome are aligned, which add
 
 Scaffolds of at least 500 kb whose two ends join (whole circular chromosomes) are recentered: cut at the replication terminus found from their GC skew, so that the origin sits near the middle (`--origin-first` to start at the origin instead, `--no-recenter` to leave them as they are).
 
-The refined assembly depends on the contact map and the contigs only, not on the input layout, so `-i` is optional: for bacterial genomes, `instagraal-pre` then `instagraal-refine -c hic_folder/reads.cool -f assembly.fa -o refined` gives the same assembly without a GPU (the scaffolder's layout is then only used for the QC in `junctions.tsv`).
+Refine only joins contigs whose junction is clear from local contacts, so where the evidence is weak (gaps, low coverage) a chromosome can come out in several scaffolds. With the scaffolder's layout as input, a second pass (`--extend auto`, the default) joins whole scaffolds from contacts over 200 kb windows. Long-range contacts are exactly what aligned replication arms distort, so this pass only runs when refine confirms at least 30% of the input layout's joins, which a scaffolder folded by the X does not reach (`--extend on`/`off` to force it).
+
+`-i` is optional: without it, `instagraal-pre` then `instagraal-refine -c hic_folder/reads.cool -f assembly.fa -o refined` gives an assembly without a GPU, joined from local evidence only (more fragmented where junctions are weak, as the second pass needs the scaffolder's layout to decide whether long-range contacts can be trusted).
 
 **4. Post-process** — lift over contacts to the new assembly and build a multi-resolution `.mcool`:
 
