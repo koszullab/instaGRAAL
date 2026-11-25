@@ -2505,7 +2505,7 @@ class sampler:
                 or np.any(c.l_cont_bp - c.start_bp <= 0)
                 or np.any((c.start_bp != 0) * (c.pos == 0))
                 or np.any((c.start_bp == 0) * (c.pos != 0))
-                or np.any(c.__next__ == c.id)
+                or np.any(c.next == c.id)
                 or np.any(c.prev == c.id)
             ):
                 logger.info("problem!!!!")
@@ -2532,7 +2532,7 @@ class sampler:
                 or np.any(c.l_cont_bp - c.start_bp <= 0)
                 or np.any((c.start_bp != 0) * (c.pos == 0))
                 or np.any((c.start_bp == 0) * (c.pos != 0))
-                or np.any(c.__next__ == c.id)
+                or np.any(c.next == c.id)
                 or np.any(c.prev == c.id)
             ):
                 logger.info("problem!!!!")
@@ -2610,7 +2610,7 @@ class sampler:
         self.gpu_vect_frags.copy_from_gpu()
         self.gpu_id_contigs.get(ary=self.cpu_id_contigs)
         pos_frag = np.copy(self.gpu_vect_frags.pos)
-        next_frag = np.copy(self.gpu_vect_frags.__next__)
+        next_frag = np.copy(self.gpu_vect_frags.next)
         prev_frag = np.copy(self.gpu_vect_frags.prev)
         start_bp = np.copy(self.gpu_vect_frags.start_bp)
         list_id_frags = np.copy(self.gpu_vect_frags.id_d)
