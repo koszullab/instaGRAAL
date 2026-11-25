@@ -92,6 +92,7 @@ instagraal-endtoend = "instagraal.cli.endtoend:main"
 instagraal-polish = "instagraal.cli.polish:main"
 instagraal-post = "instagraal.cli.post:main"
 instagraal-pre = "instagraal.cli.pre:main"
+instagraal-refine = "instagraal.cli.refine:main"
 instagraal-stats = "instagraal.cli.stats:main"
 instagraal-test = "instagraal.cli.test:main"
 

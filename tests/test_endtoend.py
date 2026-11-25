@@ -126,6 +126,7 @@ def test_recap_commands_printed(tmp_path):
     [
         (["--no-bomb"], {"bomb": False}),
         (["--no-polish"], {"polish": False}),
+        (["--refine"], {"refine": True}),
         (["--no-save-matrix"], {"save_matrix": False}),
         (["--no-balance"], {"balance": False}),
         (["--cycles", "5"], {"cycles": 5}),
@@ -186,6 +187,7 @@ def test_defaults(tmp_path):
     assert captured["cycles"] == 100
     assert captured["bomb"] is True
     assert captured["polish"] is True
+    assert captured["refine"] is False
     assert captured["save_matrix"] is True
     assert captured["balance"] is True
     assert captured["device"] == 0
@@ -273,3 +275,34 @@ def test_dry_run_post_junction_matches_polish(tmp_path, junction, expected):
     # even an empty junction is passed on: instagraal-polish must not fall back to its own default
     polish_cmd = _command(commands, "instagraal-polish")
     assert polish_cmd[polish_cmd.index("--junction") + 1] == junction
+
+
+@pytest.mark.parametrize("junction,expected", [("NNNNNN", "6"), ("", "0")])
+def test_dry_run_refine_uses_refined_output(tmp_path, junction, expected):
+    commands = _dry_run_commands(tmp_path, refine=True, junction=junction)
+    refine_cmd = _command(commands, "instagraal-refine")
+    assert refine_cmd[refine_cmd.index("--info-frags") + 1].endswith("polished/new_info_frags.txt")
+    # the fragment-level map written by instagraal-pre, named after the pairs file
+    assert refine_cmd[refine_cmd.index("--cool") + 1].endswith("pre/yeast.cool")
+    # passed even when empty, like for instagraal-polish: post is told len(junction)
+    assert refine_cmd[refine_cmd.index("--junction") + 1] == junction
+    post_cmd = _command(commands, "instagraal-post")
+    assert post_cmd[2].endswith("refined/refined_info_frags.txt")
+    assert post_cmd[post_cmd.index("--junction") + 1] == expected
+    stats_cmd = _command(commands, "instagraal-stats")
+    assert stats_cmd[2].endswith("refined/refined_genome.fa")
+    assert stats_cmd[stats_cmd.index("--labels") + 1] == "Input assembly,Refined assembly"
+
+
+def test_dry_run_refine_without_polish_refines_the_scaffolds_as_is(tmp_path):
+    commands = _dry_run_commands(tmp_path, refine=True, polish=False)
+    polish_cmd = _command(commands, "instagraal-polish")
+    assert polish_cmd[polish_cmd.index("--mode") + 1] == "fasta"
+    refine_cmd = _command(commands, "instagraal-refine")
+    assert refine_cmd[refine_cmd.index("--info-frags") + 1].endswith("polished/new_info_frags.txt")
+
+
+def test_dry_run_runs_no_refine_by_default(tmp_path):
+    import shlex
+
+    assert all(pathlib.Path(shlex.split(c)[0]).name != "instagraal-refine" for c in _dry_run_commands(tmp_path))

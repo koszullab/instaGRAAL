@@ -67,6 +67,7 @@ Key options:
 | `-C / --circular` | off | Circular genome |
 | `--no-bomb` | bomb | Start scaffolding from the input contigs instead of exploding the genome into bins |
 | `--no-polish` | polish | Skip polishing: write the scaffolds as instaGRAAL left them (DNA it discarded is not put back) |
+| `--refine` | no refine | Run `instagraal-refine` after polishing (see step 3b), and use its output downstream |
 
 Run `instagraal-endtoend -h` for the full option list.
 
@@ -98,6 +99,14 @@ instagraal-polish -i mcmc_out/test_mcmc_4/info_frags.txt -f assembly.fa -o polis
 
 Output: `polished/polished_genome.fa` and `polished/new_info_frags.txt`. Bins from different input contigs are joined with an `NNNNNN` junction (`--junction` sets another sequence, `--junction ''` none).
 
+**3b. Refine** (optional, recommended for bacteria) — check every contig junction against the Hi-C contacts next to the two contig ends, and re-join whole contigs where the evidence is clear:
+
+```sh
+instagraal-refine -i polished/new_info_frags.txt -c hic_folder/reads.cool -f assembly.fa -o refined
+```
+
+In many bacteria the two replication arms of a chromosome are aligned, which adds an X (anti-diagonal) to the contact map. The scaffolder's model has no term for it and tends to fold such chromosomes, interleaving their arms: the map then looks deceptively smooth, and borders appear after polishing. `instagraal-refine` ignores long-range contacts, so it is not misled by the X. It writes `refined/refined_info_frags.txt` and `refined/refined_genome.fa` (use them in steps 4 and 5), plus `junctions.tsv` and `refine_report.txt`, a reference-free QC of the input layout (contradicted or unsupported joins, and GC skew of large scaffolds: a whole circular chromosome changes skew sign at most twice: at the origin and terminus). Use `--qc-only` to only check a layout.
+
 **4. Post-process** — lift over contacts to the new assembly and build a multi-resolution `.mcool`:
 
 ```sh
@@ -124,6 +133,11 @@ After polishing (`instagraal-polish`):
 
 - `polished_genome.fa` — final assembly after artefact correction
 - `new_info_frags.txt` — updated fragment table for the polished coordinates
+
+After refining (`instagraal-refine`):
+
+- `refined_genome.fa` / `refined_info_frags.txt` — whole input contigs, re-joined where the junction evidence is clear
+- `junctions.tsv` / `refine_report.txt` — score and status of every input and refined join, and GC skew of large scaffolds
 
 > Note: Scaffolding pyramids are cached in HDF5 format. If a run was interrupted and pyramids appear corrupted, delete the `pyramids/` folder and re-run.
 

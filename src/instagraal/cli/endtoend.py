@@ -10,6 +10,7 @@ import time
 
 import click
 
+from ..pre import default_cool_name
 from ..version import __version__ as VERSION_NUMBER
 
 # ---------------------------------------------------------------------------
@@ -140,6 +141,7 @@ def _run_endtoend(
     cool_name: str | None,
     dry_run: bool = False,
     polish: bool = True,
+    refine: bool = False,
 ) -> list[str]:
     """Execute the full instaGRAAL pipeline on user-supplied data.
 
@@ -251,8 +253,35 @@ def _run_endtoend(
         if criterion is not None and polish:
             polish_cmd += ["--criterion", criterion]
         _run_cmd(polish_cmd, _record=ran_cmds, dry_run=dry_run)
-    polished_fa = polish_dir / "polished_genome.fa"
-    new_info_frags = polish_dir / "new_info_frags.txt"
+    final_fa = polish_dir / "polished_genome.fa"
+    final_info_frags = polish_dir / "new_info_frags.txt"
+    final_label = "Polished assembly" if polish else "Scaffolded assembly (not polished)"
+
+    # -- 4b. instagraal-refine (optional) ------------------------------------
+    if refine:
+        with _step("[4/6] Running instagraal-refine …"):
+            refine_dir = output_dir / "refined"
+            refine_dir.mkdir(exist_ok=True)
+            pre_cool = pre_dir / f"{cool_name or default_cool_name(pairs)}.cool"
+            refine_cmd = [
+                cmd("instagraal-refine"),
+                "--info-frags",
+                final_info_frags,
+                "--cool",
+                pre_cool,
+                "--fasta",
+                fasta,
+                "--output-dir",
+                refine_dir,
+                # refine inserts the same junction between contigs as polish does
+                # between bins, so instagraal-post's len(junction) still holds
+                "--junction",
+                junction,
+            ]
+            _run_cmd(refine_cmd, _record=ran_cmds, dry_run=dry_run)
+        final_fa = refine_dir / "refined_genome.fa"
+        final_info_frags = refine_dir / "refined_info_frags.txt"
+        final_label = "Refined assembly"
 
     # -- 5. instagraal-post --------------------------------------------------
     with _step("[5/6] Running instagraal-post …"):
@@ -261,7 +290,7 @@ def _run_endtoend(
         post_cmd = [
             cmd("instagraal-post"),
             pairs,
-            new_info_frags,
+            final_info_frags,
             "--resolutions",
             resolutions,
             "--output-dir",
@@ -283,9 +312,9 @@ def _run_endtoend(
             [
                 cmd("instagraal-stats"),
                 fasta,
-                polished_fa,
+                final_fa,
                 "--labels",
-                "Input assembly,Polished assembly" if polish else "Input assembly,Scaffolded assembly (not polished)",
+                f"Input assembly,{final_label}",
             ],
             _record=ran_cmds,
             dry_run=dry_run,
@@ -395,6 +424,16 @@ def _run_endtoend(
         "Polish the scaffolds with instagraal-polish. With --no-polish, the scaffolds are "
         "written as instagraal left them (instagraal-polish --mode fasta), and DNA that "
         "instagraal discarded (e.g. low-coverage contigs) is not put back."
+    ),
+)
+@click.option(
+    "--refine/--no-refine",
+    default=False,
+    show_default=True,
+    help=(
+        "Run instagraal-refine after polishing: re-join whole contigs from the Hi-C contacts next to "
+        "their ends, which undoes chromosome folding caused by inter-arm contacts (common in bacteria). "
+        "instagraal-post and instagraal-stats then use the refined assembly."
     ),
 )
 @click.option(
@@ -515,6 +554,7 @@ def main(
     debug: bool,
     dry_run: bool,
     polish: bool,
+    refine: bool,
     balance: bool,
     balance_args: str | None,
     min_scaffold_size: int,
@@ -533,7 +573,8 @@ def main(
       3. instagraal        — MCMC-based scaffolding (on the exploded genome
                              unless --no-bomb).
       4. instagraal-polish — full polishing pipeline (skipped with --no-polish:
-                             the scaffolds are then written as they are).
+                             the scaffolds are then written as they are);
+         then instagraal-refine with --refine (re-joins contigs from local contacts).
       5. instagraal-post   — remap pairs to new assembly, write .mcool.
       6. instagraal-stats  — compare input vs. polished assembly statistics.
 
@@ -584,6 +625,7 @@ def main(
         cool_name=cool_name,
         dry_run=dry_run,
         polish=polish,
+        refine=refine,
     )
     _elapsed = time.monotonic() - _start
     if dry_run:

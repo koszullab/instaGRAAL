@@ -342,6 +342,17 @@ def _plot_hic_map(
 # ---------------------------------------------------------------------------
 
 
+def default_cool_name(pairs: pathlib.Path) -> str:
+    """Base name of the .cool written by :func:`run_pre` when none is given:
+    the pairs file name without up to two extensions (``.pairs`` and ``.gz``)."""
+    stem = pathlib.Path(pairs).name
+    for _ in range(2):
+        stem, ext = pathlib.Path(stem).stem, pathlib.Path(stem).suffix
+        if not ext:
+            break
+    return stem
+
+
 def run_pre(
     fasta: pathlib.Path,
     pairs: pathlib.Path,
@@ -384,13 +395,7 @@ def run_pre(
 
     # Write .cool
     if cool_name is None:
-        # Strip up to two extensions to handle .pairs and .pairs.gz
-        stem = pairs.name
-        for _ in range(2):
-            stem, ext = pathlib.Path(stem).stem, pathlib.Path(stem).suffix
-            if not ext:
-                break
-        cool_name = stem
+        cool_name = default_cool_name(pairs)
     cool_path = output_dir / f"{cool_name}.cool"
     print(f"[5/5] Writing outputs to {output_dir}")
     print(f"      → {cool_path.name}")
