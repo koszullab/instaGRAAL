@@ -10,6 +10,10 @@ name: Test (GPU)
 #      whatever happens to the workflow;
 #   4. gpu-pod-reaper.yml terminates CI pods older than POD_TTL_MINUTES + 15.
 #
+# Runs on pull requests that change what the GPU tests exercise (see
+# `paths`), on pushes whose commit message contains "[gpu]", and on manual
+# dispatch.
+#
 # To retry, use "Re-run all jobs". "Re-run failed jobs" starts no pods: the
 # test jobs would wait for runners that no longer exist until GitHub drops
 # them (no cost, but the run hangs; cancel it).
@@ -18,6 +22,12 @@ on:
   workflow_dispatch:
   push:
   pull_request:
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - ".github/workflows/test-gpu.yml"
+      - ".github/runpod/**"
 
 concurrency:
   group: gpu-tests-${{ github.ref }}
@@ -77,14 +87,19 @@ jobs:
               { "python-version": "3.11", "cuda-version": "12.4.1", "image": "nvidia/cuda:12.4.1-devel-ubuntu22.04" },
               { "python-version": "3.12", "cuda-version": "12.4.1", "image": "nvidia/cuda:12.4.1-devel-ubuntu22.04" }
             ]
-          # GPU types to try in turn when RunPod has none of the previous ones.
-          # Secure cloud prices per pod-hour (Nov 2026): RTX 4090 $0.89,
-          # RTX A5000 $0.27, RTX 3090 $0.50, L4 $0.69.
+          # GPU types to try in turn when RunPod has none of the previous ones,
+          # cheapest first: the tests need little GPU. Secure cloud prices per
+          # pod-hour (Nov 2026): RTX 2000 Ada $0.24, A4000 $0.25, A4500 $0.25,
+          # A5000 $0.27, RTX 4000 Ada $0.28, RTX 3090 $0.50 (RTX 4090 $0.89).
+          # Keep to Ampere and Ada GPUs: CUDA 12.1/12.4 cannot compile for
+          # Blackwell ones (RTX 50xx, RTX PRO).
           GPU_TYPES: |
-            NVIDIA GeForce RTX 4090
+            NVIDIA RTX 2000 Ada Generation
+            NVIDIA RTX A4000
+            NVIDIA RTX A4500
             NVIDIA RTX A5000
+            NVIDIA RTX 4000 Ada Generation
             NVIDIA GeForce RTX 3090
-            NVIDIA L4
         run: bash .github/runpod/ci.sh launch
 
       - name: Wait for the runners to come online

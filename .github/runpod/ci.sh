@@ -222,7 +222,7 @@ cmd_launch() {
   require RUNPOD_API_KEY GH_PAT GITHUB_REPOSITORY GITHUB_OUTPUT POD_PREFIX COMBOS GPU_TYPES POD_TTL_MINUTES
   [[ $POD_PREFIX == "$CI_POD_BASE_PREFIX"?* ]] || die "POD_PREFIX must start with $CI_POD_BASE_PREFIX"
   [[ $POD_TTL_MINUTES =~ ^[1-9][0-9]*$ ]] || die "POD_TTL_MINUTES must be a number of minutes"
-  mapfile -t GPU_TYPE_LIST < <(sed 's/^[[:space:]]*//; s/[[:space:]]*$//; /^$/d' <<<"$GPU_TYPES")
+  mapfile -t GPU_TYPE_LIST < <(sed 's/#.*//; s/^[[:space:]]*//; s/[[:space:]]*$//; /^$/d' <<<"$GPU_TYPES")
   ((${#GPU_TYPE_LIST[@]} > 0)) || die "GPU_TYPES is empty"
   jq -e 'type == "array" and length > 0 and all(.[]; (.["python-version"] | type) == "string"
     and (.["cuda-version"] | type) == "string" and (.image | type) == "string")' >/dev/null <<<"$COMBOS" ||
