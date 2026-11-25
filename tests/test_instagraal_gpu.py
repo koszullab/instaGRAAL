@@ -854,6 +854,21 @@ def test_endtoend_new_info_frags_non_empty(endtoend_out):
 
 
 # ---------------------------------------------------------------------------
+# Refine step (the default mode is mcmc,refine) and the final assembly
+# ---------------------------------------------------------------------------
+
+
+def test_endtoend_refined_genome_exists(endtoend_out):
+    assert (endtoend_out / "refined" / "refined_genome.fa").stat().st_size > 0
+
+
+def test_endtoend_final_assembly_is_the_refined_one(endtoend_out):
+    refined = endtoend_out / "refined"
+    assert (endtoend_out / "final_genome.fa").read_bytes() == (refined / "refined_genome.fa").read_bytes()
+    assert (endtoend_out / "final_info_frags.txt").read_bytes() == (refined / "refined_info_frags.txt").read_bytes()
+
+
+# ---------------------------------------------------------------------------
 # Post step: .mcool produced
 # ---------------------------------------------------------------------------
 

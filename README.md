@@ -10,7 +10,7 @@
 
 Large genome reassembly based on Hi-C data (continuation and partial rewrite of [GRAAL](https://github.com/koszullab/GRAAL)).
 It relies on `pycuda` for GPU-accelerated MCMC scaffolding and `cooler` for multi-resolution contact map generation.
-Requires **Python 3.10-3.12** and an **NVIDIA GPU** with the **CUDA toolkit** installed.
+Requires **Python 3.10-3.12** and the **CUDA toolkit** (to install `pycuda`). The default pipeline runs its MCMC on an **NVIDIA GPU**; `instagraal-endtoend --mode cpu` needs none.
 
 ## Installation
 
@@ -47,7 +47,7 @@ a wide range of GPU generations.
 
 ### Simplest approach
 
-`instagraal-endtoend` runs the full pipeline — pre-processing, scaffolding, polishing, and contact-map generation — in a single command:
+`instagraal-endtoend` runs the full pipeline — pre-processing, scaffolding, refinement, and contact-map generation — in a single command:
 
 ```sh
 instagraal-endtoend assembly.fa reads.pairs --enzyme DpnII -o out
@@ -61,15 +61,23 @@ Key options:
 |--------|---------|-------------|
 | `-e / --enzyme` | _(required)_ | Restriction enzyme(s), e.g. `DpnII` or `DpnII,HinfI` |
 | `-o / --output-dir` | `out` | Root directory for all outputs |
+| `-m / --mode` | `default` | Steps to run (see below) |
 | `-l / --level` | `4` | Resolution level (higher = faster but coarser) |
-| `-n / --cycles` | `100` | MCMC iterations (more = better convergence) |
+| `-n / --cycles` | `10` with refine, else `100` | MCMC iterations (more = better convergence) |
 | `--device` | `0` | CUDA device index |
 | `-C / --circular` | off | Circular genome |
-| `--no-bomb` | bomb | Start scaffolding from the input contigs instead of exploding the genome into bins |
-| `--no-polish` | polish | Skip polishing: write the scaffolds as instaGRAAL left them (DNA it discarded is not put back) |
-| `--refine` | no refine | Run `instagraal-refine` after polishing (see step 3b), and use its output downstream |
 
 Run `instagraal-endtoend -h` for the full option list.
+
+`--mode` chooses the steps run between pre-processing and contact-map generation: a preset, or steps separated by commas (`mcmc`, `bomb`, `polish`, `refine`, `extend` or `noextend`), in any order.
+
+| Mode | Steps | GPU | What it does |
+|------|-------|-----|--------------|
+| `default` | `mcmc,refine` | yes | MCMC scaffolding from the contigs, then `instagraal-refine` (step 3b); refine's second, long-range pass runs only if refine confirms the MCMC layout |
+| `cpu` | `refine,extend` | no | `instagraal-refine` alone, its second pass forced: the most contiguous assemblies, though on clearly incomplete bins that pass can add misjoins (`--mode refine` leaves it out) |
+| `legacy` | `bomb,mcmc,polish` | yes | The pipeline before refine: MCMC on the genome exploded into bins, then `instagraal-polish` |
+
+Other combinations work too, e.g. `--mode mcmc,polish` (no bombing) or `--mode mcmc` (the MCMC scaffolds as they are). Refine needs memory in proportion to the square of the number of contigs: above 5,000 contigs, the default mode falls back to `legacy`. Whatever the mode, the final assembly is also copied to `out/final_genome.fa`, and its layout to `out/final_info_frags.txt`. The former `--no-bomb` and `--no-polish` still work, with their former meaning on the legacy pipeline, but are deprecated.
 
 ### Step-by-step
 
