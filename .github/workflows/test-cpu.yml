@@ -24,25 +24,14 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      # Without the gpu extra: pycuda is not installed, as on a machine without CUDA.
+      # Without the gpu extra, as on a machine without CUDA. The tests that need
+      # pycuda and a GPU (the MCMC scaffolder) skip here: they run on the RunPod
+      # GPU pods (test-gpu.yml).
       - name: Install instagraal with test extras
         run: pip install ".[test]"
 
-      - name: Check that nothing needs pycuda
-        run: |
-          python -c "import importlib.util, sys; sys.exit(importlib.util.find_spec('pycuda') is not None)"
-          instagraal-endtoend --help > /dev/null
-          instagraal-refine --help > /dev/null
-
       - name: Run pytest (GPU tests auto-skipped)
         run: pytest -v --tb=short --junitxml=test-results.xml
-
-      # The stub (distribution name "pycuda", no CUDA needed) lets the MCMC module
-      # import, so that its dispatch test runs here too.
-      - name: Run the MCMC dispatch test with a pycuda stub
-        run: |
-          pip install ./tools/pycuda-stub/
-          pytest -v --tb=short --cov-append tests/test_instagraal.py -k test_run_instagraal_calls_existing_methods
 
       - name: Upload test results
         if: always()

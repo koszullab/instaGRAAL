@@ -168,12 +168,13 @@ def test_run_instagraal_calls_existing_methods(tmp_path, monkeypatch):
 
     The class is replaced by an autospec mock, which raises AttributeError for
     any attribute the real class lacks, so a call to a removed method fails
-    here without a GPU.
+    here without running the MCMC. Importing the module still needs pycuda
+    and a GPU: the test runs on the GPU CI only.
     """
     try:
-        import pycuda.autoinit  # noqa: F401  (a no-op with the CPU CI pycuda stub)
-    except Exception as exc:  # real pycuda without a usable CUDA device
-        pytest.skip(f"instagraal.instagraal needs pycuda.autoinit: {exc}")
+        import pycuda.autoinit  # noqa: F401
+    except Exception as exc:  # noqa: BLE001  (no pycuda, or pycuda without a usable CUDA device)
+        pytest.skip(f"instagraal.instagraal needs pycuda and a GPU: {exc}")
     from instagraal import instagraal as ig
 
     mock_cls = create_autospec(ig.instagraal_class)
