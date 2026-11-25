@@ -20,6 +20,7 @@ All public symbols are re-exported here so that existing code importing from
 """
 
 from ._scaffold_correct import (
+    REORIENT_MODES,
     correct_scaffolds,
     correct_spurious_inversions,
     find_lost_dna,
@@ -53,6 +54,7 @@ __all__ = [
     "DEFAULT_MIN_SCAFFOLD_SIZE",
     "DEFAULT_NEW_GENOME_NAME",
     "DEFAULT_NEW_INFO_FRAGS_NAME",
+    "REORIENT_MODES",
     # I/O
     "_parse_fasta",
     # correction algorithms

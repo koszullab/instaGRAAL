@@ -55,14 +55,17 @@ def parse_info_frags(info_frags):
     new_scaffolds = {}
     with open(info_frags, "r") as info_frags_handle:
         current_new_contig = None
-        for line in info_frags_handle:
+        for raw_line in info_frags_handle:
+            line = raw_line.rstrip("\r\n")
+            if not line.strip():
+                continue
             if line.startswith(">"):
-                current_new_contig = str(line[1:-1])
+                current_new_contig = line[1:].strip()
                 new_scaffolds[current_new_contig] = []
             elif line.startswith("init_contig"):
                 pass
             else:
-                init_contig, id_frag, orientation, pos_start, pos_end = str(line[:-1]).split("\t")
+                init_contig, id_frag, orientation, pos_start, pos_end = line.split("\t")
                 start = int(pos_start)
                 end = int(pos_end)
                 ori = int(orientation)
@@ -145,56 +148,30 @@ def write_info_frags(scaffolds, output="new_info_frags.txt"):
 
 
 def write_fasta(init_fasta, info_frags, output=DEFAULT_NEW_GENOME_NAME, junction=False):
-    """Convert an info_frags.txt file into a fasta file given a reference.
+    """Convert an info_frags.txt file (or a scaffold dictionary) into a fasta
+    file given a reference.
     Optionally adds junction sequences to reflect the possibly missing base
-    pairs between two newly joined scaffolds.
+    pairs between two newly joined scaffolds: one junction is inserted
+    between consecutive bins coming from different initial contigs.
     """
 
     init_genome = {record.id: record.seq for record in _parse_fasta(init_fasta)}
+    scaffolds = format_info_frags(info_frags)
+    junction_seq = str(junction) if junction else ""
     my_new_records = []
-    with open(info_frags, "r") as info_frags_handle:
-        current_seq = ""
-        current_id = None
+    for name, scaffold in scaffolds.items():
+        pieces = []
         previous_contig = None
-        for line in info_frags_handle:
-            if line.startswith(">"):
-                previous_contig = None
-                if current_id is not None:
-                    new_record = SeqRecord(current_seq, id=current_id, description="")
-                    my_new_records.append(new_record)
-                current_seq = ""
-                current_id = str(line[1:])
-            elif line.startswith("init_contig"):
-                previous_contig = None
+        for init_contig, _, start, end, ori in scaffold:
+            if junction_seq and previous_contig not in {None, init_contig}:
+                pieces.append(junction_seq)
+            seq_to_add = init_genome[init_contig][start:end]
+            if ori == 1:
+                pieces.append(str(seq_to_add))
+            elif ori == -1:
+                pieces.append(str(seq_to_add.reverse_complement()))
             else:
-                init_contig, _, orientation, pos_start, pos_end = str(line[:-1]).split("\t")
-
-                start = int(pos_start)
-                end = int(pos_end)
-                ori = int(orientation)
-
-                assert start < end
-                assert ori in {-1, 1}
-                if junction and previous_contig not in {None, init_contig}:
-                    error_was_raised = False
-                    try:
-                        extra_seq = Seq(junction)
-                        current_seq = current_seq + extra_seq
-                    except TypeError:
-                        if not error_was_raised:
-                            print("Invalid junction sequence")
-                            error_was_raised = True
-
-                seq_to_add = init_genome[init_contig][start:end]
-                if ori == 1:
-                    current_seq += seq_to_add
-                elif ori == -1:
-                    current_seq += seq_to_add.reverse_complement()
-                else:
-                    raise ValueError("Invalid data in orientation field {}".format(ori))
-
-                previous_contig = init_contig
-
-        new_record = SeqRecord(current_seq, id=current_id, description="")
-        my_new_records.append(new_record)
+                raise ValueError("Invalid data in orientation field {}".format(ori))
+            previous_contig = init_contig
+        my_new_records.append(SeqRecord(Seq("".join(pieces)), id=name, description=""))
     SeqIO.write(my_new_records, output, "fasta")

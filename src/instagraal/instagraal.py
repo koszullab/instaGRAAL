@@ -193,6 +193,45 @@ class instagraal_class:
         self.txt_file_list_mutations = os.path.join(self.simulation.output_folder, "list_mutations.txt")
         self.file_all_data = os.path.join(self.simulation.output_folder, "behaviour_all.txt")
 
+    def simple_start(self, n_cycles: int, n_neighbours: int, bomb: bool) -> None:
+        """Like :meth:`full_em`, but only sample mutations at contig ends.
+
+        At each cycle, only the fragments at either end of a contig are
+        visited, and the nuisance parameters are not re-estimated.
+        """
+        sampler = self.simulation.sampler
+        if bomb:
+            sampler.bomb_the_genome()
+        for j in range(0, n_cycles):
+            sampler.gpu_vect_frags.copy_from_gpu()
+            extremities = np.concatenate(
+                [
+                    np.nonzero(sampler.gpu_vect_frags.prev == -1)[0],
+                    np.nonzero(sampler.gpu_vect_frags.next == -1)[0],
+                ]
+            )
+            extremities = np.unique(extremities).astype(np.int32)
+            np.random.shuffle(extremities)
+            logger.info("cycle = {}".format(j))
+            for id_frag in extremities:
+                (
+                    o,
+                    dist,
+                    _op_sampled,
+                    _id_f_sampled,
+                    _mean_len,
+                    _n_contigs,
+                ) = sampler.step_sampler(id_frag, n_neighbours, self.dt)
+                self.str_likelihood = "likelihood = " + str(o)
+                self.str_n_contigs = "n contigs = " + str(sampler.n_contigs)
+                self.str_curr_id_frag = "current frag = " + str(id_frag)
+                self.str_curr_dist = "current dist = " + str(dist)
+                self.str_curr_cycle = "current cycle = " + str(j)
+            try:
+                self.simulation.export_new_fasta()
+            except OSError as e:
+                logger.warning("Warning, could not write output files at {}: {}".format(j, e))
+
     def full_em(
         self,
         n_cycles: int,

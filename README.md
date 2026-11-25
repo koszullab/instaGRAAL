@@ -65,6 +65,8 @@ Key options:
 | `-n / --cycles` | `100` | MCMC iterations (more = better convergence) |
 | `--device` | `0` | CUDA device index |
 | `-C / --circular` | off | Circular genome |
+| `--no-bomb` | bomb | Start scaffolding from the input contigs instead of exploding the genome into bins |
+| `--no-polish` | polish | Skip polishing: write the scaffolds as instaGRAAL left them (DNA it discarded is not put back) |
 
 Run `instagraal-endtoend -h` for the full option list.
 
