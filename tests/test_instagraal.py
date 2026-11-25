@@ -198,3 +198,58 @@ def test_gpu_self_test_without_pycuda_points_to_the_gpu_extra(no_pycuda):
 
     with pytest.raises(click.ClickException, match=r"pip install 'instagraal\[gpu\]'"):
         _check_gpu(0)
+
+
+# ---------------------------------------------------------------------------
+# Tests: reference loading / genome.fasta writing (CUDA-free)
+# ---------------------------------------------------------------------------
+
+
+def test_load_reference_sequence_keeps_last_line(tmp_path):
+    """The last line of the reference (here a whole one-line record) is kept."""
+    import types
+
+    fasta = tmp_path / "ref.fa"
+    fasta.write_text(">ctg1 some description\nACGTAC\nGTA\n>ctg2\nTTTTGGGGCC\n")
+    holder = types.SimpleNamespace()
+    pyramid_sparse.pyramid.load_reference_sequence(holder, str(fasta))
+    assert holder.dict_sequence_contigs == {"ctg1": "ACGTACGTA", "ctg2": "TTTTGGGGCC"}
+
+
+@pytest.mark.parametrize("length", [60, 61, 62, 122, 123, 200])
+def test_generate_new_fasta_writes_every_base(tmp_path, length):
+    """genome.fasta holds the full scaffold, whatever its length (61-bp lines)."""
+    import random
+    import types
+
+    import numpy as np
+    from Bio import SeqIO
+
+    seq = "".join(random.Random(length).choice("ACGT") for _ in range(length))
+    cut = length // 2
+    level = types.SimpleNamespace(
+        level=0,
+        frags_init_contigs=["ctg", "ctg"],
+        pyramid=types.SimpleNamespace(
+            spec_level={
+                "0": {
+                    "fragments_dict": {
+                        1: {"start_pos(bp)": 0, "end_pos(bp)": cut},
+                        2: {"start_pos(bp)": cut, "end_pos(bp)": length},
+                    }
+                }
+            },
+            dict_sequence_contigs={"ctg": seq},
+        ),
+    )
+    vect_frags = types.SimpleNamespace(
+        id_c=np.array([1, 1]),
+        pos=np.array([0, 1]),
+        ori=np.array([1, 1]),
+        activ=np.array([1, 1]),
+        id_d=np.array([0, 1]),
+    )
+    new_fasta = tmp_path / "genome.fasta"
+    pyramid_sparse.level.generate_new_fasta(level, vect_frags, str(new_fasta), str(tmp_path / "info_frags.txt"))
+    records = list(SeqIO.parse(str(new_fasta), "fasta"))
+    assert [(r.id, str(r.seq)) for r in records] == [("3C-assembly-contig_1", seq)]
