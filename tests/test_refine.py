@@ -342,11 +342,14 @@ def _circular_distance(a, b, size):
     return min(d, size - d)
 
 
-@pytest.mark.parametrize("origin_first,expected_start", [(False, 150_000), (True, 0)], ids=["terminus-cut", "origin-first"])
+@pytest.mark.parametrize(
+    "origin_first,expected_start", [(False, 150_000), (True, 0), (None, 0)], ids=["terminus-cut", "origin-first", "default"]
+)
 def test_refine_recenters_a_circular_chromosome(skewed_circle, tmp_path, monkeypatch, origin_first, expected_start):
+    """By default the chromosome starts at the origin, as a reference genome does."""
     monkeypatch.setattr(refine_module, "CIRCULAR_MIN_LENGTH", 100_000)
     data = skewed_circle
-    summary = _refine(data, tmp_path, origin_first=origin_first)
+    summary = _refine(data, tmp_path, **({} if origin_first is None else {"origin_first": origin_first}))
     assert summary["circular"] == summary["recentered"] == ["refined_scaffold_1"]
     records = list(SeqIO.parse(str(tmp_path / "refined_genome.fa"), "fasta"))
     assert len(records) == 1
@@ -422,7 +425,7 @@ def test_refine_cli_without_input_layout_gives_the_same_assembly(synthetic, tmp_
     """The refined assembly depends on the contact map and the contigs only: -i is optional."""
     common = ["-c", str(synthetic["cool"]), "-f", str(synthetic["fasta"]), "-w", "30000", "-l", "10000", "-j", "NNNNNN"]
     with_layout = CliRunner().invoke(refine_main, [*common, "-i", str(synthetic["layout"]), "-o", str(tmp_path / "a")])
-    without = CliRunner().invoke(refine_main, [*common, "-o", str(tmp_path / "b"), "--origin-first"])
+    without = CliRunner().invoke(refine_main, [*common, "-o", str(tmp_path / "b"), "--terminus-first"])
     assert with_layout.exit_code == 0, with_layout.output
     assert without.exit_code == 0, without.output
     assert "Input layout: none given" in without.output

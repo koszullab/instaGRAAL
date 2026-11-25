@@ -42,10 +42,12 @@ A scaffold of at least ``CIRCULAR_MIN_LENGTH`` is circular when its two outer en
 would be joined if cycles were allowed (they are each other's best free partner);
 shorter ones are not tested, as their two ends are close along the scaffold itself.
 A circular scaffold is recentered on its GC skew, whose cumulative sum is lowest at
-the replication origin and highest at the terminus: it is cut at the terminus, which
-puts the origin near its middle (or, with ``origin_first``, at the origin), provided
-the skew fits the two-replichore pattern. Skew cannot tell the two strands apart, so
-the orientation is left as it is.
+the replication origin and highest at the terminus: it is cut at the origin, so that it
+reads like a reference genome, with a positive skew from its start to the terminus near
+its middle and a negative one after it (``origin_first=False``: cut at the terminus,
+which puts the origin in the middle), provided the skew fits the two-replichore pattern.
+Skew cannot tell the two strands apart (read from the origin, both show that pattern),
+so the orientation is left as it is.
 
 The input layout (``new_info_frags.txt`` from ``instagraal-polish``, or the raw
 ``info_frags.txt``) is scored the same way, which gives a reference-free QC of its
@@ -756,7 +758,7 @@ def run_refine(
     place_short: bool = True,
     short_margin: float = DEFAULT_SHORT_MARGIN,
     recenter: bool = True,
-    origin_first: bool = False,
+    origin_first: bool = True,
     extend: str = "auto",
 ) -> dict[str, Any]:
     """Score the input layout's joins and, unless ``qc_only``, re-scaffold the contigs.

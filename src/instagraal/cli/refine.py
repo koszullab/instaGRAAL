@@ -117,15 +117,19 @@ from ..version import __version__ as VERSION_NUMBER
     default=True,
     show_default=True,
     help=(
-        "Cut each circular scaffold of at least 500 kb at the replication terminus found from its GC skew, so that "
-        "the origin sits near its middle (left as is if the skew does not show two clear replichores)."
+        "Cut each circular scaffold of at least 500 kb at its replication origin, found from its GC skew (left as is "
+        "if the skew does not show two clear replichores)."
     ),
 )
 @click.option(
-    "--origin-first",
-    is_flag=True,
-    default=False,
-    help="With --recenter, start circular scaffolds at the origin instead.",
+    "--origin-first/--terminus-first",
+    default=True,
+    show_default=True,
+    help=(
+        "With --recenter, start circular scaffolds at the origin, as reference genomes do (GC skew positive from the "
+        "start to the terminus near the middle, negative after), or at the terminus, which puts the origin in the "
+        "middle of the scaffold and of its contact map."
+    ),
 )
 @click.option(
     "-j",
