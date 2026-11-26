@@ -62,6 +62,9 @@ change in your commands.
 ### Removed
 - The Sphinx documentation (`doc/`), and `example/example.gif`, the movie of
   the OpenGL viewer that 0.2.0 removed.
+- `scripts/instagraal-setup`, the installer of 0.1, which no longer worked
+  (it read a `requirements.txt` that is gone): `pip install "instagraal[gpu]"`
+  installs pycuda.
 
 ### Fixed
 - Polishing puts back every base the scaffolder left out exactly once. Lost
