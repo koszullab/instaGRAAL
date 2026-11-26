@@ -21,6 +21,7 @@ new assembly.
 **Documentation: <https://koszullab.github.io/instagraal/>**:
 [quickstart](https://koszullab.github.io/instagraal/quickstart/),
 [the end-to-end pipeline](https://koszullab.github.io/instagraal/end-to-end/),
+[a showcase on a metagenome](https://koszullab.github.io/instagraal/showcase/),
 [concepts](https://koszullab.github.io/instagraal/concepts/),
 [CLI reference](https://koszullab.github.io/instagraal/cli/) and
 [file formats](https://koszullab.github.io/instagraal/formats/).
