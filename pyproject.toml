@@ -58,7 +58,7 @@ test = [
 ]
 dev = [
     "instagraal[test]",
-    "python-semantic-release",
+    "bump-my-version>=0.28",
     "pre-commit",
     "pylint",
     "mypy",
@@ -158,3 +158,37 @@ warn_unreachable = true
 # Third-party scientific/CUDA libraries have no stubs; ignore missing imports
 # rather than failing on every numpy/scipy/pycuda reference.
 ignore_missing_imports = true
+
+[tool.bumpversion]
+# `version` in [project] is the single source of the version (instagraal.__version__
+# reads it from the installed package); current_version is bump-my-version's copy of it.
+# See "Releasing" in docs/contributing.md.
+current_version = "0.2.0"
+commit = true
+tag = true
+tag_name = "v{new_version}"
+message = "chore(release): v{new_version}"
+allow_dirty = false
+
+[[tool.bumpversion.files]]
+filename = "pyproject.toml"
+search = '^version = "{current_version}"'
+replace = 'version = "{new_version}"'
+regex = true
+
+[[tool.bumpversion.files]]
+# The version the documentation's header and footer show.
+filename = "zensical.toml"
+search = 'release = "{current_version}"'
+replace = 'release = "{new_version}"'
+
+[[tool.bumpversion.files]]
+filename = "Dockerfile"
+search = "Version={current_version}"
+replace = "Version={new_version}"
+
+[[tool.bumpversion.files]]
+# Promote the "Unreleased" entries to a dated section and open a fresh one.
+filename = "docs/changelog.md"
+search = "## Unreleased"
+replace = "## Unreleased\n\n## [{new_version}] - {now:%Y-%m-%d}"
