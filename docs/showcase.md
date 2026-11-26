@@ -13,9 +13,10 @@ genomes and across all 27.
 
 ## The data
 
-The files are public, in the `rsglab-data` bucket (Amazon S3, `eu-west-3`):
+The files are public, in the `rsglab-data` bucket (Amazon S3, `eu-west-3`),
+under `https://rsglab-data.s3.amazonaws.com/meta/`:
 
-| Path under `https://rsglab-data.s3.amazonaws.com/meta/` | What it holds |
+| Path | What it holds |
 |---|---|
 | `instagraal/MM133_metator_<bin>.fa` | The contigs of each genome, as metaTOR binned them |
 | `instagraal/MM133_metator_<bin>.cool` | metaTOR's contact map of each genome, at 1 kb |
