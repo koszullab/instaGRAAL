@@ -45,16 +45,26 @@ jobs:
         run: |
           echo "cuda_tag=cuda${{ matrix.cuda-version }}" >> $GITHUB_OUTPUT
 
+      # Every tag names the CUDA version of its image: master-cuda<cuda> and
+      # sha-<commit>-cuda<cuda> from master; <version>-cuda<cuda> and
+      # latest-cuda<cuda> from a release tag (vX.Y.Z). The plain `latest` tag
+      # that metadata-action adds on a tag push would be overwritten by each of
+      # the four CUDA builds: it is turned off, and given to the CUDA 11.8.0
+      # build, which runs on most drivers. (`pattern` only applies to semver
+      # tags: on `type=ref` it was ignored, and every build pushed `vX.Y.Z`.)
       - name: Extract Docker metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/${{ github.repository }}
+          flavor: |
+            latest=false
           tags: |
             type=ref,event=branch,suffix=-${{ steps.cuda-tag.outputs.cuda_tag }}
             type=ref,event=pr,suffix=-${{ steps.cuda-tag.outputs.cuda_tag }}
-            type=ref,event=tag,pattern={{version}}-${{ steps.cuda-tag.outputs.cuda_tag }}
-            type=ref,event=tag,pattern=latest-${{ steps.cuda-tag.outputs.cuda_tag }},if=starts
+            type=semver,pattern={{version}},suffix=-${{ steps.cuda-tag.outputs.cuda_tag }}
+            type=raw,value=latest-${{ steps.cuda-tag.outputs.cuda_tag }},enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') && matrix.cuda-version == '11.8.0' }}
             type=sha,suffix=-${{ steps.cuda-tag.outputs.cuda_tag }}
 
       - name: Build and push
