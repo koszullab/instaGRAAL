@@ -1,8 +1,8 @@
 # Polishing the scaffolds
 
 The MCMC scaffolder moves bins, not contigs: its scaffolds can split a
-contig, flip part of one, and leave out the DNA of the fragments the coverage
-filter removed. `instagraal-polish` corrects these artefacts in a layout
+contig, flip part of one, and leave out the DNA that the coverage filter drops
+at the ends of contigs. `instagraal-polish` corrects these artefacts in a layout
 (`info_frags.txt`), and writes the polished scaffolds. The `legacy` mode of
 `instagraal-endtoend` polishes the MCMC scaffolds; the `default` mode refines
 them instead (see [Refining the scaffolds](refine.md)).

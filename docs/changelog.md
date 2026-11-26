@@ -48,15 +48,15 @@ change in your commands.
   `new_info_frags.txt`. ([#49](https://github.com/koszullab/instaGRAAL/pull/49))
 - Without pycuda, `instagraal`, `instagraal-test` and the modes of
   `instagraal-endtoend` with `mcmc` stop with a message naming the `gpu`
-  extra and `--mode cpu`. ([#53](https://github.com/koszullab/instaGRAAL/pull/53))
+  extra (and `--mode cpu`, but for `instagraal-test`). ([#53](https://github.com/koszullab/instaGRAAL/pull/53))
 - The Docker images of a release are tagged `<version>-cuda<cuda>` and
   `latest-cuda<cuda>`, and `latest` is `latest-cuda11.8.0`: the four CUDA
   builds of a release no longer overwrite one `latest` tag and one
   `v<version>` tag.
 
 ### Deprecated
-- `instagraal-endtoend --bomb/--no-bomb` and `--polish/--no-polish`: use
-  `--mode`. They set the `legacy` pipeline, with a warning.
+- `instagraal-endtoend --bomb/--no-bomb`: use `--mode`. It sets the `legacy`
+  pipeline, with a warning; so does `--polish/--no-polish`, added after 0.2.0.
   ([#53](https://github.com/koszullab/instaGRAAL/pull/53))
 
 ### Removed
@@ -77,8 +77,8 @@ change in your commands.
   `--criterion` in the `polishing` mode; kept a newline in FASTA headers.
   ([#49](https://github.com/koszullab/instaGRAAL/pull/49))
 - `instagraal --simple` crashed. ([#49](https://github.com/koszullab/instaGRAAL/pull/49))
-- `instagraal-endtoend` passed a junction of 6 bp to `instagraal-post`
-  whatever `--junction`. ([#49](https://github.com/koszullab/instaGRAAL/pull/49))
+- `instagraal-endtoend --junction ''` told `instagraal-post` the junction was
+  6 bp long. ([#49](https://github.com/koszullab/instaGRAAL/pull/49))
 - The genome helpers of the sampler (`modify_genome`, `explode_genome`,
   `genome_content`) failed on the `next` field of the GPU structure.
   ([#50](https://github.com/koszullab/instaGRAAL/pull/50))

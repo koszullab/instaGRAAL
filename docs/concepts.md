@@ -71,12 +71,15 @@ the contigs run out of fragments. On the test data:
 | 5 | 332 | 36.3 kb |
 | 6 | 239 | 50.4 kb |
 
-Before binning, the **coverage filter** removes the fragments in contact with
-too few others: fewer than the mean minus `--coverage-std` standard deviations
-(1 by default), along with any in contact with far too many (more than the
-mean plus 50 standard deviations). On the test data it removes 23,615 of the
-75,032 fragments, 3.7 of the 12.2 Mb, which is why level 0 has 51,417. The
-scaffolder never sees that DNA; polishing and refining put it back.
+Before binning, the **coverage filter** flags the fragments in contact with
+too few others (fewer than the mean minus `--coverage-std` standard
+deviations, 1 by default), with far too many (more than the mean plus 50
+standard deviations), or shorter than 50 bp. Each flagged fragment is merged
+into the next fragment of its contig; only the flagged fragments at the end of
+a contig, or in a contig with none left, are dropped. On the test data it
+flags 23,615 of the 75,032 fragments, which is why level 0 has 51,417 bins,
+but drops only 0.11 of the 12.2 Mb: polishing and refining put that DNA
+back.
 
 ## The model and the MCMC
 
@@ -85,12 +88,14 @@ likelihood is that of the observed contacts under a model of the expected
 ones: between two bins of one scaffold, a contact frequency that decays with
 their distance along it, following a polymer model of the chromosome
 ([Rippe, 2001](https://doi.org/10.1016/S0968-0004(01)01978-8)); between bins
-of different scaffolds, a constant frequency. The parameters of the model are estimated from the contacts, and
-re-estimated as the layout changes.
+of different scaffolds, a constant frequency. The parameters of the model
+are estimated from the contacts, and, from the sixth cycle on, re-estimated
+as the layout changes.
 
 Each **cycle** visits every bin, in a random order. For each, the scaffolder
-takes its `--neighborhood` bins of most contacts (5 by default) and tries
-moves that bring them together: insert the bin next to one of them, on
+draws `--neighborhood` partner bins (5 by default) at random, each with a
+probability proportional to its contacts with the bin, and tries moves that
+bring them together: insert the bin next to one of them, on
 either side and in either orientation; flip or eject it; swap the ends of
 their scaffolds; scramble their surroundings. It computes the likelihood of
 every move on the GPU, and applies the most likely. `--cycles` sets how many
@@ -137,7 +142,7 @@ layout. [Refining the scaffolds](guides/refine.md) says more.
 ## Polishing
 
 The MCMC moves bins, not contigs: it can split a contig, flip part of it, or
-lose its bins to the coverage filter. `instagraal-polish` brings the bins of
+lose the end of a contig to the coverage filter. `instagraal-polish` brings the bins of
 each contig back together within each scaffold, next to their longest run,
 puts each run of bins of a contig back in its order and in its majority
 orientation, and reinserts the DNA the scaffolder left out next to its
@@ -149,8 +154,10 @@ writes them as they are and refines them instead. See
 ## Junctions
 
 Where two contigs (or bins of different contigs) meet in a scaffold, the
-FASTA holds a **junction**: `NNNNNN` by default (`--junction`), to mark a gap
-of unknown length. `instagraal-post` rebuilds the coordinates of the
+FASTA files of `instagraal-polish` and `instagraal-endtoend` hold a
+**junction**, `NNNNNN` by default (`--junction`), to mark a gap of unknown
+length; `instagraal-refine` adds one only when asked, and the MCMC's
+`genome.fasta` has none. `instagraal-post` rebuilds the coordinates of the
 scaffolds from their layout, so it must be told the length of that junction:
 `instagraal-endtoend` passes it on.
 

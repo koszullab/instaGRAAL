@@ -4,7 +4,7 @@
 scaffolds, and writes the contact maps of the new assembly.
 
 ```bash
-instagraal-post pairs.gz refined/refined_info_frags.txt \
+instagraal-post pairs.gz out/final_info_frags.txt \
     --resolutions 1000,5000,25000 --junction 6 --output-dir post
 ```
 
@@ -53,8 +53,8 @@ the weights are still written. `--no-balance` skips it.
 
 ## The junction { #the-junction }
 
-The scaffolds hold a junction between contigs (`NNNNNN` by default), which
-moves every coordinate after it. `instagraal-post` rebuilds the coordinates
+The scaffolds can hold a junction between contigs, which moves every
+coordinate after it. `instagraal-post` rebuilds the coordinates
 of the scaffolds from their layout, so `--junction` must be the length of
 the junction of the FASTA file:
 
@@ -63,6 +63,7 @@ the junction of the FASTA file:
 | `instagraal-endtoend` | `--junction`, `NNNNNN` by default | passed on by the pipeline |
 | `instagraal-polish` | `--junction`, `NNNNNN` by default | `6` (the default) |
 | `instagraal-refine` | `--junction`, none by default | `0` |
+| `instagraal` (`genome.fasta`) | none | `0` |
 
 With the wrong length, the contact maps drift from the FASTA file by that
 many bp at each junction.

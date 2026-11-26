@@ -39,9 +39,10 @@ The steps:
 | `extend`, `noextend` | Force refine's second pass on or off (by default, it runs only if refine confirms the MCMC layout; without `mcmc`, it does not run). Need `refine`. |
 
 `--mode mcmc` gives the MCMC scaffolds as they are, and `--mode mcmc,polish`
-polishes them without bombing. A run prints a note when its steps make one of
-them useless: refine gives the same assembly with or without `polish`, and
-with `extend` or `noextend` the MCMC does not change the assembly.
+polishes them without bombing. A run prints a note when a step changes
+little: with `extend` or `noextend`, the MCMC does not change the assembly;
+and refine gives the same assembly with or without `polish` up to its second
+pass, which `auto` decides from the layout it is given, polished or not.
 
 ### Choosing a mode
 
@@ -158,7 +159,8 @@ The guides take each step in turn: [Preparing the contacts](pre.md),
 
 ## Earlier options
 
-`-b, --bomb/--no-bomb` and `--polish/--no-polish` set the pipeline up to
-0.2.0. They still work, with their former meaning on the `legacy` pipeline
-(`--no-bomb` gives `--mode mcmc,polish`), with a warning, and cannot be
-combined with `--mode`. See [Upgrading](../upgrading.md).
+`-b, --bomb/--no-bomb` set the pipeline of 0.2.0, and `--polish/--no-polish`
+that of the development version after it. Both still work, with their former
+meaning on the `legacy` pipeline (`--no-bomb` gives `--mode mcmc,polish`,
+`--no-polish` `--mode bomb,mcmc`), with a warning, and cannot be combined
+with `--mode`. See [Upgrading](../upgrading.md).

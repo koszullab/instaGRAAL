@@ -23,8 +23,8 @@ Without pycuda, `instagraal` stops at once and says which extra to install;
 |---|---|---|
 | `-l, --level` | 4 | The level of the pyramid to scaffold at: bins of about 3<sup>level</sup> fragments. One level up makes about three times fewer bins, and a run about three times faster. |
 | `-n, --cycles` | 100 | How many times each bin is visited. Too few and the layout does not converge; many more bring little. |
-| `-N, --neighborhood` | 5 | How many of its most contacting bins each visit tries to bring a bin next to. |
-| `-c, --coverage-std` | 1 | The coverage filter: fragments in contact with fewer others than the mean minus this many standard deviations are left out. |
+| `-N, --neighborhood` | 5 | How many partner bins each visit draws for a bin, at random, weighted by their contacts with it. |
+| `-c, --coverage-std` | 1 | The coverage filter: fragments in contact with fewer others than the mean minus this many standard deviations are merged into the next fragment of their contig (see [Concepts](../concepts.md#levels-and-bins)). |
 | `-b, --bomb` | off | Start from the bins, each its own scaffold, rather than from the contigs. |
 | `-C, --circular` | off | The genome is circular. |
 | `--device` | 0 | The GPU to run on, numbered from 0, when there are several. |
@@ -37,7 +37,8 @@ average (see [Concepts](../concepts.md#levels-and-bins)).
 Other options:
 
 - `--simple` visits only the bins at the ends of the scaffolds, and keeps the
-  parameters of the model as they are.
+  parameters of the model as they are. It writes `genome.fasta` and
+  `info_frags.txt` only: no traces, and no `--save-matrix` pictures.
 - `--pyramid-only` builds the pyramid and stops.
 - `--save-matrix` draws the contact map after each cycle
   (`matrix_cycle_<n>.png`); `instagraal-endtoend` turns it on.
@@ -65,18 +66,20 @@ mcmc/
 ```
 
 - `genome.fasta` and `info_frags.txt` are written after each cycle: an
-  interrupted run leaves the layout of its last cycle. The scaffolds are named
-  `3C-assembly|contig_<n>`.
+  interrupted run leaves the layout of its last cycle. `genome.fasta` names
+  the scaffolds `3C-assembly-contig_<n>`, longest first, with no junction
+  between contigs; `info_frags.txt` names them `3C-assembly|contig_<n>`.
 - The `list_*.txt` files trace the run, one value per move: the likelihood,
   the number of scaffolds and their mean length, the distance from the
-  initial layout, and the parameters of the model. `list_mutations.txt` gives
+  initial layout, and the parameters of the model (from the sixth cycle on:
+  with 5 cycles or fewer, their files stay empty). `list_mutations.txt` gives
   the moves.
 - In the current directory, `instagraal` also writes its log,
   `instagraal-<date>.log`, and two plots of the coverage filter,
   `sparsity_plot.pdf` and `sparsity_hist.pdf`.
 
-The scaffolds of the MCMC split some contigs and leave out the DNA of the
-filtered fragments: polish or refine them (see
+The scaffolds of the MCMC split some contigs, and leave out the DNA that the
+coverage filter drops at the ends of contigs: polish or refine them (see
 [Polishing the scaffolds](polishing.md) and
 [Refining the scaffolds](refine.md)). [File formats](../formats.md#info_frags-files)
 describes `info_frags.txt`.

@@ -29,10 +29,10 @@ New to instaGRAAL? Start with the [Quickstart](quickstart.md) or
 | Convention | Meaning |
 |---|---|
 | Compressed files | FASTA and pairs files can be gzip-compressed (`.gz`; pairs also `.bgz`), as their name says. |
-| Output directories | A command writes into its output directory, created if missing, and replaces the files it writes there. `instagraal` reuses the pyramid it finds there (see [Scaffolding on a GPU](guides/scaffolding.md#the-pyramid)). |
+| Output directories | A command writes into its output directory, created if missing (`instagraal` creates only the last directory of the path), and replaces the files it writes there. `instagraal` reuses the pyramid it finds there (see [Scaffolding on a GPU](guides/scaffolding.md#the-pyramid)). |
 | Enzymes | Restriction enzymes by their names in Biopython, comma-separated: `DpnII,HinfI`. |
 | Layouts | The `info_frags` files that `instagraal`, `instagraal-polish`, `instagraal-refine` and `instagraal-endtoend` write, and that the next steps read (see [File formats](formats.md#info_frags-files)). |
-| Junctions | The sequence between two contigs in a scaffold, `NNNNNN` by default. `instagraal-post --junction` takes its length (see [Contact maps of the assembly](guides/post.md#the-junction)). |
+| Junctions | The sequence between two contigs in a scaffold: `NNNNNN` by default with `instagraal-polish` and `instagraal-endtoend`, none by default with `instagraal-refine`, none in the MCMC's `genome.fasta`. `instagraal-post --junction` takes its length (see [Contact maps of the assembly](guides/post.md#the-junction)). |
 | Logs | `instagraal` writes its log, `instagraal-<date>.log`, in the current directory. The other commands print to the terminal. |
 | Random numbers | The MCMC visits the bins in a random order: two runs of `instagraal` give close, not identical, layouts. The other steps give the same output for the same input. |
 | `-V, --version` | Prints the version: `instagraal`, `instagraal-endtoend`, `instagraal-refine`, `instagraal-stats` and `instagraal-test`. |
@@ -73,8 +73,8 @@ instagraal-endtoend [OPTIONS] FASTA PAIRS
 | `-l, --level` | `4` | The level of the MCMC: one level up makes about three times fewer bins, and a run about three times faster. |
 | `-n, --cycles` | `10` with `refine`, else `100` | The number of MCMC cycles: each visits every bin. Ignored without `mcmc`. |
 | `-r, --resolutions` | `1000` | The resolutions of the `.mcool` file, in bp, comma-separated, each a multiple of a smaller one. |
-| `-c, --coverage-std` | `1.0` | The coverage filter of the MCMC: fragments in contact with fewer others than the mean minus this many standard deviations are left out. |
-| `-N, --neighborhood` | `5` | How many of its most contacting bins the MCMC tries to bring each bin next to. |
+| `-c, --coverage-std` | `1.0` | The coverage filter of the MCMC: fragments in contact with fewer others than the mean minus this many standard deviations are merged into the next fragment of their contig. |
+| `-N, --neighborhood` | `5` | How many partner bins the MCMC draws for each bin, at random, weighted by their contacts with it. |
 | `-C, --circular` | off | The genome is circular (MCMC). |
 | `--save-matrix/--no-save-matrix` | on | Draw the contact map after each MCMC cycle. |
 | `--balance/--no-balance` | on | Balance each resolution of the `.mcool` file (ICE). |
@@ -84,7 +84,7 @@ instagraal-endtoend [OPTIONS] FASTA PAIRS
 | `-j, --junction` | `NNNNNN` | The sequence between contigs, in the scaffolds of `instagraal-polish` and `instagraal-refine`; its length goes to `instagraal-post`. |
 | `--criterion` | `blocks` | `instagraal-polish`: how runs of bins are reoriented, `blocks` or `sequences`. |
 | `--cool-name` | the name of `PAIRS` | The base name of the cool and mcool files of `instagraal-pre` and `instagraal-post`. |
-| `--simple` | off | MCMC: visit only the bins at the ends of the scaffolds. |
+| `--simple` | off | MCMC: visit only the bins at the ends of the scaffolds; no traces are written. |
 | `--save-pickle` | off | MCMC: write the state of the run to `graal.pkl`. |
 | `--quiet` | off | MCMC: print only warnings and errors. |
 | `--debug` | off | MCMC: print everything; overrides `--quiet`. |
@@ -140,15 +140,15 @@ instagraal [OPTIONS] HIC_FOLDER REFERENCE.FA
 | `-o, --output-dir` | `out` | The directory to write to. |
 | `-l, --level` | `4` | The level of the pyramid to scaffold at: bins of about 3<sup>level</sup> fragments. |
 | `-n, --cycles` | `100` | The number of cycles: each visits every bin. |
-| `-c, --coverage-std` | `1.0` | The coverage filter: fragments in contact with fewer others than the mean minus this many standard deviations are left out. Applied when the pyramid is built. |
-| `-N, --neighborhood` | `5` | How many of its most contacting bins each visit tries to bring a bin next to. |
+| `-c, --coverage-std` | `1.0` | The coverage filter: fragments in contact with fewer others than the mean minus this many standard deviations are merged into the next fragment of their contig. Applied when the pyramid is built. |
+| `-N, --neighborhood` | `5` | How many partner bins each visit draws, at random, weighted by their contacts with the bin. |
 | `--device` | `0` | The GPU to run on, numbered from 0. |
 | `-C, --circular` | off | The genome is circular. |
 | `-b, --bomb` | off | Start from the bins, each its own scaffold, rather than from the contigs. |
 | `--pyramid-only` | off | Build the pyramid, and stop. |
 | `--save-pickle` | off | Write the state of the run to `graal.pkl`, in the current directory. |
 | `--save-matrix` | off | Draw the contact map after each cycle (`matrix_cycle_<n>.png`). |
-| `--simple` | off | Visit only the bins at the ends of the scaffolds, and keep the parameters of the model. |
+| `--simple` | off | Visit only the bins at the ends of the scaffolds, and keep the parameters of the model. Writes `genome.fasta` and `info_frags.txt` only: no traces, and no `--save-matrix` pictures. |
 | `--quiet` | off | Print only warnings and errors. |
 | `--debug` | off | Print everything; overrides `--quiet`. |
 

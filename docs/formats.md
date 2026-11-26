@@ -109,8 +109,11 @@ is a piece of the scaffold, in order:
 | `orientation` | `1` as on the contig, `-1` reverse-complemented |
 | `start`, `end` | The piece on the contig, 0-based, the end excluded |
 
-The FASTA file of a layout holds the pieces in order, the junction (`NNNNNN`
-by default) between pieces of different contigs.
+The FASTA file of a layout holds its pieces in order, with a junction between
+pieces of different contigs: `NNNNNN` by default in those of
+`instagraal-polish` and `instagraal-endtoend`, none by default in that of
+`instagraal-refine`, and none in the MCMC's `genome.fasta` (see
+[The junction](guides/post.md#the-junction)).
 
 ## `junctions.tsv`
 
@@ -149,11 +152,12 @@ after each cycle:
 | `save_simu_step_<n>.txt` | The state of every bin after cycle `n`: position, start, scaffold and orientation |
 | `matrix_cycle_<n>.png` | With `--save-matrix`: the contact map after cycle `n` |
 | `list_likelihood.txt`, `list_n_contigs.txt`, `list_mean_len.txt`, `list_dist_init_genome.txt` | One value per move: the likelihood, the number of scaffolds, their mean length, the distance from the initial layout |
-| `list_fact.txt`, `list_slope.txt`, `list_d.txt`, `list_d_max.txt`, `list_d_nuc.txt`, `list_success.txt` | The parameters of the contact model, as they are re-estimated |
+| `list_fact.txt`, `list_slope.txt`, `list_d.txt`, `list_d_max.txt`, `list_d_nuc.txt`, `list_success.txt` | The parameters of the contact model, as they are re-estimated, from the sixth cycle on |
 | `list_mutations.txt` | The moves: the bin visited, its partner, and the move applied |
 
-The scaffolds of the MCMC are named `3C-assembly|contig_<n>`. `pyramids/`, in
-the output directory, holds the contact maps of every level:
+`genome.fasta` names the scaffolds `3C-assembly-contig_<n>`, longest first,
+with no junction between contigs; `info_frags.txt` names them
+`3C-assembly|contig_<n>`. `pyramids/`, in the output directory, holds the contact maps of every level:
 `pyramid_1_no_thresh/` before the coverage filter, `pyramid_9_thresh_auto/`
 after it, one `level_<n>/` folder each, and an HDF5 file of the contacts. In
 the current directory, `instagraal` writes its log, `instagraal-<date>.log`,

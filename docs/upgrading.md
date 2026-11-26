@@ -13,10 +13,9 @@
     |---|---|
     | `instagraal-endtoend …` | `instagraal-endtoend --mode legacy …` |
     | `instagraal-endtoend --no-bomb …` | `instagraal-endtoend --mode mcmc,polish …` |
-    | `instagraal-endtoend --no-polish …` | `instagraal-endtoend --mode bomb,mcmc …` |
     | `polished/polished_genome.fa` | `final_genome.fa` (a copy of the last step's) |
 
-    `--bomb/--no-bomb` and `--polish/--no-polish` still work, with a warning.
+    `--bomb/--no-bomb` still works, with a warning.
 
 - **pycuda is an extra.** `pip install instagraal` no longer installs pycuda:
   for the MCMC scaffolder, install `pip install "instagraal[gpu]"` (see
