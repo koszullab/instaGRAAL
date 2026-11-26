@@ -178,6 +178,8 @@ clr.matrix(balance=True).fetch("refined_scaffold_1")
 ## Next steps
 
 - [The end-to-end pipeline](end-to-end.md): from the reads to chromosomes.
+- [Showcase](showcase.md): genomes binned from a metagenome, scaffolded and
+  checked against their references.
 - [Concepts](concepts.md): how instaGRAAL scaffolds.
 - [Running the pipeline](guides/pipeline.md): the modes, every output, and the
   steps one by one.

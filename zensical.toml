@@ -20,6 +20,7 @@ nav = [
     { "Installation" = "installation.md" },
     { "Quickstart" = "quickstart.md" },
     { "The end-to-end pipeline" = "end-to-end.md" },
+    { "Showcase: a metagenome" = "showcase.md" },
     { "Concepts" = "concepts.md" }
   ]},
   { "Guides" = [

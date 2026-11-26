@@ -50,9 +50,9 @@ pip install instagraal
 <div class="cx-tiles" markdown>
 
 [<span class="cx-glyph">:lucide-rocket:</span> <strong>Quickstart</strong> <span class="cx-tile-text">From contigs and Hi-C pairs to chromosomes, on the test data, in a minute, without a GPU.</span>](quickstart.md){ .cx-tile }
+[<span class="cx-glyph">:lucide-microscope:</span> <strong>Showcase</strong> <span class="cx-tile-text">27 genomes from a metagenome, checked against their references.</span>](showcase.md){ .cx-tile }
 [<span class="cx-glyph">:lucide-lightbulb:</span> <strong>Concepts</strong> <span class="cx-tile-text">The contact model, the MCMC, levels, refine and polish.</span>](concepts.md){ .cx-tile }
 [<span class="cx-glyph">:lucide-square-terminal:</span> <strong>CLI reference</strong> <span class="cx-tile-text">Every command and option.</span>](cli.md){ .cx-tile }
-[<span class="cx-glyph">:lucide-braces:</span> <strong>Python API</strong> <span class="cx-tile-text">The functions behind the commands.</span>](api/pre.md){ .cx-tile }
 
 </div>
 

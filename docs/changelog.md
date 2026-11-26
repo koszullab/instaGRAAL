@@ -37,7 +37,8 @@ change in your commands.
   contigs, a run without `--mode` falls back to `legacy`.
   ([#53](https://github.com/koszullab/instaGRAAL/pull/53))
 - The documentation, at <https://koszullab.github.io/instagraal/>, built with
-  Zensical from `docs/`, in place of the Sphinx site on Read the Docs.
+  Zensical from `docs/`, in place of the Sphinx site on Read the Docs, with a
+  showcase on 27 genomes binned from a mock-community metagenome.
 - Releases follow `bump-my-version`, which keeps the version of the package,
   of the documentation and of the Docker image in step, and dates this
   changelog.

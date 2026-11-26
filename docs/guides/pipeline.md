@@ -61,7 +61,8 @@ reference. NA50 is the N50 of the blocks between breakpoints (where a scaffold
 jumps more than 50 kb on the reference), as a share of the genome's length.
 The legacy scaffolds are long but chimeric. `default` and `cpu` gave the same assembly
 on 18 of the 27 genomes; `cpu` is more contiguous where `default` does not
-trust the MCMC layout enough to run the second pass.
+trust the MCMC layout enough to run the second pass. The
+[Showcase](../showcase.md) shows these assemblies, genome by genome.
 
 ### More than 5,000 contigs
 

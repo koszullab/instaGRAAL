@@ -61,4 +61,5 @@ The default mode runs the MCMC, which needs an NVIDIA GPU and the `gpu`
 extra (see [Installation](installation.md)); `--mode cpu` needs neither. The
 [Quickstart](quickstart.md) runs instaGRAAL on test data,
 [The end-to-end pipeline](end-to-end.md) goes from the reads to
-chromosomes, and [Concepts](concepts.md) explains how it works.
+chromosomes, the [Showcase](showcase.md) puts it to the test on genomes from a
+metagenome, and [Concepts](concepts.md) explains how it works.
