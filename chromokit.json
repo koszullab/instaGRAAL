@@ -1,0 +1,13 @@
+{
+  "$comment": "Written by chromokit (https://github.com/js2264/chromokit). The files listed are the kit's: `npx github:js2264/chromokit sync` replaces them and `… check` refuses local edits. Put local changes in your own stylesheet instead.",
+  "version": "0.1.0",
+  "target": "zensical",
+  "files": {
+    "docs/javascripts/chromokit.js": "sha256:ac8b76ae05238e10050c1adca409d8603863a8428c03cd992940f8568756e30a",
+    "docs/stylesheets/chromokit.css": "sha256:a67ecee4fa07774b342f4a1ca16ea4dd37fa97161a9799b95f262042b65377fc",
+    "overrides/main.html": "sha256:24ce2012e4c3bfcdbd643a57e81c11cc4e645c1597e2f36dda806e03248fcb82",
+    "overrides/partials/cx-page-footer.html": "sha256:c2c73dd0722deab073368444b46e82dd8b13774aa4c6c0ce7305f8c1fac92d1d",
+    "overrides/partials/header.html": "sha256:b0ab045a8d9d749ab9b9736b14947aed2783a27082d2121590217267287277ec",
+    "overrides/partials/search.html": "sha256:e75c9bae1df009516dccca6a83a1763e9962ca07971b33c1c4a36731e7c4d54a"
+  }
+}

@@ -1,0 +1,64 @@
+{#-
+  chromokit: a chromosomix-style header. The mark, the site name, a small
+  accented kicker ("docs" unless `extra.kicker` says otherwise) and the
+  release (`extra.release`) on the left; the search button in the middle; an
+  optional call to action (`extra.cta = { text = "…", href = "…" }`), GitHub
+  and the theme toggle on the right. It keeps the data-md-component hooks
+  zensical's script mounts (header, logo, search, palette).
+-#}
+<header class="md-header cx-header" data-md-component="header">
+  <nav class="md-header__inner cx-header__inner" aria-label="{{ lang.t('header') }}">
+    <label class="md-header__button md-icon cx-header__menu" for="__drawer">
+      {% set icon = config.theme.icon.menu or "material/menu" %}
+      {% include ".icons/" ~ icon ~ ".svg" %}
+      <span class="md-visually-hidden">{{ lang.t('nav') }}</span>
+    </label>
+    <div class="cx-header__brand">
+      <a href="{{ config.extra.homepage | d(nav.homepage.url, true) | url }}" title="{{ config.site_name | e }}" class="cx-header__title" aria-label="{{ config.site_name }}" data-md-component="logo">
+        {% if config.theme.logo %}<img src="{{ config.theme.logo | url }}" alt="" width="26" height="26">{% endif %}
+        <span translate="no">{{ config.site_name }}</span>
+      </a>
+      {% set kicker = config.extra.kicker | d("docs", true) %}
+      {% if kicker %}<span class="cx-header__kicker" aria-hidden="true">{{ kicker }}</span>{% endif %}
+      {% if config.extra.release %}
+        <span class="cx-header__version" title="Latest release">v{{ config.extra.release }}</span>
+      {% endif %}
+    </div>
+    <div class="cx-header__search">
+      {% if "search" in config.plugins %}
+        {% set search = config.plugins["search"] | attr("config") %}
+        {% if search.enabled %}
+          {% include "partials/search.html" %}
+        {% endif %}
+      {% endif %}
+    </div>
+    <div class="cx-header__actions">
+      {% if "search" in config.plugins %}
+        {% set search = config.plugins["search"] | attr("config") %}
+        {% if search.enabled %}
+          <label class="md-header__button md-icon cx-header__search-toggle" for="__search">
+            {% set icon = config.theme.icon.search or "material/magnify" %}
+            {% include ".icons/" ~ icon ~ ".svg" %}
+            <span class="md-visually-hidden">{{ lang.t('search') }}</span>
+          </label>
+        {% endif %}
+      {% endif %}
+      {% if config.extra.cta and config.extra.cta.href %}
+        <a class="cx-control cx-header__wide" href="{{ config.extra.cta.href }}">{{ config.extra.cta.text | d("Open") }}</a>
+      {% endif %}
+      {% if config.repo_url %}
+        <a class="cx-header__icon-button" href="{{ config.repo_url }}" title="{{ config.site_name }} source" aria-label="{{ config.site_name }} source">
+          {% include ".icons/fontawesome/brands/github.svg" %}
+        </a>
+      {% endif %}
+      {% if config.theme.palette %}
+        {% if not config.theme.palette is mapping %}
+          {% include "partials/palette.html" %}
+        {% endif %}
+      {% endif %}
+      {% if not config.theme.palette is mapping %}
+        {% include "partials/javascripts/palette.html" %}
+      {% endif %}
+    </div>
+  </nav>
+</header>

@@ -56,23 +56,6 @@ test = [
     "pytest-order",
     "ruff",
 ]
-docs = [
-    'autodoc',
-    'sphinx-autoapi',
-    "autodocsumm",
-    "sphinxcontrib-napoleon",
-    "m2r",
-    "recommonmark",
-    "Sphinx>=1.6",
-    "sphinx-autobuild",
-    "sphinx-click",
-    "furo",
-    "pydata-sphinx-theme",
-    "sphinx-rtd-theme",
-    "myst-parser",
-    "nbsphinx",
-    "lxml[html_clean]",
-]
 dev = [
     "instagraal[test]",
     "python-semantic-release",
@@ -85,10 +68,20 @@ dev = [
     "ipython"
 ]
 
+[dependency-groups]
+# The documentation site (docs/ and zensical.toml): `uv run --only-group docs
+# zensical serve`. A group rather than an extra, so that it installs without
+# instaGRAAL and pycuda: the Python API pages read the sources in src/.
+docs = [
+    "zensical>=0.0.43",
+    "mkdocstrings[python]>=0.25",
+]
 
 [project.urls]
 Homepage = "https://github.com/koszullab/instagraal"
+Documentation = "https://koszullab.github.io/instagraal/"
 Repository = "https://github.com/koszullab/instagraal"
+Changelog = "https://koszullab.github.io/instagraal/changelog/"
 
 [project.scripts]
 instagraal = "instagraal.cli.main:main"
@@ -109,7 +102,6 @@ include = [
     "src/instagraal/",
     "scripts/",
     "tests/data/",
-    "example/",
     "README.md",
     "LICENSE",
 ]

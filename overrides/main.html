@@ -1,0 +1,12 @@
+{#-
+  chromokit: the page footer lives at the end of the content column, as on
+  doc.chromosomix.app, rather than in a full-width band under the sidebars.
+-#}
+{% extends "base.html" %}
+
+{% block content %}
+  {{ super() }}
+  {% include "partials/cx-page-footer.html" %}
+{% endblock %}
+
+{% block footer %}{% endblock %}
