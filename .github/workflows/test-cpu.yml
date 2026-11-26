@@ -24,11 +24,9 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      # Installs as distribution name "pycuda" so pip considers the hard
-      # dependency satisfied without needing a CUDA toolkit to compile from source.
-      - name: Install pycuda stub
-        run: pip install ./tools/pycuda-stub/
-
+      # Without the gpu extra, as on a machine without CUDA. The tests that need
+      # pycuda and a GPU (the MCMC scaffolder) skip here: they run on the RunPod
+      # GPU pods (test-gpu.yml).
       - name: Install instagraal with test extras
         run: pip install ".[test]"
 

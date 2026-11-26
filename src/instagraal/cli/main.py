@@ -154,7 +154,16 @@ def main(
     REFERENCE.FA  Reference genome in FASTA format.
     """
     from .. import log
-    from ..instagraal import run_instagraal
+
+    try:
+        from ..instagraal import run_instagraal
+    except ModuleNotFoundError as exc:
+        if (exc.name or "").split(".")[0] != "pycuda":
+            raise
+        raise click.ClickException(
+            "The MCMC scaffolder needs pycuda and a CUDA GPU: pip install 'instagraal[gpu]' (building pycuda "
+            "needs the CUDA toolkit). Without a GPU, use instagraal-endtoend --mode cpu."
+        ) from exc
 
     log_level = logging.INFO
     if quiet:

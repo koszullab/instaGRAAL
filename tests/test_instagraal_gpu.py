@@ -1,6 +1,9 @@
 """GPU-dependent tests for instaGRAAL.
 
 All tests in this module are skipped unless a CUDA-capable GPU is detected.
+The GPU CI (RunPod pods, test-gpu.yml) runs this module only, and every other
+test runs on GitHub's runners (test-cpu.yml): a test that needs pycuda or a
+GPU belongs here.
 
 The module covers two goals:
 
@@ -18,6 +21,7 @@ The module covers two goals:
 import math
 import pathlib
 import struct
+from unittest.mock import MagicMock, create_autospec
 
 import numpy as np
 import pandas as pd
@@ -384,6 +388,33 @@ def test_gpu_pyramid_thresh_auto_multi_level(pyramid_dir):
 
     with h5py.File(pyramid_dir / "pyramid_9_thresh_auto" / "pyramid.hdf5", "r") as f:
         assert len(list(f.keys())) > 1, "Expected multiple pyramid levels"
+
+
+# ---------------------------------------------------------------------------
+# run_instagraal dispatch (no GPU work, but importing the module needs a GPU)
+# ---------------------------------------------------------------------------
+
+
+def test_run_instagraal_calls_existing_methods(tmp_path, monkeypatch):
+    """``run_instagraal`` only calls methods that ``instagraal_class`` defines.
+
+    The class is replaced by an autospec mock, which raises AttributeError for
+    any attribute the real class lacks, so a call to a removed method fails
+    here without running the MCMC.
+    """
+    from instagraal import instagraal as ig
+
+    mock_cls = create_autospec(ig.instagraal_class)
+    mock_stats = MagicMock()
+    monkeypatch.setattr(ig, "instagraal_class", mock_cls)
+    monkeypatch.setattr("instagraal.assembly_stats.print_assembly_stats", mock_stats)
+    p2 = mock_cls.return_value
+    p2.simulation = MagicMock()  # set in __init__, so not part of the autospec
+
+    ig.run_instagraal(tmp_path, REF_FASTA, cycles=3, neighborhood=7, bomb=True, save_matrix=True)
+
+    p2.full_em.assert_called_once_with(n_cycles=3, n_neighbours=7, bomb=True, id_start_sample_param=4, save_matrix=True)
+    mock_stats.assert_called_once_with(p2.simulation.new_fasta, label="Scaffolded assembly")
 
 
 # ===========================================================================
@@ -851,6 +882,21 @@ def test_endtoend_new_info_frags_non_empty(endtoend_out):
 
     scaffolds = parse_info_frags(str(endtoend_out / "polished" / "new_info_frags.txt"))
     assert len(scaffolds) > 0
+
+
+# ---------------------------------------------------------------------------
+# Refine step (the default mode is mcmc,refine) and the final assembly
+# ---------------------------------------------------------------------------
+
+
+def test_endtoend_refined_genome_exists(endtoend_out):
+    assert (endtoend_out / "refined" / "refined_genome.fa").stat().st_size > 0
+
+
+def test_endtoend_final_assembly_is_the_refined_one(endtoend_out):
+    refined = endtoend_out / "refined"
+    assert (endtoend_out / "final_genome.fa").read_bytes() == (refined / "refined_genome.fa").read_bytes()
+    assert (endtoend_out / "final_info_frags.txt").read_bytes() == (refined / "refined_info_frags.txt").read_bytes()
 
 
 # ---------------------------------------------------------------------------

@@ -9,6 +9,7 @@ it the right place for:
 """
 
 import pathlib
+import sys
 
 import matplotlib
 import pytest
@@ -45,6 +46,19 @@ REF_FASTA = TEST_DATA / "yeast.contigs.fa.gz"
 REF_PAIRS = TEST_DATA / "yeast.pairs.gz"
 NEW_INFO_FRAGS = TEST_DATA / "new_info_frags.txt"
 ENZYMES = "DpnII,HinfI"
+
+# The modules of instagraal that import pycuda: the MCMC scaffolder. No other command imports them.
+PYCUDA_USERS = ("instagraal.instagraal", "instagraal.simu_single", "instagraal.cuda_lib_gl_single", "instagraal.gpustruct")
+
+
+@pytest.fixture
+def no_pycuda(monkeypatch):
+    """Make pycuda unimportable for one test, as ``pip install instagraal`` (without the gpu extra) leaves it."""
+    for name in [m for m in sys.modules if m.split(".")[0] == "pycuda"]:
+        monkeypatch.setitem(sys.modules, name, None)
+    monkeypatch.setitem(sys.modules, "pycuda", None)
+    for name in PYCUDA_USERS:
+        monkeypatch.delitem(sys.modules, name, raising=False)
 
 
 @pytest.fixture(scope="session")
