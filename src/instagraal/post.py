@@ -22,7 +22,9 @@ been inserted between fragments from different source contigs.
     ...
 
 This module uses that file to lift every read pair from original-assembly
-coordinates to new-assembly coordinates, then builds a contact map.
+coordinates to new-assembly coordinates, then builds contact maps.
+``instagraal-refine`` writes the same layout (``refined_info_frags.txt``),
+and ``instagraal-endtoend`` copies the final one to ``final_info_frags.txt``.
 
 Inputs required
 ---------------
@@ -30,26 +32,30 @@ pairs
     Original 4DN-format Hi-C pairs file (plain or ``.gz``), exactly as fed
     to ``instagraal-pre``.  Reads must be aligned to the *original* FASTA.
 new_info_frags
-    ``new_info_frags.txt`` produced by ``instagraal-polish``.
+    The layout of the new assembly: ``new_info_frags.txt`` produced by
+    ``instagraal-polish``, or ``refined_info_frags.txt`` produced by
+    ``instagraal-refine``.
 
 Note: the original FASTA is **not** required — all coordinate information
-is already encoded in ``new_info_frags.txt``.  Pass it via ``--fasta`` only
-if you want GC-content annotation on the output bins (not yet implemented).
+is already encoded in the layout.  The ``--fasta`` option of
+``instagraal-post`` is reserved for GC-content annotation of the output bins
+(not yet implemented).
 
 Outputs
 -------
 <name>_contigs.cool
     Original Hi-C pairs at contig level, bins = original contigs ordered by
-    their position in the new assembly.
+    their position in the new assembly (only if the pairs file has
+    ``#chromsize`` lines).
 <name>_scaffolds.cool
     Lifted Hi-C pairs at scaffold level, one bin per new scaffold (whole
     scaffold = single bin).
-<name>.mcool
+<name>_scaffolds_binned.mcool
     Lifted Hi-C pairs binned at the requested fixed resolution(s) (via
-    ``cooler.zoomify_cooler``).
-<name>.pairs.gz
+    ``cooler.zoomify_cooler``), balanced unless ``balance=False``.
+<name>_lifted.pairs.gz
     Hi-C pairs file remapped to new-assembly coordinates (gzip-compressed).
-<name>_contigs_hic_map.png / <name>_scaffolds_hic_map.png
+<name>_contigs.png / <name>_scaffolds.png / <name>_scaffolds_binned_<res>.png
     Genome-wide Hi-C contact map visualisations.
 <name>_ps_curves.png
     P(s) contact probability curves, original vs new assembly.
@@ -1451,26 +1457,31 @@ def run_post(
     Three cooler files are generated:
 
     1. ``<name>_contigs.cool`` — original pairs at contig level, with contigs
-       ordered according to the new assembly (from *new_info_frags*).
+       ordered according to the new assembly (from *new_info_frags*); only if
+       the pairs file has ``#chromsize`` lines.
     2. ``<name>_scaffolds.cool`` — lifted pairs at scaffold level (one bin per
        new scaffold).
-    3. ``<name>.mcool`` — lifted pairs binned at fixed resolution(s).
+    3. ``<name>_scaffolds_binned.mcool`` — lifted pairs binned at fixed
+       resolution(s).
 
-    Additionally writes a remapped pairs file (``<name>.pairs.gz``), P(s) curves,
-    and Hi-C map PNGs.
+    Additionally writes a remapped pairs file (``<name>_lifted.pairs.gz``),
+    P(s) curves, and Hi-C map PNGs.
 
     Parameters
     ----------
     pairs:
         Original Hi-C pairs file (plain or gzip, 4DN format).
     new_info_frags:
-        ``new_info_frags.txt`` from ``instagraal-polish``.
+        The layout of the new assembly: ``new_info_frags.txt`` from
+        ``instagraal-polish``, or ``refined_info_frags.txt`` from
+        ``instagraal-refine``.
     output_dir:
         Directory where output files will be written (created if absent).
     resolutions:
         Target bin size(s) in bp for the ``.mcool``.  Either a
         comma-separated string (``"1000,5000,25000"``) or a list of ints.
-        The smallest value is used as the base resolution.
+        The smallest value is used as the base resolution; each other value
+        must be a multiple of a smaller one.
     cool_name:
         Base name for output files.  Defaults to the stem of the pairs file.
     junction_len:
@@ -1478,7 +1489,7 @@ def run_post(
     balance:
         Apply ICE balancing at each zoom level.  Default ``True``.
     balance_args:
-        Extra kwargs forwarded to :func:`cooler.balance_cooler`.
+        Extra kwargs forwarded to ``cooler.balance_cooler``.
     """
     output_dir.mkdir(parents=True, exist_ok=True)
 

@@ -343,7 +343,7 @@ def _plot_hic_map(
 
 
 def default_cool_name(pairs: pathlib.Path) -> str:
-    """Base name of the .cool written by :func:`run_pre` when none is given:
+    """Base name of the .cool written by ``run_pre`` when none is given:
     the pairs file name without up to two extensions (``.pairs`` and ``.gz``)."""
     stem = pathlib.Path(pairs).name
     for _ in range(2):

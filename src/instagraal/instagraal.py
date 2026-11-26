@@ -1,52 +1,15 @@
 #!/usr/bin/env python3
 
-"""Large genome reassembly based on Hi-C data.
+"""The MCMC scaffolder of instaGRAAL, which the ``instagraal`` command runs.
 
-Usage:
-    instagraal <hic_folder> <reference.fa> [<output_folder>]
-               [--level=4] [--cycles=100] [--coverage-std=1]
-               [--neighborhood=5] [--device=0] [--circular] [--bomb]
-               [--save-matrix] [--pyramid-only] [--save-pickle] [--simple]
-               [--quiet] [--debug]
+``run_instagraal`` builds the pyramid of contact maps from the folder that
+``instagraal-pre`` writes, then reorders and reorients the bins of the contigs,
+cycle after cycle, to fit a model of the contacts, on an NVIDIA GPU. The
+layout is written after each cycle, as ``genome.fasta`` and
+``info_frags.txt``, in ``<output_folder>/<hic_folder name>/test_mcmc_<level>/``.
 
-Options:
-    -h, --help              Display this help message.
-    --version               Display the program's current version.
-    -l 4, --level 4         Level (resolution) of the contact map.
-                            Increasing level by one means a threefold smaller
-                            resolution but also a threefold faster computation
-                            time. [default: 4]
-    -n 100, --cycles 100    Number of iterations to perform for each bin.
-                            (row/column of the contact map). A high number of
-                            cycles has diminishing returns but there is a
-                            necessary minimum for assembly convergence.
-                            [default: 100]
-    -c 1, --coverage-std 1  Number of standard deviations below the mean.
-                            coverage, below which fragments should be filtered
-                            out prior to binning. [default: 1]
-    -N 5, --neighborhood 5  Number of neighbors to sample for potential
-                            mutations for each bin. [default: 5]
-    --device 0              If multiple graphic cards are available, select
-                            a specific device (numbered from 0). [default: 0]
-    -C, --circular          Indicates genome is circular. [default: False]
-    -b, --bomb              Explode the genome prior to scaffolding.
-                            [default: False]
-    --pyramid-only          Only build multi-resolution contact maps (pyramids)
-                            and don't do any scaffolding. [default: False]
-    --save-pickle           Dump all info from the instaGRAAL run into a
-                            pickle. Primarily for development purposes, but
-                            also for advanced post hoc introspection.
-                            [default: False]
-    --save-matrix           Saves a preview of the contact map after each
-                            cycle. [default: False]
-    --simple                Only perform operations at the edge of the contigs.
-                            [default: False]
-    --quiet                 Only display warnings and errors as outputs.
-                            [default: False]
-    --debug                 Display debug information. For development purposes
-                            only. Mutually exclusive with --quiet, and will
-                            override it. [default: False]
-
+Importing this module initialises CUDA (``pycuda.autoinit``): it needs pycuda,
+which the ``gpu`` extra installs, and a GPU.
 """
 
 import os
@@ -393,7 +356,9 @@ def run_instagraal(
     reference_fa:
         Path to the reference genome in FASTA format.
     output_folder:
-        Optional output directory. Defaults to the current directory.
+        Output directory. Without one, the results go to a ``results`` folder
+        in the directory of the installed package; the ``instagraal`` command
+        passes ``out`` by default.
     level:
         Resolution level of the contact map.
     cycles:

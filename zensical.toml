@@ -1,0 +1,124 @@
+[project]
+site_name = "instaGRAAL"
+site_url = "https://koszullab.github.io/instagraal/"
+site_description = "Chromosome-level scaffolding of genomes from Hi-C contacts."
+site_author = "Romain Koszul Laboratory"
+copyright = "&copy; 2014-2026 Romain Koszul Laboratory"
+repo_url = "https://github.com/koszullab/instaGRAAL"
+repo_name = "koszullab/instaGRAAL"
+docs_dir = "docs"
+site_dir = "site"
+# chromokit's stylesheet first, then instaGRAAL's own (docs/stylesheets/site.css),
+# which wins.
+extra_css = ["stylesheets/chromokit.css", "stylesheets/site.css"]
+extra_javascript = ["javascripts/chromokit.js"]
+
+nav = [
+  { "Home" = "index.md" },
+  { "Getting started" = [
+    { "Why instaGRAAL?" = "why.md" },
+    { "Installation" = "installation.md" },
+    { "Quickstart" = "quickstart.md" },
+    { "The end-to-end pipeline" = "end-to-end.md" },
+    { "Showcase: a metagenome" = "showcase.md" },
+    { "Concepts" = "concepts.md" }
+  ]},
+  { "Guides" = [
+    { "Running the pipeline" = "guides/pipeline.md" },
+    { "Preparing the contacts" = "guides/pre.md" },
+    { "Scaffolding on a GPU" = "guides/scaffolding.md" },
+    { "Refining the scaffolds" = "guides/refine.md" },
+    { "Polishing the scaffolds" = "guides/polishing.md" },
+    { "Contact maps of the assembly" = "guides/post.md" },
+    { "Checking an assembly" = "guides/checking.md" },
+    { "GPUs, CUDA and Docker" = "guides/gpu.md" },
+    { "Using the Python API" = "guides/python.md" },
+    { "Troubleshooting" = "troubleshooting.md" }
+  ]},
+  { "Reference" = [
+    { "CLI reference" = "cli.md" },
+    { "File formats" = "formats.md" },
+    { "Python API" = [
+      { "Pre-processing" = "api/pre.md" },
+      { "Scaffolding" = "api/scaffolding.md" },
+      { "Refining" = "api/refine.md" },
+      { "Polishing" = "api/polishing.md" },
+      { "Post-processing" = "api/post.md" },
+      { "Assembly statistics" = "api/stats.md" }
+    ]}
+  ]},
+  { "Contributing" = "contributing.md" },
+  { "Citing instaGRAAL" = "citation.md" },
+  { "Upgrading" = "upgrading.md" },
+  { "Changelog" = "changelog.md" }
+]
+
+# chromokit (https://github.com/js2264/chromokit): the header and the in-column
+# footer come from overrides/, the palette and the rest of the look from
+# docs/stylesheets/chromokit.css. Those are kit files, listed in chromokit.json:
+# `npx github:js2264/chromokit sync` updates them. Local changes go in
+# docs/stylesheets/site.css.
+[project.theme]
+custom_dir = "overrides"
+logo = "assets/mark.svg"
+favicon = "assets/mark.svg"
+# System fonts, as on chromosomix: no web-font request.
+font = false
+features = [
+  "navigation.instant",
+  "navigation.expand",
+  "navigation.sections",
+  "navigation.top",
+  "search.suggest",
+  "search.highlight",
+  "content.code.copy",
+  "content.code.annotate",
+  "content.tabs.link"
+]
+
+# Light and dark follow the system until the header toggle picks one. The
+# colours come from chromokit, so `primary` and `accent` are "custom".
+[[project.theme.palette]]
+media = "(prefers-color-scheme: light)"
+scheme = "default"
+primary = "custom"
+accent = "custom"
+toggle.icon = "lucide/sun"
+toggle.name = "Switch to dark mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: dark)"
+scheme = "slate"
+primary = "custom"
+accent = "custom"
+toggle.icon = "lucide/moon"
+toggle.name = "Switch to light mode"
+
+[project.extra]
+# Beside the name in the header and in every page's footer. bump-my-version
+# keeps it in step with the package (see [tool.bumpversion] in pyproject.toml).
+release = "0.2.0"
+# The small word after the name ("" for none).
+kicker = "docs"
+
+# Zensical's default Markdown extensions (admonitions, tabs, attribute lists,
+# icons, keys, Mermaid diagrams, highlighting with language classes) are what
+# the kit styles: declaring [project.markdown_extensions] would replace them.
+
+# The Python API pages: `::: instagraal.<module>` in docs/api/*.md, read from
+# the sources (no import, so pycuda is not needed). instaGRAAL's docstrings
+# follow the numpydoc layout.
+[project.plugins.mkdocstrings.handlers.python]
+paths = ["src"]
+
+[project.plugins.mkdocstrings.handlers.python.options]
+docstring_style = "numpy"
+show_source = true
+show_root_heading = true
+show_root_full_path = true
+show_signature_annotations = true
+separate_signature = true
+line_length = 80
+members_order = "source"
+show_submodules = false
+filters = ["!^_"]

@@ -1,5 +1,0 @@
-notebook
-sphinx
-nbsphinx
-recommonmark
-instagraal

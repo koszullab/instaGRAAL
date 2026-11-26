@@ -1,0 +1,66 @@
+name: Docs
+
+# Builds the documentation (docs/ and zensical.toml) on every pull request, and
+# deploys it to GitHub Pages, at https://koszullab.github.io/instagraal/, from
+# master. Pages deploys from a branch only: the github-pages environment
+# refuses a tag, and a release is cut with `git push --follow-tags`, so the
+# push of the release commit to master deploys it, with its version.
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One build per branch or pull request: a newer push cancels the build of a
+# pull request, never a deployment.
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          python-version: "3.12"
+
+      # The docs dependency group alone (Zensical and mkdocstrings): the Python
+      # API pages read the sources in src/ without importing them, so neither
+      # instaGRAAL nor pycuda is installed. --strict fails on a warning, such as
+      # a link to a page that does not exist.
+      - name: Build the site
+        run: uv run --only-group docs zensical build --clean --strict
+
+      - name: Upload the site for GitHub Pages
+        if: github.ref == 'refs/heads/master'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+  deploy:
+    name: Deploy
+    needs: build
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

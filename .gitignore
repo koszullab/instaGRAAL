@@ -78,8 +78,8 @@ Thumbs.db
 # Logs
 *.log
 
-# Sphinx documentation
-doc/_build/
+# The documentation site, built by zensical (zensical.toml)
+/site/
 
 # pyenv
 .python-version

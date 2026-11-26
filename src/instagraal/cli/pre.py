@@ -58,6 +58,7 @@ def main(
 
     FASTA   Genome assembly FASTA file (plain or .gz).
 
+    \b
     PAIRS   Hi-C pairs file in 4DN pairs format (plain or .gz).
             Required columns: readID chr1 pos1 chr2 pos2 strand1 strand2.
     """

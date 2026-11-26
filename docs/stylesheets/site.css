@@ -1,0 +1,15 @@
+/* instaGRAAL: its own styles, after chromokit's. chromokit's tokens are
+   `--cx-*` custom properties: override one here to change it everywhere. */
+
+/* Mermaid diagrams (```mermaid blocks) in chromokit's neutral colours, in
+   both palettes, rather than the accent zensical gives them. zensical draws
+   them in a closed shadow root, with its --md-mermaid-* variables (set on
+   `:root > *`): only these variables reach inside. Tell nodes apart by their
+   shape, not by a colour. */
+:root > * {
+  --md-mermaid-node-bg-color: var(--cx-bg-raised);
+  --md-mermaid-node-fg-color: var(--cx-border-strong);
+  --md-mermaid-edge-color: var(--cx-text-dim);
+  --md-mermaid-label-fg-color: var(--cx-text);
+  --md-mermaid-label-bg-color: var(--cx-bg);
+}
