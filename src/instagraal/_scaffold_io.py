@@ -125,6 +125,10 @@ def format_info_frags(info_frags):
 
 
 def write_info_frags(scaffolds, output="new_info_frags.txt"):
+    """Write a scaffold dictionary (or an info_frags.txt file) as an
+    info_frags.txt file: for each scaffold, a ``>name`` line, a header line,
+    then one line per bin, ``init_contig id_frag orientation start end``.
+    """
 
     scaffolds = format_info_frags(scaffolds)
     with open(output, "w") as info_frags_handle:

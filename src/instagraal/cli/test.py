@@ -406,7 +406,7 @@ def main(
       6. instagraal-post   - remap pairs to new assembly, write mcool.
       7. instagraal-stats  - compare input vs. polished assembly statistics.
 
-    The test uses S. cerevisiae as the model organism (enzyme: DpnII).
+    The test uses S. cerevisiae as the model organism (enzymes: DpnII and HinfI).
     """
     _tmp_dir: str | None = None
 

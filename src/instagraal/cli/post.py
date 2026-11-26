@@ -24,12 +24,9 @@ from ..post import run_post
     "--resolutions",
     required=True,
     help=(
-        "Resolution(s) for the output .mcool, passed directly to "
-        "``cooler zoomify --resolutions``.  "
-        "Either a comma-separated list of base-pair values "
-        "(e.g. '1000,5000,10000,25000,100000') or a single integer N, "
-        "in which case cooler generates a geometric series from the "
-        "fragment-level base resolution up to N bp."
+        "Resolution(s) of the output .mcool, in bp, comma-separated (e.g. '1000,5000,10000,25000,100000'). "
+        "The smallest is the base resolution, at which the lifted pairs are binned; the others are "
+        "aggregated from it, so each must be a multiple of a smaller one. A single value gives one resolution."
     ),
 )
 @click.option(
@@ -96,21 +93,25 @@ def main(
     """Post-process instaGRAAL results into a multi-resolution contact map.
 
     Lifts over the original Hi-C read pairs from the old reference genome to
-    the new assembly produced by instagraal-polish, builds a fragment-level
-    .cool file, and zooms it into an .mcool at the requested resolution(s).
+    the new assembly produced by instagraal-polish or instagraal-refine, bins
+    them, and writes an .mcool at the requested resolution(s), with .cool files
+    of the scaffolds and of the contigs.
 
     \b
     Typical workflow:
       1. instagraal-pre     genome.fa  reads.pairs  -e DpnII -o hic/
       2. instagraal         hic/  genome.fa  -o out/
-      3. instagraal-polish  -i out/info_frags.txt -f genome.fa
-      4. instagraal-post    reads.pairs  out/new_info_frags.txt  \\
+      3. instagraal-polish  -i out/hic/test_mcmc_4/info_frags.txt -f genome.fa -o polished/
+      4. instagraal-post    reads.pairs  polished/new_info_frags.txt  \\
                             -r 1000,5000,25000,100000  -o post/
 
     \b
     PAIRS           Hi-C pairs file aligned to the *original* reference
                     (plain or .gz, 4DN format).
-    NEW_INFO_FRAGS  new_info_frags.txt produced by instagraal-polish.
+    NEW_INFO_FRAGS  Layout of the new assembly: new_info_frags.txt of
+                    instagraal-polish, refined_info_frags.txt of
+                    instagraal-refine, or final_info_frags.txt of
+                    instagraal-endtoend.
     """
     parsed_balance_args: dict | None = None
     if balance_args is not None:

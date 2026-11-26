@@ -527,9 +527,8 @@ def _run_endtoend(
     default=DEFAULT_RESOLUTIONS,
     show_default=True,
     help=(
-        "Resolution(s) for the output .mcool passed to instagraal-post, "
-        "as a comma-separated list of base-pair values "
-        "(e.g. '1000,5000,10000') or a single integer N for a geometric series."
+        "Resolution(s) of the output .mcool, in bp, comma-separated (e.g. '1000,5000,10000'), passed to "
+        "instagraal-post: each must be a multiple of a smaller one, and a single value gives one resolution."
     ),
 )
 @click.option(
