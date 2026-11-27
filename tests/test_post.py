@@ -12,13 +12,15 @@ import cooler
 import pytest
 
 from instagraal.post import (
+    _binnify,
     _build_liftover_index,
     _build_new_bins,
+    _compute_ps,
+    _fragment_pixels_to_scaffold_pixels,
     _pos_to_new_bin,
     _pos_to_new_coords,
     _scaffold_bins_from_extended,
-    _fragment_pixels_to_scaffold_pixels,
-    _binnify,
+    _write_lifted_pairs,
 )
 
 # ---------------------------------------------------------------------------
@@ -243,6 +245,65 @@ def test_binnify_preserves_chrom_order():
     assert list(bins["chrom"]) == ["chrB", "chrA"]
 
 
+# ---------------------------------------------------------------------------
+# _write_lifted_pairs & _compute_ps strand / upper-triangle handling
+# ---------------------------------------------------------------------------
+
+
+def test_write_lifted_pairs_flips_strands_and_preserves_upper_triangle(tmp_path):
+    scaffolds = {
+        "scaf1": [
+            ["ctgA", 0, 0, 1000, 1],
+            ["ctgB", 0, 0, 1000, -1],
+        ],
+        "scaf2": [
+            ["ctgC", 0, 0, 500, 1],
+        ],
+    }
+    bins = _build_new_bins(scaffolds, junction_len=0)
+    index = _build_liftover_index(bins)
+
+    pairs_in = tmp_path / "in.pairs"
+    pairs_in.write_text(
+        "## pairs format v1.0.0\n"
+        "#sorted: chr1-chr2-pos1-pos2\n"
+        "#shape: upper triangle\n"
+        "#chromsize: ctgA 1000\n"
+        "#chromsize: ctgB 1000\n"
+        "#chromsize: ctgC 500\n"
+        "#columns: readID chrom1 pos1 chrom2 pos2 strand1 strand2 pair_type\n"
+        "r1\tctgB\t100\tctgB\t300\t+\t-\tUU\n"
+        "r2\tctgB\t100\tctgB\t300\t+\t+\tUU\n"
+        "r3\tctgA\t100\tctgB\t200\t+\t+\tUU\n"
+        "r4\tctgC\t50\tctgA\t100\t+\t-\tUR\n"
+    )
+    pairs_out = tmp_path / "out.pairs.gz"
+    total, remapped = _write_lifted_pairs(pairs_in, index, bins, pairs_out)
+    assert (total, remapped) == (4, 4)
+
+    with gzip.open(pairs_out, "rt") as fh:
+        rows = [line.rstrip("\n").split("\t") for line in fh if not line.startswith("#")]
+
+    # r1: ctgB [0,1000) reversed into scaf1 [1000,2000): 100->1901 (-), 300->1701 (+)
+    # Upper-triangled -> (1701 +, 1901 -) preserves inward (+-) orientation
+    assert rows[0] == ["r1", "scaf1", "1701", "scaf1", "1901", "+", "-", "UU"]
+    # r2: both + on reversed ctgB flip to - and -
+    assert rows[1] == ["r2", "scaf1", "1701", "scaf1", "1901", "-", "-", "UU"]
+    # r3: ctgA (+1) -> 100 (+), ctgB (-1) -> 1801 (-)
+    assert rows[2] == ["r3", "scaf1", "100", "scaf1", "1801", "+", "-", "UU"]
+    # r4: ctgC (scaf2, rank 1) & ctgA (scaf1, rank 0) swapped to upper triangle, UR -> RU
+    assert rows[3] == ["r4", "scaf1", "100", "scaf2", "50", "-", "+", "RU"]
+
+
+def test_compute_ps_orders_strands_by_position(tmp_path):
+    pairs_in = tmp_path / "unsorted.pairs"
+    pairs_in.write_text(
+        "## pairs format v1.0.0\n#columns: readID chrom1 pos1 chrom2 pos2 strand1 strand2\nr1\tscaf1\t900\tscaf1\t700\t-\t+\n"
+    )
+    df = _compute_ps(pairs_in)
+    assert list(df["strand_combo"]) == ["+-"]
+
+
 # ===========================================================================
 # Integration tests - use committed test data via post_output_dir fixture
 # ===========================================================================
@@ -429,6 +490,36 @@ def test_lifted_pairs_positions_positive(lifted_pairs_lines):
         assert int(parts[col_pos1]) > 0
         assert int(parts[col_pos2]) > 0
         break
+
+
+def test_lifted_pairs_upper_triangle(lifted_pairs_lines):
+    chrom_rank: dict[str, int] = {}
+    col_chr1, col_pos1, col_chr2, col_pos2 = 1, 2, 3, 4
+    checked = 0
+    for line in lifted_pairs_lines:
+        if line.startswith("#"):
+            if line.startswith("#chromsize:"):
+                chrom_rank[line.split()[1]] = len(chrom_rank)
+            elif line.startswith("#columns:"):
+                cols = line.split()[1:]
+                col_map = {name: i for i, name in enumerate(cols)}
+                for k1, k2 in (("chr1", "chr2"), ("chrom1", "chrom2")):
+                    if k1 in col_map and k2 in col_map:
+                        col_chr1, col_chr2 = col_map[k1], col_map[k2]
+                        break
+                col_pos1 = col_map.get("pos1", col_pos1)
+                col_pos2 = col_map.get("pos2", col_pos2)
+            continue
+        parts = line.split("\t")
+        if len(parts) < 5:
+            continue
+        k1 = (chrom_rank[parts[col_chr1]], int(parts[col_pos1]))
+        k2 = (chrom_rank[parts[col_chr2]], int(parts[col_pos2]))
+        assert k1 <= k2
+        checked += 1
+        if checked >= 5000:
+            break
+    assert checked == 5000
 
 
 # ---------------------------------------------------------------------------
