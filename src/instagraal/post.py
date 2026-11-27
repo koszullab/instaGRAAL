@@ -212,21 +212,15 @@ def _pos_to_new_bin(orig_chrom: str, orig_pos_1based: int, index: dict) -> int |
     return int(entry["bin_ids"][i])
 
 
-def _pos_to_new_coords(
+_FLIP_STRAND = {"+": "-", "-": "+"}
+
+
+def _lift_pos(
     orig_chrom: str,
     orig_pos_1based: int,
     index: dict,
-) -> tuple[str, int] | None:
-    """Map a 1-based position on the original assembly to new-assembly coords.
-
-    Returns the new scaffold name and 1-based position, or ``None`` when the
-    position cannot be lifted over (contig absent or position outside all
-    fragments).
-
-    Strand orientation is taken into account: when a fragment was placed in
-    reverse complement (orientation ``-1``), positions are mirrored within
-    the fragment.
-    """
+) -> tuple[str, int, int] | None:
+    """Map a 1-based position on the original assembly to ``(new_chrom, new_pos, ori)``."""
     if orig_chrom not in index:
         return None
     entry = index[orig_chrom]
@@ -243,7 +237,28 @@ def _pos_to_new_coords(
     else:  # ori == -1: reverse complement — mirror position within fragment
         frag_len = int(entry["orig_ends"][i]) - int(entry["orig_starts"][i])
         new_pos0 = new_frag_start + (frag_len - 1 - offset)
-    return new_chrom, new_pos0 + 1  # return 1-based
+    return new_chrom, new_pos0 + 1, ori
+
+
+def _pos_to_new_coords(
+    orig_chrom: str,
+    orig_pos_1based: int,
+    index: dict,
+) -> tuple[str, int] | None:
+    """Map a 1-based position on the original assembly to new-assembly coords.
+
+    Returns the new scaffold name and 1-based position, or ``None`` when the
+    position cannot be lifted over (contig absent or position outside all
+    fragments).
+
+    Strand orientation is taken into account: when a fragment was placed in
+    reverse complement (orientation ``-1``), positions are mirrored within
+    the fragment.
+    """
+    lifted = _lift_pos(orig_chrom, orig_pos_1based, index)
+    if lifted is None:
+        return None
+    return lifted[0], lifted[1]
 
 
 # ---------------------------------------------------------------------------
@@ -376,6 +391,10 @@ def _write_lifted_pairs(
     other_meta: list[str] = []
     columns_line = "#columns: readID chr1 pos1 chr2 pos2 strand1 strand2"
     col_chr1, col_pos1, col_chr2, col_pos2 = 1, 2, 3, 4
+    col_s1: int | None = 5
+    col_s2: int | None = 6
+    col_pair_type: int | None = None
+    paired_cols: list[tuple[int, int]] = [(5, 6)]
 
     with opener(pairs_path, "rt") as fh:
         for line in fh:
@@ -387,17 +406,28 @@ def _write_lifted_pairs(
             elif stripped.startswith("#columns:"):
                 columns_line = stripped
                 cols = stripped.split()[1:]
-                try:
-                    col_chr1 = cols.index("chr1")
-                    col_pos1 = cols.index("pos1")
-                    col_chr2 = cols.index("chr2")
-                    col_pos2 = cols.index("pos2")
-                except ValueError:
-                    pass
+                col_map = {name: idx for idx, name in enumerate(cols)}
+                for k1, k2 in (("chr1", "chr2"), ("chrom1", "chrom2")):
+                    if k1 in col_map and k2 in col_map:
+                        col_chr1, col_chr2 = col_map[k1], col_map[k2]
+                        break
+                if "pos1" in col_map and "pos2" in col_map:
+                    col_pos1, col_pos2 = col_map["pos1"], col_map["pos2"]
+                col_s1 = col_map.get("strand1")
+                col_s2 = col_map.get("strand2")
+                col_pair_type = col_map.get("pair_type")
+                coord_cols = {col_chr1, col_pos1, col_chr2, col_pos2}
+                paired_cols = [
+                    (col_map[name], col_map[name[:-1] + "2"])
+                    for name in cols
+                    if name.endswith("1") and (name[:-1] + "2") in col_map and col_map[name] not in coord_cols
+                ]
             elif stripped.startswith(("#chromsize:", "#chromosomes:", "#sorted:")):
                 pass  # replaced below
             else:
                 other_meta.append(stripped)
+
+    chrom_rank: dict[str, int] = {chrom: idx for idx, chrom in enumerate(new_chromsizes)}
 
     # ── Pass 2: remap data and write output ───────────────────────────────
     total = 0
@@ -426,12 +456,25 @@ def _write_lifted_pairs(
                     pos2 = int(parts[col_pos2])
                 except (IndexError, ValueError):
                     continue
-                coords1 = _pos_to_new_coords(chr1, pos1, index)
-                coords2 = _pos_to_new_coords(chr2, pos2, index)
-                if coords1 is None or coords2 is None:
+                lifted1 = _lift_pos(chr1, pos1, index)
+                lifted2 = _lift_pos(chr2, pos2, index)
+                if lifted1 is None or lifted2 is None:
                     continue
-                new_chr1, new_pos1 = coords1
-                new_chr2, new_pos2 = coords2
+                new_chr1, new_pos1, ori1 = lifted1
+                new_chr2, new_pos2, ori2 = lifted2
+                n_parts = len(parts)
+                if ori1 == -1 and col_s1 is not None and col_s1 < n_parts:
+                    parts[col_s1] = _FLIP_STRAND.get(parts[col_s1], parts[col_s1])
+                if ori2 == -1 and col_s2 is not None and col_s2 < n_parts:
+                    parts[col_s2] = _FLIP_STRAND.get(parts[col_s2], parts[col_s2])
+                if (chrom_rank[new_chr1], new_pos1) > (chrom_rank[new_chr2], new_pos2):
+                    new_chr1, new_chr2 = new_chr2, new_chr1
+                    new_pos1, new_pos2 = new_pos2, new_pos1
+                    for c1, c2 in paired_cols:
+                        if c1 < n_parts and c2 < n_parts:
+                            parts[c1], parts[c2] = parts[c2], parts[c1]
+                    if col_pair_type is not None and col_pair_type < n_parts and len(parts[col_pair_type]) == 2:
+                        parts[col_pair_type] = parts[col_pair_type][::-1]
                 parts[col_chr1] = new_chr1
                 parts[col_pos1] = str(new_pos1)
                 parts[col_chr2] = new_chr2
@@ -899,15 +942,15 @@ def _compute_ps(pairs_path: pathlib.Path) -> pd.DataFrame:
             if line.startswith("#"):
                 if line.startswith("#columns:"):
                     cols = line.strip().split()[1:]
-                    try:
-                        col_chr1 = cols.index("chr1")
-                        col_pos1 = cols.index("pos1")
-                        col_chr2 = cols.index("chr2")
-                        col_pos2 = cols.index("pos2")
-                        col_s1 = cols.index("strand1")
-                        col_s2 = cols.index("strand2")
-                    except ValueError:
-                        pass
+                    col_map = {name: idx for idx, name in enumerate(cols)}
+                    for k1, k2 in (("chr1", "chr2"), ("chrom1", "chrom2")):
+                        if k1 in col_map and k2 in col_map:
+                            col_chr1, col_chr2 = col_map[k1], col_map[k2]
+                            break
+                    if "pos1" in col_map and "pos2" in col_map:
+                        col_pos1, col_pos2 = col_map["pos1"], col_map["pos2"]
+                    if "strand1" in col_map and "strand2" in col_map:
+                        col_s1, col_s2 = col_map["strand1"], col_map["strand2"]
                 continue
             parts = line.rstrip("\n").split("\t")
             try:
@@ -922,7 +965,7 @@ def _compute_ps(pairs_path: pathlib.Path) -> pd.DataFrame:
             if chr1 != chr2:
                 continue
             distances.append(abs(pos2 - pos1))
-            strands.append(s1 + s2)
+            strands.append(s1 + s2 if pos1 <= pos2 else s2 + s1)
 
     if not distances:
         return pd.DataFrame(columns=["binned_distance", "strand_combo", "norm_p"])
